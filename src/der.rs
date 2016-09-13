@@ -344,7 +344,7 @@ fn test_der_set() {
 fn test_der_contextspecific() {
     let empty = &b""[..];
     let data = [0x02, 0x01, 0x02];
-    let expected = DerObject::ContextSpecific(&data);
+    let expected = DerObject::ContextSpecific(0,&data);
     assert_eq!(parse_der(&[0xa0, 0x03, 0x02, 0x01, 0x02]), IResult::Done(empty, expected));
 }
 
