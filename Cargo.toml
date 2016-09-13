@@ -6,3 +6,5 @@ authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
 [dependencies]
 libc = "0.2.0"
 nom = "1.2.4"
+log = "*"
+env_logger = "*"

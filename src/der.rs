@@ -1,6 +1,6 @@
 use std::vec::Vec;
 //use nom::{IResult, space, alpha, alphanumeric, digit};
-use nom::{IResult};
+use nom::{IResult,Err,ErrorKind};
 
 //use common::{Tag};
 use common::bytes_to_u64;
@@ -28,7 +28,7 @@ named!(parse_identifier<(&[u8],usize),DerElement>,
   )
 );
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,Clone,PartialEq)]
 pub enum DerObject<'a> {
     Boolean(bool),
     Integer(u64),
@@ -50,11 +50,68 @@ pub enum DerObject<'a> {
     Unknown(DerElementHeader, &'a[u8]),
 }
 
+impl<'a> DerObject<'a> {
+    pub fn as_u32(&self) -> Option<u32> {
+        match self {
+            &DerObject::Integer(i) => Some(i as u32),
+            _ => None,
+        }
+    }
+}
+
+// This is a consuming iterator
+impl<'a> IntoIterator for DerObject<'a> {
+    type Item = DerObject<'a>;
+    type IntoIter = DerObjectIntoIterator<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        // match self {
+        //     DerObject::Sequence(ref v) => (),
+        //     _ => (),
+        // };
+        DerObjectIntoIterator{ val: self, idx: 0 }
+    }
+}
+
+pub struct DerObjectIntoIterator<'a> {
+    val: DerObject<'a>,
+    idx: usize,
+}
+
+impl<'a> Iterator for DerObjectIntoIterator<'a> {
+    type Item = DerObject<'a>;
+    fn next(&mut self) -> Option<DerObject<'a>> {
+        // let result = if self.idx < self.vec.len() {
+        //     Some(self.vec[self.idx].clone())
+        // } else {
+        //     None
+        // };
+        let res =
+            match self.val {
+                DerObject::Sequence(ref v) if self.idx < v.len() => Some(v[self.idx].clone()),
+                DerObject::Set(ref v) if self.idx < v.len() => Some(v[self.idx].clone()),
+                _ => None,
+            };
+        self.idx += 1;
+        res
+    }
+}
+
+// impl<'a> Iterator for DerObject<'a> {
+//     type Item = DerObject<'a>;
+// 
+//     fn next(&mut self) -> Option<DerObject<'a>> {
+//         None
+//     }
+// }
+
+
+
 named!(parse_der_length_byte<(&[u8],usize),(u8,u8)>,
   chain!(
     msb: take_bits!(u8, 1) ~
     low7: take_bits!(u8, 7),
-    || { println!("(msb,low7)=({},{})",msb,low7); (msb,low7) }
+    || { debug!("(msb,low7)=({},{})",msb,low7); (msb,low7) }
   )
 );
 
@@ -93,7 +150,7 @@ named!(der_read_element_header<&[u8],DerElementHeader>,
         llen: cond!(len.0 == 1, take!(len.1)),
 
         || {
-            println!("hdr: {:?}",el);
+            debug!("hdr: {:?}",el);
             let len : u64 = match len.0 {
                 0 => len.1 as u64,
                 _ => bytes_to_u64(llen.unwrap()).unwrap(),
@@ -111,8 +168,8 @@ named!(der_read_sequence_contents<&[u8],Vec<DerObject> >,
 );
 
 fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResult<&'a [u8], DerObject<'a>> {
-    println!("der_read_element_contents: {:?}", hdr);
-    println!("i len: {}", i.len());
+    debug!("der_read_element_contents: {:?}", hdr);
+    debug!("i len: {}", i.len());
     match hdr.elt.class {
         // universal
         0b00 => (),
@@ -179,18 +236,14 @@ fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResul
         0x10 => {
                     chain!(i,
                         l: flat_map!(take!(hdr.len),der_read_sequence_contents),
-                        || {
-                        println!("sequence OK {:?}", l.len());
-                        DerObject::Sequence(l) }
+                        || { DerObject::Sequence(l) }
                     )
                 },
         // 0x11: set
         0x11 => {
                     chain!(i,
                         l: flat_map!(take!(hdr.len),der_read_sequence_contents),
-                        || {
-                        println!("set OK {:?}", l.len());
-                        DerObject::Set(l) }
+                        || { DerObject::Set(l) }
                     )
                 },
         // 0x12: numericstring
@@ -226,27 +279,46 @@ fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResul
         _    => {
                     chain!(i,
                         b: take!(hdr.len),
-                        || {
-                        println!("unknown type");
-                        DerObject::Unknown(hdr, b) }
+                        || { DerObject::Unknown(hdr, b) }
                     )
                 },
     }
 }
 
-pub fn parse_der<'a,'b>(i: &'a[u8]) -> IResult<&'a[u8], DerObject<'a> > {
+named!(pub parse_der_integer<DerObject>,
+   chain!(
+       hdr: der_read_element_header ~
+       error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) ~
+       error_if!(hdr.elt.tag != 0x02, Err::Code(ErrorKind::Custom(128))) ~
+       contents: apply!(der_read_element_contents,hdr),
+       || { contents }
+   )
+);
+
+named!(pub parse_der_sequence<DerObject>,
+   chain!(
+       hdr: der_read_element_header ~
+       error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) ~
+       error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom(128))) ~
+       error_if!(hdr.elt.tag != 0x10, Err::Code(ErrorKind::Custom(128))) ~
+       contents: apply!(der_read_element_contents,hdr),
+       || { contents }
+   )
+);
+
+pub fn parse_der<'a>(i: &'a[u8]) -> IResult<&'a[u8], DerObject<'a> > {
 //named!(parse_der<&[u8],DerObject>,
-    println!("--");
-    println!("parse_der");
-    println!("i len: {}", i.len());
+    debug!("--");
+    debug!("parse_der");
+    debug!("i len: {}", i.len());
     chain!(i,
         hdr: apply!(der_read_element_header,) ~
 
         contents: apply!(der_read_element_contents,hdr),
 
         || {
-            println!("el: {:?}",hdr.elt);
-            println!("contents: {:?}",contents);
+            debug!("el: {:?}",hdr.elt);
+            debug!("contents: {:?}",contents);
             contents
         }
     )
@@ -259,8 +331,10 @@ mod tests {
     use der::{parse_der,DerObject};
     use nom::IResult;
 
-use nom::Err::*;
-use nom::ErrorKind;
+    use nom::Err::*;
+    use nom::ErrorKind;
+
+    extern crate env_logger;
 
 #[test]
 fn test_der_bool() {
@@ -353,6 +427,36 @@ fn test_der_contextspecific() {
 //    let empty = &b""[..];
 //    assert_eq!(parse_hex4(&[0x00, 0x01, 0x00, 0x01]), IResult::Done(empty, (65537)));
 //}
+
+#[test]
+fn test_der_seq_iter() {
+    let _ = env_logger::init();
+
+    debug!("blah");
+
+    let empty = &b""[..];
+    let bytes = [ 0x30, 0x0a,
+                  0x02, 0x03, 0x01, 0x00, 0x01,
+                  0x02, 0x03, 0x01, 0x00, 0x00,
+    ];
+    let expected_values =
+        vec![DerObject::Integer(65537), DerObject::Integer(65536)]
+    ;
+    let result = parse_der(&bytes);
+
+    match result {
+        IResult::Done(e,res) => {
+            assert_eq!(e,empty);
+            let mut idx = 0;
+            for v in res {
+                debug!("v: {:?}", v);
+                assert_eq!(v,expected_values[idx]);
+                idx += 1;
+            }
+        },
+        _ => assert_eq!(result,IResult::Done(empty,DerObject::Sequence(expected_values))),
+    }
+}
 
 
 }
