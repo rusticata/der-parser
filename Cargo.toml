@@ -1,0 +1,8 @@
+[package]
+name = "der-parser"
+version = "0.1.0"
+authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
+
+[dependencies]
+libc = "0.2.0"
+nom = "1.2.4"
