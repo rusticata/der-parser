@@ -1,4 +1,5 @@
 use std::vec::Vec;
+use std::ops::Index;
 //use nom::{IResult, space, alpha, alphanumeric, digit};
 use nom::{IResult,Err,ErrorKind};
 
@@ -126,6 +127,23 @@ impl<'a> Iterator for DerObjectRefIterator<'a> {
 impl<'a> DerObject<'a> {
     pub fn ref_iter(&'a self) -> DerObjectRefIterator<'a> {
         DerObjectRefIterator{ obj:&self, idx:0 }
+    }
+}
+
+impl<'a> Index<usize> for DerObject<'a> {
+    type Output = DerObject<'a>;
+
+    fn index(&self, idx: usize) -> &DerObject<'a> {
+        match *self {
+            DerObject::Sequence(ref v) if idx < v.len() => &v[idx],
+            DerObject::Set(ref v) if idx < v.len() => &v[idx],
+            _ => panic!("Try to index DerObject which is not structured"),
+        }
+        // XXX the following
+        // self.ref_iter().nth(idx).unwrap()
+        // fails with:
+        // error: cannot infer an appropriate lifetime for autoref due to conflicting requirements [E0495]
+        // self.ref_iter().nth(idx).unwrap()
     }
 }
 
