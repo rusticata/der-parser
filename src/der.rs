@@ -105,6 +105,30 @@ impl<'a> Iterator for DerObjectIntoIterator<'a> {
 //     }
 // }
 
+pub struct DerObjectRefIterator<'a> {
+    obj: &'a DerObject<'a>,
+    idx: usize,
+}
+
+impl<'a> Iterator for DerObjectRefIterator<'a> {
+    type Item = &'a DerObject<'a>;
+    fn next(&mut self) -> Option<&'a DerObject<'a>> {
+        let res = match *self.obj {
+                DerObject::Sequence(ref v) if self.idx < v.len() => Some(&v[self.idx]),
+                DerObject::Set(ref v) if self.idx < v.len() => Some(&v[self.idx]),
+                _ => None,
+            };
+        self.idx += 1;
+        res
+    }
+}
+
+impl<'a> DerObject<'a> {
+    pub fn ref_iter(&'a self) -> DerObjectRefIterator<'a> {
+        DerObjectRefIterator{ obj:&self, idx:0 }
+    }
+}
+
 
 
 named!(parse_der_length_byte<(&[u8],usize),(u8,u8)>,
@@ -448,9 +472,14 @@ fn test_der_seq_iter() {
         IResult::Done(e,res) => {
             assert_eq!(e,empty);
             let mut idx = 0;
-            for v in res {
+            // for v in res {
+            //     debug!("v: {:?}", v);
+            //     assert_eq!(v,expected_values[idx]);
+            //     idx += 1;
+            // }
+            for v in res.ref_iter() {
                 debug!("v: {:?}", v);
-                assert_eq!(v,expected_values[idx]);
+                assert_eq!((*v),expected_values[idx]);
                 idx += 1;
             }
         },
