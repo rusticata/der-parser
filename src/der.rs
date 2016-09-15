@@ -1,7 +1,7 @@
 use std::vec::Vec;
 use std::ops::Index;
 //use nom::{IResult, space, alpha, alphanumeric, digit};
-use nom::{IResult,Err,ErrorKind};
+use nom::{be_u8,IResult,Err,ErrorKind};
 
 //use common::{Tag};
 use common::bytes_to_u64;
@@ -246,9 +246,9 @@ fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResul
         // 0x03: bitstring
         0x03 => {
                     chain!(i,
-                        ignored_bits: take!(1) ~
+                        ignored_bits: be_u8 ~
                         s: take!(hdr.len - 1), // XXX we must check if constructed or not (8.7)
-                        || { DerObject::BitString(ignored_bits[0],s) }
+                        || { DerObject::BitString(ignored_bits,s) }
                     )
                 },
         // 0x04: octetstring
@@ -348,14 +348,9 @@ named!(pub parse_der_sequence<DerObject>,
    )
 );
 
-pub fn parse_der<'a>(i: &'a[u8]) -> IResult<&'a[u8], DerObject<'a> > {
-//named!(parse_der<&[u8],DerObject>,
-    debug!("--");
-    debug!("parse_der");
-    debug!("i len: {}", i.len());
-    chain!(i,
-        hdr: apply!(der_read_element_header,) ~
-
+named!(pub parse_der<&[u8],DerObject>,
+    chain!(
+        hdr: der_read_element_header ~
         contents: apply!(der_read_element_contents,hdr),
 
         || {
@@ -364,8 +359,7 @@ pub fn parse_der<'a>(i: &'a[u8]) -> IResult<&'a[u8], DerObject<'a> > {
             contents
         }
     )
-//);
-}
+);
 
 #[cfg(test)]
 mod tests {
