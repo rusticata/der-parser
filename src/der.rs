@@ -221,7 +221,7 @@ fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResul
         0b10 => return chain!(i,b: take!(hdr.len),|| { DerObject::ContextSpecific(hdr.elt.tag,b) }),
         // private
         0b11 => (),
-        _    => panic!("out of bounds value for hdr.elt.tag: {}", hdr.elt.tag),
+        _    => { return IResult::Error(Err::Code(ErrorKind::Custom(128))); },
     }
     match hdr.elt.tag {
         // 0x00 end-of-content
