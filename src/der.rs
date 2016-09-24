@@ -91,7 +91,7 @@ impl<'a> Iterator for DerObjectIntoIterator<'a> {
             match self.val {
                 DerObject::Sequence(ref v) if self.idx < v.len() => Some(v[self.idx].clone()),
                 DerObject::Set(ref v) if self.idx < v.len() => Some(v[self.idx].clone()),
-                _ => None,
+                _ => if self.idx == 0 { Some(self.val.clone()) } else { None },
             };
         self.idx += 1;
         res
