@@ -206,7 +206,7 @@ named!(der_read_element_header<&[u8],DerElementHeader>,
 );
 
 named!(der_read_sequence_contents<&[u8],Vec<DerObject> >,
-    chain!(v: many0!(parse_der), || { return v })
+    many0!(parse_der)
 );
 
 fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResult<&'a [u8], DerObject<'a>> {
