@@ -41,6 +41,7 @@ pub enum DerObject<'a> {
     NumericString(&'a[u8]),
     PrintableString(&'a[u8]),
     IA5String(&'a[u8]),
+    UTF8String(&'a[u8]),
 
     Sequence(Vec<DerObject<'a> >),
     Set(Vec<DerObject<'a> >),
@@ -274,6 +275,13 @@ fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResul
                         || { DerObject::Enum(i) }
                     )
                 },
+        // 0x0c: UTF8String
+        0x0c => {
+                    chain!(i,
+                        s: take!(hdr.len), // XXX we must check if constructed or not (8.7)
+                        || { DerObject::UTF8String(s) }
+                    )
+                },
         // 0x10: sequence
         0x10 => {
                     chain!(i,
@@ -426,6 +434,16 @@ fn test_der_utctime() {
 }
 
 #[test]
+fn test_der_utf8string() {
+    let empty = &b""[..];
+    let bytes = [ 0x0c, 0x0a,
+                  0x53, 0x6f, 0x6d, 0x65, 0x2d, 0x53, 0x74, 0x61, 0x74, 0x65
+    ];
+    let expected = DerObject::UTF8String(b"Some-State");
+    assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
+}
+
+#[test]
 fn test_der_seq() {
     let empty = &b""[..];
     let bytes = [ 0x30, 0x05,
@@ -456,6 +474,42 @@ fn test_der_contextspecific() {
     let data = [0x02, 0x01, 0x02];
     let expected = DerObject::ContextSpecific(0,&data);
     assert_eq!(parse_der(&[0xa0, 0x03, 0x02, 0x01, 0x02]), IResult::Done(empty, expected));
+}
+
+#[test]
+fn test_der_seq_dn() {
+    let empty = &b""[..];
+    let bytes = [
+        0x30, 0x45, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03, 0x55, 0x04, 0x06, 0x13,
+        0x02, 0x46, 0x52, 0x31, 0x13, 0x30, 0x11, 0x06, 0x03, 0x55, 0x04, 0x08,
+        0x0c, 0x0a, 0x53, 0x6f, 0x6d, 0x65, 0x2d, 0x53, 0x74, 0x61, 0x74, 0x65,
+        0x31, 0x21, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x04, 0x0a, 0x0c, 0x18, 0x49,
+        0x6e, 0x74, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x20, 0x57, 0x69, 0x64, 0x67,
+        0x69, 0x74, 0x73, 0x20, 0x50, 0x74, 0x79, 0x20, 0x4c, 0x74, 0x64
+    ];
+    let expected = DerObject::Sequence(
+        vec![
+            DerObject::Set(vec![
+                DerObject::Sequence(vec![
+                    DerObject::OID(vec![2, 5, 4, 6]), // countryName
+                    DerObject::PrintableString(b"FR"),
+                ]),
+            ]),
+            DerObject::Set(vec![
+                DerObject::Sequence(vec![
+                    DerObject::OID(vec![2, 5, 4, 8]), // stateOrProvinceName
+                    DerObject::UTF8String(b"Some-State"),
+                ]),
+            ]),
+            DerObject::Set(vec![
+                DerObject::Sequence(vec![
+                    DerObject::OID(vec![2, 5, 4, 10]), // organizationName
+                    DerObject::UTF8String(b"Internet Widgits Pty Ltd"),
+                ]),
+            ]),
+        ]
+    );
+    assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
 }
 
 //#[test]
