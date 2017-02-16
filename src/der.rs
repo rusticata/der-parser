@@ -21,11 +21,11 @@ pub struct DerElementHeader {
 
 
 named!(parse_identifier<(&[u8],usize),DerElement>,
-  chain!(
-    class: take_bits!(u8, 2) ~
-    structured: take_bits!(u8, 1) ~
-    tag: take_bits!(u8, 5) ,
-    || { DerElement{class:class,structured:structured,tag:tag} }
+  do_parse!(
+    class:      take_bits!(u8, 2) >>
+    structured: take_bits!(u8, 1) >>
+    tag:        take_bits!(u8, 5) >>
+    ( DerElement{class:class,structured:structured,tag:tag} )
   )
 );
 
@@ -151,10 +151,10 @@ impl<'a> Index<usize> for DerObject<'a> {
 
 
 named!(parse_der_length_byte<(&[u8],usize),(u8,u8)>,
-  chain!(
-    msb: take_bits!(u8, 1) ~
-    low7: take_bits!(u8, 7),
-    || { debug!("(msb,low7)=({},{})",msb,low7); (msb,low7) }
+  do_parse!(
+    msb:  take_bits!(u8, 1) >>
+    low7: take_bits!(u8, 7) >>
+    ( { debug!("(msb,low7)=({},{})",msb,low7); (msb,low7) } )
   )
 );
 
@@ -183,16 +183,16 @@ fn der_read_oid<'a>(i: &'a[u8]) -> Vec<u64> {
 
 
 named!(der_read_element_header<&[u8],DerElementHeader>,
-    chain!(
+    do_parse!(
         el: bits!(
             parse_identifier
-        ) ~
+        ) >>
         len: bits!(
             parse_der_length_byte
-        ) ~
-        llen: cond!(len.0 == 1, take!(len.1)),
+        ) >>
+        llen: cond!(len.0 == 1, take!(len.1)) >>
 
-        || {
+        ( {
             debug!("hdr: {:?}",el);
             let len : u64 = match len.0 {
                 0 => len.1 as u64,
@@ -202,7 +202,7 @@ named!(der_read_element_header<&[u8],DerElementHeader>,
                 elt: el,
                 len: len,
             }
-        }
+        } )
     )
 );
 
@@ -219,7 +219,7 @@ fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResul
         // application
         0b01 => (),
         // context-specific
-        0b10 => return chain!(i,b: take!(hdr.len),|| { DerObject::ContextSpecific(hdr.elt.tag,b) }),
+        0b10 => return map!(i,take!(hdr.len),|b| { DerObject::ContextSpecific(hdr.elt.tag,b) }),
         // private
         0b11 => (),
         _    => { return IResult::Error(Err::Code(ErrorKind::Custom(128))); },
@@ -228,144 +228,143 @@ fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResul
         // 0x00 end-of-content
         // 0x01 bool
         0x01 => {
-                    chain!(i,
-                        b: switch!(take!(1),
+                    map!(i,
+                        switch!(take!(1),
                           b"\x00" => value!(true) |
                           b"\xff" => value!(false)
                         ),
-                        || {
+                        |b| {
                         DerObject::Boolean(b) }
                     )
                 },
         // 0x02: integer
         0x02 => {
-                    chain!(i,
-                        i: parse_hex_to_u64!(hdr.len),
-                        || { DerObject::Integer(i) }
+                    map!(i,
+                        parse_hex_to_u64!(hdr.len),
+                        |i| { DerObject::Integer(i) }
                     )
                 },
         // 0x03: bitstring
         0x03 => {
-                    chain!(i,
-                        ignored_bits: be_u8 ~
-                        s: take!(hdr.len - 1), // XXX we must check if constructed or not (8.7)
-                        || { DerObject::BitString(ignored_bits,s) }
+                    do_parse!(i,
+                        ignored_bits: be_u8 >>
+                        s: take!(hdr.len - 1) >> // XXX we must check if constructed or not (8.7)
+                        ( DerObject::BitString(ignored_bits,s) )
                     )
                 },
         // 0x04: octetstring
         0x04 => {
-                    chain!(i,
-                        s: take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        || { DerObject::OctetString(s) }
+                    map!(i,
+                        take!(hdr.len), // XXX we must check if constructed or not (8.7)
+                        |s| { DerObject::OctetString(s) }
                     )
                 },
         // 0x05: null
         0x05 => { IResult::Done(i,DerObject::Null) },
         // 0x06: object identified
         0x06 => {
-                    chain!(i,
-                        i: map!(take!(hdr.len),der_read_oid),
-                        || { assert!(hdr.elt.structured == 0); DerObject::OID(i) }
+                    map!(i,
+                        map!(take!(hdr.len),der_read_oid),
+                        |i| { assert!(hdr.elt.structured == 0); DerObject::OID(i) }
                     )
                 },
         // 0x0a: enumerated
         0x0a => {
-                    chain!(i,
-                        i: parse_hex_to_u64!(hdr.len),
-                        || { DerObject::Enum(i) }
+                    map!(i,
+                        parse_hex_to_u64!(hdr.len),
+                        |i| { DerObject::Enum(i) }
                     )
                 },
         // 0x0c: UTF8String
         0x0c => {
-                    chain!(i,
-                        s: take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        || { DerObject::UTF8String(s) }
+                    map!(i,
+                        take!(hdr.len), // XXX we must check if constructed or not (8.7)
+                        |s| { DerObject::UTF8String(s) }
                     )
                 },
         // 0x10: sequence
         0x10 => {
-                    chain!(i,
-                        l: flat_map!(take!(hdr.len),der_read_sequence_contents),
-                        || { DerObject::Sequence(l) }
+                    map!(i,
+                        flat_map!(take!(hdr.len),der_read_sequence_contents),
+                        |l| { DerObject::Sequence(l) }
                     )
                 },
         // 0x11: set
         0x11 => {
-                    chain!(i,
-                        l: flat_map!(take!(hdr.len),der_read_sequence_contents),
-                        || { DerObject::Set(l) }
+                    map!(i,
+                        flat_map!(take!(hdr.len),der_read_sequence_contents),
+                        |l| { DerObject::Set(l) }
                     )
                 },
         // 0x12: numericstring
         0x12 => {
-                    chain!(i,
-                        s: take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        || { DerObject::NumericString(s) }
+                    map!(i,
+                        take!(hdr.len), // XXX we must check if constructed or not (8.7)
+                        |s| { DerObject::NumericString(s) }
                     )
                 },
         // 0x13: printablestring
         0x13 => {
-                    chain!(i,
-                        s: take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        || { DerObject::PrintableString(s) }
+                    map!(i,
+                        take!(hdr.len), // XXX we must check if constructed or not (8.7)
+                        |s| { DerObject::PrintableString(s) }
                     )
                 },
 
         // 0x16: ia5string
         0x16 => {
-                    chain!(i,
-                        s: take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        || { DerObject::IA5String(s) }
+                    map!(i,
+                        take!(hdr.len), // XXX we must check if constructed or not (8.7)
+                        |s| { DerObject::IA5String(s) }
                     )
                 },
         // 0x17: utctime
         0x17 => {
-                    chain!(i,
-                        s: take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        || { DerObject::UTCTime(s) }
+                    map!(i,
+                        take!(hdr.len), // XXX we must check if constructed or not (8.7)
+                        |s| { DerObject::UTCTime(s) }
                     )
                 },
         // all unknown values
         _    => {
-                    chain!(i,
-                        b: take!(hdr.len),
-                        || { DerObject::Unknown(hdr, b) }
+                    map!(i,
+                        take!(hdr.len),
+                        |b| { DerObject::Unknown(hdr, b) }
                     )
                 },
     }
 }
 
 named!(pub parse_der_integer<DerObject>,
-   chain!(
-       hdr: der_read_element_header ~
-       error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) ~
-       error_if!(hdr.elt.tag != 0x02, Err::Code(ErrorKind::Custom(128))) ~
-       contents: apply!(der_read_element_contents,hdr),
-       || { contents }
+   do_parse!(
+       hdr:      der_read_element_header >>
+                 error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
+                 error_if!(hdr.elt.tag != 0x02, Err::Code(ErrorKind::Custom(128))) >>
+       contents: apply!(der_read_element_contents,hdr) >>
+       ( contents )
    )
 );
 
 named!(pub parse_der_sequence<DerObject>,
-   chain!(
-       hdr: der_read_element_header ~
-       error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) ~
-       error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom(128))) ~
-       error_if!(hdr.elt.tag != 0x10, Err::Code(ErrorKind::Custom(128))) ~
-       contents: apply!(der_read_element_contents,hdr),
-       || { contents }
+   do_parse!(
+       hdr:      der_read_element_header >>
+                 error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
+                 error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom(128))) >>
+                 error_if!(hdr.elt.tag != 0x10, Err::Code(ErrorKind::Custom(128))) >>
+       contents: apply!(der_read_element_contents,hdr) >>
+       ( contents )
    )
 );
 
 named!(pub parse_der<&[u8],DerObject>,
-    chain!(
-        hdr: der_read_element_header ~
-        contents: apply!(der_read_element_contents,hdr),
-
-        || {
+    do_parse!(
+        hdr:      der_read_element_header >>
+        contents: apply!(der_read_element_contents,hdr) >>
+        ( {
             debug!("el: {:?}",hdr.elt);
             debug!("contents: {:?}",contents);
             contents
-        }
+        } )
     )
 );
 
