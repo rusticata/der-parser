@@ -184,12 +184,8 @@ fn der_read_oid<'a>(i: &'a[u8]) -> Vec<u64> {
 
 named!(der_read_element_header<&[u8],DerElementHeader>,
     do_parse!(
-        el: bits!(
-            parse_identifier
-        ) >>
-        len: bits!(
-            parse_der_length_byte
-        ) >>
+        el:   bits!( parse_identifier) >>
+        len:  bits!( parse_der_length_byte) >>
         llen: cond!(len.0 == 1, take!(len.1)) >>
 
         ( {
