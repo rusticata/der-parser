@@ -196,7 +196,12 @@ named!(der_read_element_header<&[u8],DerElementHeader>,
             debug!("hdr: {:?}",el);
             let len : u64 = match len.0 {
                 0 => len.1 as u64,
-                _ => bytes_to_u64(llen.unwrap()).unwrap(),
+                _ => {
+                    match bytes_to_u64(llen.unwrap()) {
+                        Ok(l)  => l,
+                        Err(_) => { return IResult::Error(Err::Code(ErrorKind::Custom(128))); },
+                    }
+                },
             };
             DerElementHeader {
                 elt: el,

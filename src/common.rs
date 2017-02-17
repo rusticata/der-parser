@@ -37,11 +37,13 @@ macro_rules! error_if (
 
 
 pub fn bytes_to_u64(s: &[u8]) -> Result<u64, &'static str> {
-    let mut u = 0;
+    let mut u : u64 = 0;
 
     for &c in s {
-        u *= 256;
-        u += c as u64;
+        let (u1,f1) = u.overflowing_mul(256);
+        let (u2,f2) = u1.overflowing_add(c as u64);
+        if f1 || f2 { return Err("overflow"); }
+        u = u2;
     }
 
     Ok(u)
@@ -54,3 +56,21 @@ macro_rules! parse_hex_to_u64 (
     );
 );
 
+#[cfg(test)]
+mod tests {
+    use super::bytes_to_u64;
+
+#[test]
+fn test_bytes_to_u64() {
+    let test1 = [0x00, 0x01, 0x02, 0x03];
+    let expected1 : u64 = 0x010203;
+    let res1 = bytes_to_u64(&test1);
+    assert_eq!(res1,Ok(expected1));
+
+
+    let test2 = [0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0x02, 0x03];
+    let res2 = bytes_to_u64(&test2);
+    assert_eq!(res2,Err("overflow"));
+}
+
+}
