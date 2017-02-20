@@ -4,7 +4,7 @@ use std::ops::Index;
 use nom::{be_u8,IResult,Err,ErrorKind};
 
 //use common::{Tag};
-use common::bytes_to_u64;
+use rusticata_macros::bytes_to_u64;
 
 #[derive(Clone,Copy,Debug,PartialEq)]
 pub struct DerElement {
