@@ -149,6 +149,65 @@ impl<'a> Index<usize> for DerObject<'a> {
 }
 
 
+#[macro_export]
+macro_rules! fold_parsers(
+    ($i:expr, $($args:tt)*) => (
+        {
+            let parsers = [ $($args)* ];
+            parsers.iter().fold(
+                (IResult::Done($i,vec![])),
+                |r, f| {
+                    match r {
+                        IResult::Done(rem,mut v) => {
+                            map!(rem, f, |x| { v.push(x); v })
+                        }
+                        IResult::Incomplete(e) => IResult::Incomplete(e),
+                        IResult::Error(e)      => IResult::Error(e),
+                    }
+                }
+                ).map(|v| { DerObject::Sequence(v) })
+        }
+    );
+);
+
+#[macro_export]
+macro_rules! parse_der_sequence_defined(
+    ($i:expr, $($args:tt)*) => (
+        {
+            let res =
+            do_parse!(
+                $i,
+                hdr:      der_read_element_header >>
+                          error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
+                          error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom(128))) >>
+                          error_if!(hdr.elt.tag != 0x10, Err::Code(ErrorKind::Custom(128))) >>
+                contents: take!(hdr.len) >>
+                ( (hdr,contents) )
+            );
+            match res {
+                IResult::Done(_rem,o)   => {
+                    match fold_parsers!(o.1, $($args)* ) {
+                        IResult::Done(rem,v)   => {
+                            if rem.len() != 0 { IResult::Error(Err::Code(ErrorKind::Custom(129))) }
+                            else { IResult::Done(_rem,v) }
+                        },
+                        IResult::Incomplete(e) => IResult::Incomplete(e),
+                        IResult::Error(e)      => IResult::Error(e),
+                    }
+                },
+                IResult::Incomplete(e) => IResult::Incomplete(e),
+                IResult::Error(e)      => IResult::Error(e),
+            }
+        }
+    );
+);
+
+
+
+
+
+
+
 
 named!(parse_der_length_byte<(&[u8],usize),(u8,u8)>,
   do_parse!(
@@ -372,7 +431,7 @@ named!(pub parse_der<&[u8],DerObject>,
 #[cfg(test)]
 mod tests {
     //use super::*;
-    use der::{parse_der,DerObject};
+    use der::*;
     use nom::IResult;
 
     use nom::Err::*;
@@ -453,6 +512,25 @@ fn test_der_seq() {
         vec![DerObject::Integer(65537)]
     );
     assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
+}
+
+#[test]
+fn test_der_seq_defined() {
+    let empty = &b""[..];
+    let bytes = [ 0x30, 0x0a,
+                  0x02, 0x03, 0x01, 0x00, 0x01,
+                  0x02, 0x03, 0x01, 0x00, 0x01,
+    ];
+    let expected = DerObject::Sequence(
+        vec![DerObject::Integer(65537), DerObject::Integer(65537)]
+    );
+    fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
+        parse_der_sequence_defined!(i,
+            parse_der_integer,
+            parse_der_integer
+        )
+    };
+    assert_eq!(parser(&bytes), IResult::Done(empty, expected));
 }
 
 #[test]
