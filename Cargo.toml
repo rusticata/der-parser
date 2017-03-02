@@ -1,7 +1,7 @@
 [package]
 description = "Parser for BER/DER encoding data"
 license = "LGPL-2.1+"
-keywords = ["BER","DER","ASN.1","ASN1","parser","nom"]
+keywords = ["BER","DER","ASN1","parser","nom"]
 homepage = "https://github.com/rusticata/der-parser"
 repository = "https://github.com/rusticata/der-parser.git"
 name = "der-parser"
