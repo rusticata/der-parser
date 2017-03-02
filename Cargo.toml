@@ -10,6 +10,6 @@ authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
 
 [dependencies]
 nom = {version = "^2.0", features = ["verbose-errors"]}
-log = "*"
-env_logger = "*"
-rusticata-macros = "*"
+log = "0.3"
+env_logger = "0.4"
+rusticata-macros = "0.2"
