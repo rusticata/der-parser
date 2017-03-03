@@ -8,15 +8,15 @@ use rusticata_macros::bytes_to_u64;
 
 #[derive(Clone,Copy,Debug,PartialEq)]
 pub struct DerElement {
-    class: u8,
-    structured: u8,
-    tag: u8,
+    pub class: u8,
+    pub structured: u8,
+    pub tag: u8,
 }
 
 #[derive(Clone,Copy,Debug,PartialEq)]
 pub struct DerElementHeader {
-    elt: DerElement,
-    len: u64,
+    pub elt: DerElement,
+    pub len: u64,
 }
 
 
@@ -171,8 +171,8 @@ macro_rules! fold_parsers(
 );
 
 #[macro_export]
-macro_rules! parse_der_sequence_defined(
-    ($i:expr, $($args:tt)*) => (
+macro_rules! parse_der_defined(
+    ($i:expr, $ty:expr, $($args:tt)*) => (
         {
             let res =
             do_parse!(
@@ -180,13 +180,13 @@ macro_rules! parse_der_sequence_defined(
                 hdr:     der_read_element_header >>
                          error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
                          error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom(128))) >>
-                         error_if!(hdr.elt.tag != 0x10, Err::Code(ErrorKind::Custom(128))) >>
+                         error_if!(hdr.elt.tag != $ty, Err::Code(ErrorKind::Custom(128))) >>
                 content: take!(hdr.len) >>
                 ( (hdr,content) )
             );
             match res {
                 IResult::Done(_rem,o)   => {
-                    match fold_parsers!(o.1, $($args)* ).map(|v| { DerObject::Sequence(v) }) {
+                    match fold_parsers!(o.1, $($args)* ) {
                         IResult::Done(rem,v)   => {
                             if rem.len() != 0 { IResult::Error(Err::Code(ErrorKind::Custom(129))) }
                             else { IResult::Done(_rem,v) }
@@ -203,34 +203,24 @@ macro_rules! parse_der_sequence_defined(
 );
 
 #[macro_export]
+macro_rules! parse_der_sequence_defined(
+    ($i:expr, $($args:tt)*) => (
+        map!(
+            $i,
+            parse_der_defined!(0x10, $($args)*),
+            |o| DerObject::Sequence(o)
+        )
+    );
+);
+
+#[macro_export]
 macro_rules! parse_der_set_defined(
     ($i:expr, $($args:tt)*) => (
-        {
-            let res =
-            do_parse!(
-                $i,
-                hdr:     der_read_element_header >>
-                         error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
-                         error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom(128))) >>
-                         error_if!(hdr.elt.tag != 0x11, Err::Code(ErrorKind::Custom(128))) >>
-                content: take!(hdr.len) >>
-                ( (hdr,content) )
-            );
-            match res {
-                IResult::Done(_rem,o)   => {
-                    match fold_parsers!(o.1, $($args)* ).map(|v| { DerObject::Set(v) }) {
-                        IResult::Done(rem,v)   => {
-                            if rem.len() != 0 { IResult::Error(Err::Code(ErrorKind::Custom(129))) }
-                            else { IResult::Done(_rem,v) }
-                        },
-                        IResult::Incomplete(e) => IResult::Incomplete(e),
-                        IResult::Error(e)      => IResult::Error(e),
-                    }
-                },
-                IResult::Incomplete(e) => IResult::Incomplete(e),
-                IResult::Error(e)      => IResult::Error(e),
-            }
-        }
+        map!(
+            $i,
+            parse_der_defined!(0x11, $($args)*),
+            |o| DerObject::Set(o)
+        )
     );
 );
 
@@ -273,7 +263,7 @@ fn der_read_oid<'a>(i: &'a[u8]) -> Vec<u64> {
 }
 
 
-named!(der_read_element_header<&[u8],DerElementHeader>,
+named!(pub der_read_element_header<&[u8],DerElementHeader>,
     do_parse!(
         el:   bits!( parse_identifier) >>
         len:  bits!( parse_der_length_byte) >>
@@ -302,7 +292,7 @@ named!(der_read_sequence_contents<&[u8],Vec<DerObject> >,
     many0!(parse_der)
 );
 
-fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResult<&'a [u8], DerObject<'a>> {
+pub fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResult<&'a [u8], DerObject<'a>> {
     debug!("der_read_element_contents: {:?}", hdr);
     debug!("i len: {}", i.len());
     match hdr.elt.class {
@@ -715,29 +705,29 @@ fn test_der_seq_dn_defined() {
         ]
     );
     #[inline]
-    fn parse_string(i:&[u8]) -> IResult<&[u8],DerObject> {
+    fn parse_directory_string(i:&[u8]) -> IResult<&[u8],DerObject> {
         alt!(i, parse_der_utf8string | parse_der_printablestring | parse_der_ia5string)
     }
     #[inline]
-    fn parse_dn(i:&[u8]) -> IResult<&[u8],DerObject> {
+    fn parse_attr_type_and_value(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_sequence_defined!(i,
             parse_der_oid,
-            parse_string
+            parse_directory_string
         )
     };
     #[inline]
-    fn parse_set_dn(i:&[u8]) -> IResult<&[u8],DerObject> {
-        parse_der_set_defined!(i, parse_dn)
+    fn parse_rdn(i:&[u8]) -> IResult<&[u8],DerObject> {
+        parse_der_set_defined!(i, parse_attr_type_and_value)
     }
     #[inline]
-    fn parse_all(i:&[u8]) -> IResult<&[u8],DerObject> {
+    fn parse_name(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_sequence_defined!(i,
-            parse_set_dn,
-            parse_set_dn,
-            parse_set_dn
+            parse_rdn,
+            parse_rdn,
+            parse_rdn
         )
     }
-    assert_eq!(parse_all(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_name(&bytes), IResult::Done(empty, expected));
 }
 
 //#[test]
