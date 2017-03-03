@@ -6,6 +6,46 @@ use nom::{be_u8,IResult,Err,ErrorKind};
 //use common::{Tag};
 use rusticata_macros::bytes_to_u64;
 
+/// Defined in X.680 section 8.4
+#[derive(Debug)]
+#[repr(u8)]
+pub enum DerTag {
+    EndOfContent = 0x0,
+    Boolean = 0x1,
+    Integer = 0x2,
+    BitString = 0x3,
+    OctetString = 0x4,
+    Null = 0x05,
+    Oid = 0x06,
+    ObjDescriptor = 0x07,
+    External = 0x08,
+    RealType = 0x09,
+    Enumerated = 0xa,
+    EmbeddedPdv = 0xb,
+    Utf8String = 0xc,
+    RdvOid = 0xd,
+
+    Sequence = 0x10,
+    Set = 0x11,
+    NumericString = 0x12,
+    PrintableString = 0x13,
+
+    Ia5String = 0x16,
+    UtcTime = 0x17,
+
+
+    Invalid = 0xff,
+}
+
+#[derive(Debug,Clone,PartialEq)]
+pub struct DerObject<'a> {
+    pub class: u8,
+    pub structured: u8,
+    pub tag: u8,
+
+    pub content: DerObjectContent<'a>,
+}
+
 #[derive(Clone,Copy,Debug,PartialEq)]
 pub struct DerElement {
     pub class: u8,
@@ -20,17 +60,8 @@ pub struct DerElementHeader {
 }
 
 
-named!(parse_identifier<(&[u8],usize),DerElement>,
-  do_parse!(
-    class:      take_bits!(u8, 2) >>
-    structured: take_bits!(u8, 1) >>
-    tag:        take_bits!(u8, 5) >>
-    ( DerElement{class:class,structured:structured,tag:tag} )
-  )
-);
-
 #[derive(Debug,Clone,PartialEq)]
-pub enum DerObject<'a> {
+pub enum DerObjectContent<'a> {
     Boolean(bool),
     Integer(u64),
     BitString(u8, &'a [u8]),
@@ -52,10 +83,67 @@ pub enum DerObject<'a> {
     Unknown(DerElementHeader, &'a[u8]),
 }
 
+pub fn tag_of_der_content(c: &DerObjectContent) -> DerTag {
+    match *c {
+        DerObjectContent::Boolean(_)           => DerTag::Boolean,
+        DerObjectContent::Integer(_)           => DerTag::Integer,
+        DerObjectContent::BitString(_,_)       => DerTag::BitString,
+        DerObjectContent::OctetString(_)       => DerTag::OctetString,
+        DerObjectContent::Null                 => DerTag::Null,
+        DerObjectContent::Enum(_)              => DerTag::Enumerated,
+        DerObjectContent::OID(_)               => DerTag::Oid,
+        DerObjectContent::NumericString(_)     => DerTag::NumericString,
+        DerObjectContent::PrintableString(_)   => DerTag::PrintableString,
+        DerObjectContent::IA5String(_)         => DerTag::Ia5String,
+        DerObjectContent::UTF8String(_)        => DerTag::Utf8String,
+        DerObjectContent::Sequence(_)          => DerTag::Sequence,
+        DerObjectContent::Set(_)               => DerTag::Set,
+        DerObjectContent::UTCTime(_)           => DerTag::UtcTime,
+        DerObjectContent::ContextSpecific(_,_) => DerTag::Invalid,
+        DerObjectContent::Unknown(_,_)         => DerTag::Invalid,
+    }
+}
+
 impl<'a> DerObject<'a> {
+    pub fn from_header_and_content(hdr: DerElementHeader, c: DerObjectContent) -> DerObject {
+        DerObject{
+            class:      hdr.elt.class,
+            structured: hdr.elt.structured,
+            tag:        hdr.elt.tag,
+            content:    c,
+        }
+    }
+    /// Build a DerObject from its content, using default flags (no class, correct tag,
+    /// and structured flag set only for Set and Sequence)
+    pub fn from_obj(c: DerObjectContent) -> DerObject {
+        let class = 0;
+        let tag = tag_of_der_content(&c);
+        let structured = match tag {
+            DerTag::Sequence => 1,
+            DerTag::Set      => 1,
+            _                => 0,
+        };
+        DerObject{
+            class:      class,
+            structured: structured,
+            tag:        tag as u8,
+            content:    c,
+        }
+    }
+    pub fn from_int(i: u64) -> DerObject<'a> {
+        DerObject{
+            class:      0,
+            structured: 0,
+            tag:        DerTag::Integer as u8,
+            content:    DerObjectContent::Integer(i),
+        }
+    }
+}
+
+impl<'a> DerObjectContent<'a> {
     pub fn as_u32(&self) -> Option<u32> {
         match self {
-            &DerObject::Integer(i) => Some(i as u32),
+            &DerObjectContent::Integer(i) => Some(i as u32),
             _ => None,
         }
     }
@@ -68,7 +156,7 @@ impl<'a> IntoIterator for DerObject<'a> {
 
     fn into_iter(self) -> Self::IntoIter {
         // match self {
-        //     DerObject::Sequence(ref v) => (),
+        //     DerObjectContent::Sequence(ref v) => (),
         //     _ => (),
         // };
         DerObjectIntoIterator{ val: self, idx: 0 }
@@ -89,9 +177,9 @@ impl<'a> Iterator for DerObjectIntoIterator<'a> {
         //     None
         // };
         let res =
-            match self.val {
-                DerObject::Sequence(ref v) if self.idx < v.len() => Some(v[self.idx].clone()),
-                DerObject::Set(ref v) if self.idx < v.len() => Some(v[self.idx].clone()),
+            match self.val.content {
+                DerObjectContent::Sequence(ref v) if self.idx < v.len() => Some(v[self.idx].clone()),
+                DerObjectContent::Set(ref v) if self.idx < v.len() => Some(v[self.idx].clone()),
                 _ => if self.idx == 0 { Some(self.val.clone()) } else { None },
             };
         self.idx += 1;
@@ -99,10 +187,10 @@ impl<'a> Iterator for DerObjectIntoIterator<'a> {
     }
 }
 
-// impl<'a> Iterator for DerObject<'a> {
-//     type Item = DerObject<'a>;
+// impl<'a> Iterator for DerObjectContent<'a> {
+//     type Item = DerObjectContent<'a>;
 // 
-//     fn next(&mut self) -> Option<DerObject<'a>> {
+//     fn next(&mut self) -> Option<DerObjectContent<'a>> {
 //         None
 //     }
 // }
@@ -115,9 +203,9 @@ pub struct DerObjectRefIterator<'a> {
 impl<'a> Iterator for DerObjectRefIterator<'a> {
     type Item = &'a DerObject<'a>;
     fn next(&mut self) -> Option<&'a DerObject<'a>> {
-        let res = match *self.obj {
-                DerObject::Sequence(ref v) if self.idx < v.len() => Some(&v[self.idx]),
-                DerObject::Set(ref v) if self.idx < v.len() => Some(&v[self.idx]),
+        let res = match (*self.obj).content {
+                DerObjectContent::Sequence(ref v) if self.idx < v.len() => Some(&v[self.idx]),
+                DerObjectContent::Set(ref v) if self.idx < v.len() => Some(&v[self.idx]),
                 _ => None,
             };
         self.idx += 1;
@@ -135,10 +223,10 @@ impl<'a> Index<usize> for DerObject<'a> {
     type Output = DerObject<'a>;
 
     fn index(&self, idx: usize) -> &DerObject<'a> {
-        match *self {
-            DerObject::Sequence(ref v) if idx < v.len() => &v[idx],
-            DerObject::Set(ref v) if idx < v.len() => &v[idx],
-            _ => panic!("Try to index DerObject which is not structured"),
+        match (*self).content {
+            DerObjectContent::Sequence(ref v) if idx < v.len() => &v[idx],
+            DerObjectContent::Set(ref v) if idx < v.len() => &v[idx],
+            _ => panic!("Try to index DerObjectContent which is not structured"),
         }
         // XXX the following
         // self.ref_iter().nth(idx).unwrap()
@@ -189,7 +277,7 @@ macro_rules! parse_der_defined(
                     match fold_parsers!(o.1, $($args)* ) {
                         IResult::Done(rem,v)   => {
                             if rem.len() != 0 { IResult::Error(Err::Code(ErrorKind::Custom(129))) }
-                            else { IResult::Done(_rem,v) }
+                            else { IResult::Done(_rem,(o.0,v)) }
                         },
                         IResult::Incomplete(e) => IResult::Incomplete(e),
                         IResult::Error(e)      => IResult::Error(e),
@@ -208,7 +296,7 @@ macro_rules! parse_der_sequence_defined(
         map!(
             $i,
             parse_der_defined!(0x10, $($args)*),
-            |o| DerObject::Sequence(o)
+            |(hdr,o)| DerObject::from_header_and_content(hdr,DerObjectContent::Sequence(o))
         )
     );
 );
@@ -219,7 +307,7 @@ macro_rules! parse_der_set_defined(
         map!(
             $i,
             parse_der_defined!(0x11, $($args)*),
-            |o| DerObject::Set(o)
+            |(hdr,o)| DerObject::from_header_and_content(hdr,DerObjectContent::Set(o))
         )
     );
 );
@@ -230,6 +318,15 @@ macro_rules! parse_der_set_defined(
 
 
 
+
+named!(parse_identifier<(&[u8],usize),DerElement>,
+  do_parse!(
+    class:      take_bits!(u8, 2) >>
+    structured: take_bits!(u8, 1) >>
+    tag:        take_bits!(u8, 5) >>
+    ( DerElement{class:class,structured:structured,tag:tag} )
+  )
+);
 
 named!(parse_der_length_byte<(&[u8],usize),(u8,u8)>,
   do_parse!(
@@ -288,12 +385,16 @@ named!(pub der_read_element_header<&[u8],DerElementHeader>,
     )
 );
 
-named!(der_read_sequence_contents<&[u8],Vec<DerObject> >,
+named!(der_read_sequence_content<&[u8],Vec<DerObject> >,
     many0!(parse_der)
 );
 
-pub fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResult<&'a [u8], DerObject<'a>> {
-    debug!("der_read_element_contents: {:?}", hdr);
+named!(der_read_set_content<&[u8],Vec<DerObject> >,
+    many0!(parse_der)
+);
+
+pub fn der_read_element_content<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResult<&'a [u8], DerObject<'a>> {
+    debug!("der_read_element_content: {:?}", hdr);
     debug!("i len: {}", i.len());
     match hdr.elt.class {
         // universal
@@ -301,7 +402,11 @@ pub fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IR
         // application
         0b01 => (),
         // context-specific
-        0b10 => return map!(i,take!(hdr.len),|b| { DerObject::ContextSpecific(hdr.elt.tag,b) }),
+        0b10 => return map!(
+            i,
+            take!(hdr.len),
+            |b| { DerObject::from_header_and_content(hdr,DerObjectContent::ContextSpecific(hdr.elt.tag,b)) }
+        ),
         // private
         0b11 => (),
         _    => { return IResult::Error(Err::Code(ErrorKind::Custom(128))); },
@@ -316,14 +421,14 @@ pub fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IR
                           b"\xff" => value!(false)
                         ),
                         |b| {
-                        DerObject::Boolean(b) }
+                        DerObject::from_header_and_content(hdr,DerObjectContent::Boolean(b)) }
                     )
                 },
         // 0x02: integer
         0x02 => {
                     map!(i,
                         parse_hex_to_u64!(hdr.len),
-                        |i| { DerObject::Integer(i) }
+                        |i| { DerObject::from_header_and_content(hdr,DerObjectContent::Integer(i)) }
                     )
                 },
         // 0x03: bitstring
@@ -331,65 +436,68 @@ pub fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IR
                     do_parse!(i,
                         ignored_bits: be_u8 >>
                         s: take!(hdr.len - 1) >> // XXX we must check if constructed or not (8.7)
-                        ( DerObject::BitString(ignored_bits,s) )
+                        ( DerObject::from_header_and_content(hdr,DerObjectContent::BitString(ignored_bits,s)) )
                     )
                 },
         // 0x04: octetstring
         0x04 => {
                     map!(i,
                         take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        |s| { DerObject::OctetString(s) }
+                        |s| { DerObject::from_header_and_content(hdr,DerObjectContent::OctetString(s)) }
                     )
                 },
         // 0x05: null
-        0x05 => { IResult::Done(i,DerObject::Null) },
+        0x05 => { IResult::Done(i,DerObject::from_header_and_content(hdr,DerObjectContent::Null)) },
         // 0x06: object identified
         0x06 => {
                     map!(i,
                         map!(take!(hdr.len),der_read_oid),
-                        |i| { assert!(hdr.elt.structured == 0); DerObject::OID(i) }
+                        |i| {
+                            assert!(hdr.elt.structured == 0); // XXX
+                            DerObject::from_header_and_content(hdr,DerObjectContent::OID(i))
+                        }
                     )
                 },
         // 0x0a: enumerated
         0x0a => {
                     map!(i,
                         parse_hex_to_u64!(hdr.len),
-                        |i| { DerObject::Enum(i) }
+                        |i| { DerObject::from_header_and_content(hdr,DerObjectContent::Enum(i)) }
                     )
                 },
         // 0x0c: UTF8String
         0x0c => {
                     map!(i,
                         take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        |s| { DerObject::UTF8String(s) }
+                        |s| { DerObject::from_header_and_content(hdr,DerObjectContent::UTF8String(s)) }
                     )
                 },
         // 0x10: sequence
         0x10 => {
                     map!(i,
-                        flat_map!(take!(hdr.len),der_read_sequence_contents),
-                        |l| { DerObject::Sequence(l) }
+                        flat_map!(take!(hdr.len),der_read_sequence_content),
+                        |l| { DerObject::from_header_and_content(hdr,DerObjectContent::Sequence(l)) }
                     )
                 },
         // 0x11: set
         0x11 => {
                     map!(i,
-                        flat_map!(take!(hdr.len),der_read_sequence_contents),
-                        |l| { DerObject::Set(l) }
+                        flat_map!(take!(hdr.len),der_read_set_content),
+                        |l| { DerObject::from_header_and_content(hdr,DerObjectContent::Set(l)) }
                     )
                 },
         // 0x12: numericstring
         0x12 => {
                     map!(i,
                         take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        |s| { DerObject::NumericString(s) }
+                        |s| { DerObject::from_header_and_content(hdr,DerObjectContent::NumericString(s)) }
                     )
                 },
         // 0x13: printablestring
         0x13 => {
                     map!(i,
                         take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        |s| { DerObject::PrintableString(s) }
+                        |s| { DerObject::from_header_and_content(hdr,DerObjectContent::PrintableString(s)) }
                     )
                 },
 
@@ -397,125 +505,205 @@ pub fn der_read_element_contents<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IR
         0x16 => {
                     map!(i,
                         take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        |s| { DerObject::IA5String(s) }
+                        |s| { DerObject::from_header_and_content(hdr,DerObjectContent::IA5String(s)) }
                     )
                 },
         // 0x17: utctime
         0x17 => {
                     map!(i,
                         take!(hdr.len), // XXX we must check if constructed or not (8.7)
-                        |s| { DerObject::UTCTime(s) }
+                        |s| { DerObject::from_header_and_content(hdr,DerObjectContent::UTCTime(s)) }
                     )
                 },
         // all unknown values
         _    => {
                     map!(i,
                         take!(hdr.len),
-                        |b| { DerObject::Unknown(hdr, b) }
+                        |b| { DerObject::from_header_and_content(hdr,DerObjectContent::Unknown(hdr, b)) }
                     )
                 },
     }
 }
 
-named!(pub parse_der_integer<DerObject>,
+pub fn parse_der_bool(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
-       hdr:      der_read_element_header >>
-                 error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
-                 error_if!(hdr.elt.tag != 0x02, Err::Code(ErrorKind::Custom(128))) >>
-       contents: apply!(der_read_element_contents,hdr) >>
-       ( contents )
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::Boolean as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: switch!(take!(1),
+                        b"\x00" => value!(true) |
+                        b"\xff" => value!(false)
+       ) >>
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::Boolean(content)) )
    )
-);
+}
 
-named!(pub parse_der_oid<DerObject>,
+pub fn parse_der_integer(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
-       hdr:      der_read_element_header >>
-                 error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
-                 error_if!(hdr.elt.tag != 0x06, Err::Code(ErrorKind::Custom(128))) >>
-       contents: apply!(der_read_element_contents,hdr) >>
-       ( contents )
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::Integer as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: parse_hex_to_u64!(hdr.len) >>
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::Integer(content)) )
    )
-);
+}
 
-named!(pub parse_der_utf8string<DerObject>,
+pub fn parse_der_bitstring(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
-       hdr:      der_read_element_header >>
-                 error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
-                 error_if!(hdr.elt.tag != 0x0c, Err::Code(ErrorKind::Custom(128))) >>
-       contents: apply!(der_read_element_contents,hdr) >>
-       ( contents )
+       i,
+       hdr:          der_read_element_header >>
+                     error_if!(hdr.elt.tag != DerTag::BitString as u8, Err::Code(ErrorKind::Custom(128))) >>
+       ignored_bits: be_u8 >>
+       content:      take!(hdr.len - 1) >> // XXX we must check if constructed or not (8.7)
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::BitString(ignored_bits,content)) )
    )
-);
+}
 
-named!(pub parse_der_sequence<DerObject>,
+pub fn parse_der_octetstring(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
-       hdr:      der_read_element_header >>
-                 error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
-                 error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom(128))) >>
-                 error_if!(hdr.elt.tag != 0x10, Err::Code(ErrorKind::Custom(128))) >>
-       contents: apply!(der_read_element_contents,hdr) >>
-       ( contents )
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::OctetString as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::OctetString(content)) )
    )
-);
+}
 
-named!(pub parse_der_printablestring<DerObject>,
+pub fn parse_der_null(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
-       hdr:      der_read_element_header >>
-                 error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
-                 error_if!(hdr.elt.tag != 0x13, Err::Code(ErrorKind::Custom(128))) >>
-       contents: apply!(der_read_element_contents,hdr) >>
-       ( contents )
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::Null as u8, Err::Code(ErrorKind::Custom(128))) >>
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::Null) )
    )
-);
+}
 
-named!(pub parse_der_ia5string<DerObject>,
+pub fn parse_der_oid(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
-       hdr:      der_read_element_header >>
-                 error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
-                 error_if!(hdr.elt.tag != 0x16, Err::Code(ErrorKind::Custom(128))) >>
-       contents: apply!(der_read_element_contents,hdr) >>
-       ( contents )
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::Oid as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: map!(take!(hdr.len),der_read_oid) >>
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::OID(content)) )
    )
-);
+}
+
+pub fn parse_der_enum(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::Enumerated as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: parse_hex_to_u64!(hdr.len) >>
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::Enum(content)) )
+   )
+}
+
+pub fn parse_der_utf8string(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::Utf8String as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::UTF8String(content)) )
+   )
+}
+
+pub fn parse_der_sequence(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::Sequence as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: flat_map!(take!(hdr.len),der_read_sequence_content) >>
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::Sequence(content)) )
+   )
+}
+
+pub fn parse_der_set(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::Set as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: flat_map!(take!(hdr.len),der_read_set_content) >>
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::Set(content)) )
+   )
+}
+
+pub fn parse_der_numericstring(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::NumericString as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::NumericString(content)) )
+   )
+}
+
+pub fn parse_der_printablestring(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::PrintableString as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::PrintableString(content)) )
+   )
+}
+
+pub fn parse_der_ia5string(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::Ia5String as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::IA5String(content)) )
+   )
+}
+
+pub fn parse_der_utctime(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::UtcTime as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::UTCTime(content)) )
+   )
+}
 
 named!(pub parse_der<&[u8],DerObject>,
     do_parse!(
         hdr:      der_read_element_header >>
-        contents: apply!(der_read_element_contents,hdr) >>
+        content: apply!(der_read_element_content,hdr) >>
         ( {
             debug!("el: {:?}",hdr.elt);
-            debug!("contents: {:?}",contents);
-            contents
+            debug!("content: {:?}",content);
+            content
         } )
     )
 );
 
 #[cfg(test)]
 mod tests {
-    //use super::*;
     use der::*;
-    use nom::IResult;
-
-    use nom::Err::*;
-    use nom::ErrorKind;
+    use nom::{IResult,Err,ErrorKind};
 
     extern crate env_logger;
 
 #[test]
 fn test_der_bool() {
     let empty = &b""[..];
-    assert_eq!(parse_der(&[0x01, 0x01, 0x00]), IResult::Done(empty, DerObject::Boolean(true)));
-    assert_eq!(parse_der(&[0x01, 0x01, 0xff]), IResult::Done(empty, DerObject::Boolean(false)));
+    let b_true  = DerObject::from_obj(DerObjectContent::Boolean(true));
+    let b_false  = DerObject::from_obj(DerObjectContent::Boolean(false));
+    assert_eq!(parse_der_bool(&[0x01, 0x01, 0x00]), IResult::Done(empty, b_true));
+    assert_eq!(parse_der_bool(&[0x01, 0x01, 0xff]), IResult::Done(empty, b_false));
     let bytes = [0x01, 0x01, 0x7f];
-    assert_eq!(parse_der(&bytes[..]), IResult::Error(Position(ErrorKind::Switch, &bytes[2..])));
+    assert_eq!(parse_der_bool(&bytes[..]), IResult::Error(Err::Position(ErrorKind::Switch, &bytes[2..])));
 }
 
 #[test]
 fn test_der_int() {
     let empty = &b""[..];
     let bytes = [0x02, 0x03, 0x01, 0x00, 0x01];
-    let expected = DerObject::Integer(65537);
-    assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
+    let expected  = DerObject::from_obj(DerObjectContent::Integer(65537));
+    assert_eq!(parse_der_integer(&bytes), IResult::Done(empty, expected));
 }
 
 #[test]
@@ -524,34 +712,30 @@ fn test_der_octetstring() {
     let bytes = [ 0x04, 0x05,
                   0x41, 0x41, 0x41, 0x41, 0x41,
     ];
-    let expected = DerObject::OctetString(b"AAAAA");
-    assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
+    let expected  = DerObject::from_obj(DerObjectContent::OctetString(b"AAAAA"));
+    assert_eq!(parse_der_octetstring(&bytes), IResult::Done(empty, expected));
 }
 
 #[test]
 fn test_der_null() {
     let empty = &b""[..];
-    assert_eq!(parse_der(&[0x05, 0x00]), IResult::Done(empty, DerObject::Null));
-}
-
-#[test]
-fn test_der_enum() {
-    let empty = &b""[..];
-    assert_eq!(parse_der(&[0x0a, 0x01, 0x02]), IResult::Done(empty, DerObject::Enum(2)));
+    let expected  = DerObject::from_obj(DerObjectContent::Null);
+    assert_eq!(parse_der_null(&[0x05, 0x00]), IResult::Done(empty, expected));
 }
 
 #[test]
 fn test_der_oid() {
     let empty = &b""[..];
     let bytes = [0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x05];
-    assert_eq!(parse_der(&bytes), IResult::Done(empty, DerObject::OID(vec![1, 2, 840, 113549, 1, 1, 5])));
+    let expected  = DerObject::from_obj(DerObjectContent::OID(vec![1, 2, 840, 113549, 1, 1, 5]));
+    assert_eq!(parse_der_oid(&bytes), IResult::Done(empty, expected));
 }
 
 #[test]
-fn test_der_utctime() {
+fn test_der_enum() {
     let empty = &b""[..];
-    let bytes = [0x17, 0x0D, 0x30, 0x32, 0x31, 0x32, 0x31, 0x33, 0x31, 0x34, 0x32, 0x39, 0x32, 0x33, 0x5A ];
-    assert_eq!(parse_der(&bytes), IResult::Done(empty, DerObject::UTCTime(&bytes[2..])));
+    let expected  = DerObject::from_obj(DerObjectContent::Enum(2));
+    assert_eq!(parse_der_enum(&[0x0a, 0x01, 0x02]), IResult::Done(empty, expected));
 }
 
 #[test]
@@ -560,8 +744,8 @@ fn test_der_utf8string() {
     let bytes = [ 0x0c, 0x0a,
                   0x53, 0x6f, 0x6d, 0x65, 0x2d, 0x53, 0x74, 0x61, 0x74, 0x65
     ];
-    let expected = DerObject::UTF8String(b"Some-State");
-    assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
+    let expected  = DerObject::from_obj(DerObjectContent::UTF8String(b"Some-State"));
+    assert_eq!(parse_der_utf8string(&bytes), IResult::Done(empty, expected));
 }
 
 #[test]
@@ -570,9 +754,22 @@ fn test_der_seq() {
     let bytes = [ 0x30, 0x05,
                   0x02, 0x03, 0x01, 0x00, 0x01,
     ];
-    let expected = DerObject::Sequence(
-        vec![DerObject::Integer(65537)]
-    );
+    let expected  = DerObject::from_obj(DerObjectContent::Sequence(vec![
+        DerObject::from_int(65537),
+    ]));
+    assert_eq!(parse_der_sequence(&bytes), IResult::Done(empty, expected));
+}
+
+#[test]
+fn test_der_set() {
+    let empty = &b""[..];
+    let bytes = [
+        0x31, 0x05,
+        0x02, 0x03, 0x01, 0x00, 0x01, // Integer 65537
+    ];
+    let expected  = DerObject::from_obj(DerObjectContent::Set(vec![
+        DerObject::from_int(65537),
+    ]));
     assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
 }
 
@@ -583,9 +780,10 @@ fn test_der_set_defined() {
                   0x02, 0x03, 0x01, 0x00, 0x01,
                   0x02, 0x03, 0x01, 0x00, 0x00,
     ];
-    let expected = DerObject::Set(
-        vec![DerObject::Integer(65537), DerObject::Integer(65536)]
-    );
+    let expected  = DerObject::from_obj(DerObjectContent::Set(vec![
+        DerObject::from_int(65537),
+        DerObject::from_int(65536),
+    ]));
     fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_set_defined!(i,
             parse_der_integer,
@@ -602,9 +800,10 @@ fn test_der_seq_defined() {
                   0x02, 0x03, 0x01, 0x00, 0x01,
                   0x02, 0x03, 0x01, 0x00, 0x00,
     ];
-    let expected = DerObject::Sequence(
-        vec![DerObject::Integer(65537), DerObject::Integer(65536)]
-    );
+    let expected  = DerObject::from_obj(DerObjectContent::Sequence(vec![
+        DerObject::from_int(65537),
+        DerObject::from_int(65536),
+    ]));
     fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_sequence_defined!(i,
             parse_der_integer,
@@ -615,23 +814,29 @@ fn test_der_seq_defined() {
 }
 
 #[test]
-fn test_der_set() {
+fn test_der_utctime() {
     let empty = &b""[..];
-    let bytes = [
-        0x31, 0x05,
-        0x02, 0x03, 0x01, 0x00, 0x01, // Integer 65537
-    ];
-    let expected = DerObject::Set(
-        vec![DerObject::Integer(65537)]
-    );
+    let bytes = [0x17, 0x0D, 0x30, 0x32, 0x31, 0x32, 0x31, 0x33, 0x31, 0x34, 0x32, 0x39, 0x32, 0x33, 0x5A ];
+    let expected = DerObject{
+        class: 0,
+        structured: 0,
+        tag: DerTag::UtcTime as u8,
+        content: DerObjectContent::UTCTime(&bytes[2..]),
+    };
     assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
 }
 
 #[test]
 fn test_der_contextspecific() {
+    env_logger::init().unwrap();
     let empty = &b""[..];
     let data = [0x02, 0x01, 0x02];
-    let expected = DerObject::ContextSpecific(0,&data);
+    let expected = DerObject{
+        class: 2,
+        structured: 1,
+        tag: 0,
+        content: DerObjectContent::ContextSpecific(0,&data),
+    };
     assert_eq!(parse_der(&[0xa0, 0x03, 0x02, 0x01, 0x02]), IResult::Done(empty, expected));
 }
 
@@ -646,27 +851,29 @@ fn test_der_seq_dn() {
         0x6e, 0x74, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x20, 0x57, 0x69, 0x64, 0x67,
         0x69, 0x74, 0x73, 0x20, 0x50, 0x74, 0x79, 0x20, 0x4c, 0x74, 0x64
     ];
-    let expected = DerObject::Sequence(
-        vec![
-            DerObject::Set(vec![
-                DerObject::Sequence(vec![
-                    DerObject::OID(vec![2, 5, 4, 6]), // countryName
-                    DerObject::PrintableString(b"FR"),
-                ]),
-            ]),
-            DerObject::Set(vec![
-                DerObject::Sequence(vec![
-                    DerObject::OID(vec![2, 5, 4, 8]), // stateOrProvinceName
-                    DerObject::UTF8String(b"Some-State"),
-                ]),
-            ]),
-            DerObject::Set(vec![
-                DerObject::Sequence(vec![
-                    DerObject::OID(vec![2, 5, 4, 10]), // organizationName
-                    DerObject::UTF8String(b"Internet Widgits Pty Ltd"),
-                ]),
-            ]),
-        ]
+    let expected = DerObject::from_obj(
+        DerObjectContent::Sequence(
+            vec![
+                DerObject::from_obj(DerObjectContent::Set(vec![
+                    DerObject::from_obj(DerObjectContent::Sequence(vec![
+                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 6])), // countryName
+                        DerObject::from_obj(DerObjectContent::PrintableString(b"FR")),
+                    ])),
+                ])),
+                DerObject::from_obj(DerObjectContent::Set(vec![
+                    DerObject::from_obj(DerObjectContent::Sequence(vec![
+                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 8])), // stateOrProvinceName
+                        DerObject::from_obj(DerObjectContent::UTF8String(b"Some-State")),
+                    ])),
+                ])),
+                DerObject::from_obj(DerObjectContent::Set(vec![
+                    DerObject::from_obj(DerObjectContent::Sequence(vec![
+                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 10])), // organizationName
+                        DerObject::from_obj(DerObjectContent::UTF8String(b"Internet Widgits Pty Ltd")),
+                    ])),
+                ])),
+            ]
+        )
     );
     assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
 }
@@ -682,27 +889,29 @@ fn test_der_seq_dn_defined() {
         0x6e, 0x74, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x20, 0x57, 0x69, 0x64, 0x67,
         0x69, 0x74, 0x73, 0x20, 0x50, 0x74, 0x79, 0x20, 0x4c, 0x74, 0x64
     ];
-    let expected = DerObject::Sequence(
-        vec![
-            DerObject::Set(vec![
-                DerObject::Sequence(vec![
-                    DerObject::OID(vec![2, 5, 4, 6]), // countryName
-                    DerObject::PrintableString(b"FR"),
-                ]),
-            ]),
-            DerObject::Set(vec![
-                DerObject::Sequence(vec![
-                    DerObject::OID(vec![2, 5, 4, 8]), // stateOrProvinceName
-                    DerObject::UTF8String(b"Some-State"),
-                ]),
-            ]),
-            DerObject::Set(vec![
-                DerObject::Sequence(vec![
-                    DerObject::OID(vec![2, 5, 4, 10]), // organizationName
-                    DerObject::UTF8String(b"Internet Widgits Pty Ltd"),
-                ]),
-            ]),
-        ]
+    let expected = DerObject::from_obj(
+        DerObjectContent::Sequence(
+            vec![
+                DerObject::from_obj(DerObjectContent::Set(vec![
+                    DerObject::from_obj(DerObjectContent::Sequence(vec![
+                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 6])), // countryName
+                        DerObject::from_obj(DerObjectContent::PrintableString(b"FR")),
+                    ])),
+                ])),
+                DerObject::from_obj(DerObjectContent::Set(vec![
+                    DerObject::from_obj(DerObjectContent::Sequence(vec![
+                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 8])), // stateOrProvinceName
+                        DerObject::from_obj(DerObjectContent::UTF8String(b"Some-State")),
+                    ])),
+                ])),
+                DerObject::from_obj(DerObjectContent::Set(vec![
+                    DerObject::from_obj(DerObjectContent::Sequence(vec![
+                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 10])), // organizationName
+                        DerObject::from_obj(DerObjectContent::UTF8String(b"Internet Widgits Pty Ltd")),
+                    ])),
+                ])),
+            ]
+        )
     );
     #[inline]
     fn parse_directory_string(i:&[u8]) -> IResult<&[u8],DerObject> {
@@ -730,26 +939,19 @@ fn test_der_seq_dn_defined() {
     assert_eq!(parse_name(&bytes), IResult::Done(empty, expected));
 }
 
-//#[test]
-//fn test_parse_hex4() {
-//    let empty = &b""[..];
-//    assert_eq!(parse_hex4(&[0x00, 0x01, 0x00, 0x01]), IResult::Done(empty, (65537)));
-//}
-
 #[test]
 fn test_der_seq_iter() {
     let _ = env_logger::init();
-
-    debug!("blah");
 
     let empty = &b""[..];
     let bytes = [ 0x30, 0x0a,
                   0x02, 0x03, 0x01, 0x00, 0x01,
                   0x02, 0x03, 0x01, 0x00, 0x00,
     ];
-    let expected_values =
-        vec![DerObject::Integer(65537), DerObject::Integer(65536)]
-    ;
+    let expected_values = vec![
+        DerObject::from_int(65537),
+        DerObject::from_int(65536),
+    ];
     let result = parse_der(&bytes);
 
     match result {
@@ -767,7 +969,7 @@ fn test_der_seq_iter() {
                 idx += 1;
             }
         },
-        _ => assert_eq!(result,IResult::Done(empty,DerObject::Sequence(expected_values))),
+        _ => assert_eq!(result,IResult::Done(empty,DerObject::from_obj(DerObjectContent::Sequence(expected_values)))),
     }
 }
 
