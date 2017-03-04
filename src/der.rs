@@ -732,8 +732,8 @@ pub fn parse_der_explicit<F>(i:&[u8], tag: u8, f:F) -> IResult<&[u8],DerObject,u
                 debug!("content: {:?}",content);
                 DerObject::from_header_and_content(
                     hdr,
-                    DerObjectContent::ContextSpecific(tag,Some(Box::new(DerObject::from_int(2))))
-                    )
+                    DerObjectContent::ContextSpecific(tag,Some(Box::new(content)))
+                )
             } )
         ) |
         apply!(parse_der_explicit_failed,tag)
