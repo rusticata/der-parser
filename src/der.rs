@@ -79,7 +79,7 @@ pub enum DerObjectContent<'a> {
 
     UTCTime(&'a [u8]),
 
-    ContextSpecific(/*tag:*/u8,&'a[u8]),
+    ContextSpecific(/*tag:*/u8, Option<Box<DerObject<'a>>>),
     Unknown(DerElementHeader, &'a[u8]),
 }
 
@@ -404,8 +404,8 @@ pub fn der_read_element_content<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IRe
         // context-specific
         0b10 => return map!(
             i,
-            take!(hdr.len),
-            |b| { DerObject::from_header_and_content(hdr,DerObjectContent::ContextSpecific(hdr.elt.tag,b)) }
+            flat_map!(take!(hdr.len),parse_der),
+            |b| { DerObject::from_header_and_content(hdr,DerObjectContent::ContextSpecific(hdr.elt.tag,Some(Box::new(b)))) }
         ),
         // private
         0b11 => (),
@@ -668,9 +668,36 @@ pub fn parse_der_utctime(i:&[u8]) -> IResult<&[u8],DerObject> {
    )
 }
 
+fn parse_der_explicit_failed(i:&[u8], tag: u8) -> IResult<&[u8],DerObject,u32> {
+    value!(i,DerObject::from_obj(DerObjectContent::ContextSpecific(tag,None))) // XXX
+}
+
+pub fn parse_der_explicit<F>(i:&[u8], tag: u8, f:F) -> IResult<&[u8],DerObject,u32>
+    where F: Fn(&[u8]) -> IResult<&[u8],DerObject,u32>
+{
+    alt_complete!(
+        i,
+        do_parse!(
+            hdr:     der_read_element_header >>
+            error_if!(hdr.elt.tag != tag as u8, Err::Code(ErrorKind::Custom(127))) >>
+            content: f >>
+            ( {
+                debug!("el: {:?}",hdr.elt);
+                debug!("content: {:?}",content);
+                DerObject::from_header_and_content(
+                    hdr,
+                    DerObjectContent::ContextSpecific(tag,Some(Box::new(DerObject::from_int(2))))
+                    )
+            } )
+        ) |
+        apply!(parse_der_explicit_failed,tag)
+    )
+}
+
+
 named!(pub parse_der<&[u8],DerObject>,
     do_parse!(
-        hdr:      der_read_element_header >>
+        hdr:     der_read_element_header >>
         content: apply!(der_read_element_content,hdr) >>
         ( {
             debug!("el: {:?}",hdr.elt);
@@ -828,16 +855,31 @@ fn test_der_utctime() {
 
 #[test]
 fn test_der_contextspecific() {
-    env_logger::init().unwrap();
+    let _ = env_logger::init();
     let empty = &b""[..];
-    let data = [0x02, 0x01, 0x02];
     let expected = DerObject{
         class: 2,
         structured: 1,
         tag: 0,
-        content: DerObjectContent::ContextSpecific(0,&data),
+        content: DerObjectContent::ContextSpecific(0,Some(Box::new(DerObject::from_int(2)))),
     };
     assert_eq!(parse_der(&[0xa0, 0x03, 0x02, 0x01, 0x02]), IResult::Done(empty, expected));
+}
+
+#[test]
+fn test_der_explicit() {
+    let _ = env_logger::init();
+    let empty = &b""[..];
+    let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
+    let expected = DerObject{
+        class: 2,
+        structured: 1,
+        tag: 0,
+        content: DerObjectContent::ContextSpecific(0,Some(Box::new(DerObject::from_int(2)))),
+    };
+    assert_eq!(parse_der_explicit(&bytes, 0, parse_der_integer), IResult::Done(empty, expected));
+    let expected2 = DerObject::from_obj(DerObjectContent::ContextSpecific(1,None));
+    assert_eq!(parse_der_explicit(&bytes, 1, parse_der_integer), IResult::Done(&bytes[..], expected2));
 }
 
 #[test]
