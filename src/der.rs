@@ -312,6 +312,32 @@ macro_rules! parse_der_set_defined(
     );
 );
 
+#[macro_export]
+macro_rules! parse_der_sequence_of(
+    ($i:expr, $f:ident) => (
+        do_parse!(
+            $i,
+            hdr:     der_read_element_header >>
+                     error_if!(hdr.elt.tag != DerTag::Sequence as u8, Err::Code(ErrorKind::Custom(128))) >>
+            content: flat_map!(take!(hdr.len),many0!($f)) >>
+            ( DerObject::from_header_and_content(hdr, DerObjectContent::Sequence(content)) )
+        )
+    )
+);
+
+#[macro_export]
+macro_rules! parse_der_set_of(
+    ($i:expr, $f:ident) => (
+        do_parse!(
+            $i,
+            hdr:     der_read_element_header >>
+                     error_if!(hdr.elt.tag != DerTag::Sequence as u8, Err::Code(ErrorKind::Custom(128))) >>
+            content: flat_map!(take!(hdr.len),many0!($f)) >>
+            ( DerObject::from_header_and_content(hdr, DerObjectContent::Sequence(content)) )
+        )
+    )
+);
+
 
 
 
@@ -836,6 +862,23 @@ fn test_der_seq_defined() {
             parse_der_integer,
             parse_der_integer
         )
+    };
+    assert_eq!(parser(&bytes), IResult::Done(empty, expected));
+}
+
+#[test]
+fn test_der_seq_of() {
+    let empty = &b""[..];
+    let bytes = [ 0x30, 0x0a,
+                  0x02, 0x03, 0x01, 0x00, 0x01,
+                  0x02, 0x03, 0x01, 0x00, 0x00,
+    ];
+    let expected  = DerObject::from_obj(DerObjectContent::Sequence(vec![
+        DerObject::from_int(65537),
+        DerObject::from_int(65536),
+    ]));
+    fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
+        parse_der_sequence_of!(i, parse_der_integer)
     };
     assert_eq!(parser(&bytes), IResult::Done(empty, expected));
 }
