@@ -32,6 +32,7 @@ pub enum DerTag {
 
     Ia5String = 0x16,
     UtcTime = 0x17,
+    GeneralizedTime = 0x18,
 
 
     Invalid = 0xff,
@@ -78,6 +79,7 @@ pub enum DerObjectContent<'a> {
     Set(Vec<DerObject<'a> >),
 
     UTCTime(&'a [u8]),
+    GeneralizedTime(&'a [u8]),
 
     ContextSpecific(/*tag:*/u8, Option<Box<DerObject<'a>>>),
     Unknown(DerElementHeader, &'a[u8]),
@@ -99,6 +101,7 @@ pub fn tag_of_der_content(c: &DerObjectContent) -> DerTag {
         DerObjectContent::Sequence(_)          => DerTag::Sequence,
         DerObjectContent::Set(_)               => DerTag::Set,
         DerObjectContent::UTCTime(_)           => DerTag::UtcTime,
+        DerObjectContent::GeneralizedTime(_)   => DerTag::GeneralizedTime,
         DerObjectContent::ContextSpecific(_,_) => DerTag::Invalid,
         DerObjectContent::Unknown(_,_)         => DerTag::Invalid,
     }
@@ -541,6 +544,13 @@ pub fn der_read_element_content<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IRe
                         |s| { DerObject::from_header_and_content(hdr,DerObjectContent::UTCTime(s)) }
                     )
                 },
+        // 0x18: utctime
+        0x18 => {
+                    map!(i,
+                        take!(hdr.len), // XXX we must check if constructed or not (8.7)
+                        |s| { DerObject::from_header_and_content(hdr,DerObjectContent::GeneralizedTime(s)) }
+                    )
+                },
         // all unknown values
         _    => {
                     map!(i,
@@ -691,6 +701,16 @@ pub fn parse_der_utctime(i:&[u8]) -> IResult<&[u8],DerObject> {
                 error_if!(hdr.elt.tag != DerTag::UtcTime as u8, Err::Code(ErrorKind::Custom(128))) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::UTCTime(content)) )
+   )
+}
+
+pub fn parse_der_generalizedtime(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::GeneralizedTime as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::GeneralizedTime(content)) )
    )
 }
 
@@ -894,6 +914,19 @@ fn test_der_utctime() {
         content: DerObjectContent::UTCTime(&bytes[2..]),
     };
     assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
+}
+
+#[test]
+fn test_der_generalizedtime() {
+    let empty = &b""[..];
+    let bytes = [0x18, 0x0D, 0x30, 0x32, 0x31, 0x32, 0x31, 0x33, 0x31, 0x34, 0x32, 0x39, 0x32, 0x33, 0x5A ];
+    let expected = DerObject{
+        class: 0,
+        structured: 0,
+        tag: DerTag::GeneralizedTime as u8,
+        content: DerObjectContent::GeneralizedTime(&bytes[2..]),
+    };
+    assert_eq!(parse_der_generalizedtime(&bytes), IResult::Done(empty, expected));
 }
 
 #[test]
