@@ -270,8 +270,8 @@ macro_rules! parse_der_defined(
                 $i,
                 hdr:     der_read_element_header >>
                          error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
-                         error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom(128))) >>
-                         error_if!(hdr.elt.tag != $ty, Err::Code(ErrorKind::Custom(128))) >>
+                         error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom(129))) >>
+                         error_if!(hdr.elt.tag != $ty, Err::Code(ErrorKind::Custom(130))) >>
                 content: take!(hdr.len) >>
                 ( (hdr,content) )
             );
@@ -279,7 +279,7 @@ macro_rules! parse_der_defined(
                 IResult::Done(_rem,o)   => {
                     match fold_parsers!(o.1, $($args)* ) {
                         IResult::Done(rem,v)   => {
-                            if rem.len() != 0 { IResult::Error(Err::Code(ErrorKind::Custom(129))) }
+                            if rem.len() != 0 { IResult::Error(Err::Code(ErrorKind::Custom(131))) }
                             else { IResult::Done(_rem,(o.0,v)) }
                         },
                         IResult::Incomplete(e) => IResult::Incomplete(e),
@@ -337,6 +337,24 @@ macro_rules! parse_der_set_of(
                      error_if!(hdr.elt.tag != DerTag::Sequence as u8, Err::Code(ErrorKind::Custom(128))) >>
             content: flat_map!(take!(hdr.len),many0!($f)) >>
             ( DerObject::from_header_and_content(hdr, DerObjectContent::Sequence(content)) )
+        )
+    )
+);
+
+#[macro_export]
+macro_rules! parse_der_optional(
+    ($i:expr, $f:ident) => (
+        alt_complete!(
+            $i,
+            do_parse!(
+                content: call!($f) >>
+                (
+                    DerObject::from_obj(
+                        DerObjectContent::ContextSpecific(0 /* XXX */,Some(Box::new(content)))
+                    )
+                )
+            ) |
+            apply!(parse_der_explicit_failed,0 /* XXX */)
         )
     )
 );
@@ -727,7 +745,7 @@ pub fn parse_der_generalizedtime(i:&[u8]) -> IResult<&[u8],DerObject> {
    )
 }
 
-fn parse_der_explicit_failed(i:&[u8], tag: u8) -> IResult<&[u8],DerObject,u32> {
+pub fn parse_der_explicit_failed(i:&[u8], tag: u8) -> IResult<&[u8],DerObject,u32> {
     value!(i,DerObject::from_obj(DerObjectContent::ContextSpecific(tag,None)))
 }
 
@@ -1015,6 +1033,42 @@ fn test_der_implicit() {
     assert_eq!(parse_der_implicit(&bytes, 1, der_read_ia5string_content), IResult::Done(empty, expected));
     let expected2 = DerObject::from_obj(DerObjectContent::ContextSpecific(2,None));
     assert_eq!(parse_der_implicit(&bytes, 2, der_read_ia5string_content), IResult::Done(&bytes[..], expected2));
+}
+
+#[test]
+fn test_der_optional() {
+    let _ = env_logger::init();
+    let empty = &b""[..];
+    let bytes1 = [ 0x30, 0x0a,
+                  0x0a, 0x03, 0x00, 0x00, 0x01,
+                  0x02, 0x03, 0x01, 0x00, 0x01,
+    ];
+    let bytes2 = [ 0x30, 0x05,
+                  0x02, 0x03, 0x01, 0x00, 0x01,
+    ];
+    let expected1  = DerObject::from_obj(DerObjectContent::Sequence(vec![
+        DerObject::from_obj(
+            DerObjectContent::ContextSpecific(0, Some(Box::new(DerObject::from_obj(DerObjectContent::Enum(1)))))
+        ),
+        DerObject::from_int(65537),
+    ]));
+    let expected2  = DerObject::from_obj(DerObjectContent::Sequence(vec![
+        DerObject::from_obj(
+            DerObjectContent::ContextSpecific(0, None),
+        ),
+        DerObject::from_int(65537),
+    ]));
+    fn parse_optional_enum(i:&[u8]) -> IResult<&[u8],DerObject> {
+        parse_der_optional!(i, parse_der_enum)
+    }
+    fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
+        parse_der_sequence_defined!(i,
+            parse_optional_enum,
+            parse_der_integer
+        )
+    };
+    assert_eq!(parser(&bytes1), IResult::Done(empty, expected1));
+    assert_eq!(parser(&bytes2), IResult::Done(empty, expected2));
 }
 
 #[test]
