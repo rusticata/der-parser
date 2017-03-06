@@ -322,7 +322,13 @@ macro_rules! parse_der_sequence_of(
             $i,
             hdr:     der_read_element_header >>
                      error_if!(hdr.elt.tag != DerTag::Sequence as u8, Err::Code(ErrorKind::Custom(128))) >>
-            content: flat_map!(take!(hdr.len),many0!($f)) >>
+            content: flat_map!(take!(hdr.len),
+                do_parse!(
+                    r: many0!($f) >>
+                       eof!() >>
+                    ( r )
+                )
+            ) >>
             ( DerObject::from_header_and_content(hdr, DerObjectContent::Sequence(content)) )
         )
     )
@@ -335,7 +341,13 @@ macro_rules! parse_der_set_of(
             $i,
             hdr:     der_read_element_header >>
                      error_if!(hdr.elt.tag != DerTag::Sequence as u8, Err::Code(ErrorKind::Custom(128))) >>
-            content: flat_map!(take!(hdr.len),many0!($f)) >>
+            content: flat_map!(take!(hdr.len),
+                do_parse!(
+                    r: many0!($f) >>
+                       eof!() >>
+                    ( r )
+                )
+            ) >>
             ( DerObject::from_header_and_content(hdr, DerObjectContent::Sequence(content)) )
         )
     )
@@ -958,6 +970,18 @@ fn test_der_seq_of() {
         parse_der_sequence_of!(i, parse_der_integer)
     };
     assert_eq!(parser(&bytes), IResult::Done(empty, expected));
+}
+
+#[test]
+fn test_der_seq_of_incomplete() {
+    let bytes = [ 0x30, 0x07,
+                  0x02, 0x03, 0x01, 0x00, 0x01,
+                  0x00, 0x00,
+    ];
+    fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
+        parse_der_sequence_of!(i, parse_der_integer)
+    };
+    assert_eq!(parser(&bytes), IResult::Error(Err::Position(ErrorKind::Eof, &bytes[2..])));
 }
 
 #[test]
