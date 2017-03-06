@@ -147,6 +147,20 @@ impl<'a> DerObjectContent<'a> {
     pub fn as_u32(&self) -> Option<u32> {
         match self {
             &DerObjectContent::Integer(i) => Some(i as u32),
+            &DerObjectContent::Enum(i)    => Some(i as u32),
+            _ => None,
+        }
+    }
+
+    pub fn as_slice(&self) -> Option<&'a [u8]> {
+        match self {
+            &DerObjectContent::BitString(_,s)     => Some(s),
+            &DerObjectContent::OctetString(s)     => Some(s),
+            &DerObjectContent::NumericString(s)   => Some(s),
+            &DerObjectContent::PrintableString(s) => Some(s),
+            &DerObjectContent::IA5String(s)       => Some(s),
+            &DerObjectContent::UTF8String(s)      => Some(s),
+            &DerObjectContent::Unknown(s)         => Some(s),
             _ => None,
         }
     }
