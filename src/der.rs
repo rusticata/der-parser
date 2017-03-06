@@ -82,7 +82,7 @@ pub enum DerObjectContent<'a> {
     GeneralizedTime(&'a [u8]),
 
     ContextSpecific(/*tag:*/u8, Option<Box<DerObject<'a>>>),
-    Unknown(DerElementHeader, &'a[u8]),
+    Unknown(&'a[u8]),
 }
 
 pub fn tag_of_der_content(c: &DerObjectContent) -> DerTag {
@@ -103,7 +103,7 @@ pub fn tag_of_der_content(c: &DerObjectContent) -> DerTag {
         DerObjectContent::UTCTime(_)           => DerTag::UtcTime,
         DerObjectContent::GeneralizedTime(_)   => DerTag::GeneralizedTime,
         DerObjectContent::ContextSpecific(_,_) => DerTag::Invalid,
-        DerObjectContent::Unknown(_,_)         => DerTag::Invalid,
+        DerObjectContent::Unknown(_)           => DerTag::Invalid,
     }
 }
 
@@ -580,10 +580,16 @@ pub fn der_read_element_content<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IRe
         // application
         0b01 => (),
         // context-specific
+        // 0b10 => return map!(
+        //     i,
+        //     // XXX nope, we cannot parse what's inside !
+        //     flat_map!(take!(hdr.len),parse_der),
+        //     |b| { DerObject::from_header_and_content(hdr,DerObjectContent::ContextSpecific(hdr.elt.tag,Some(Box::new(b)))) }
+        // ),
         0b10 => return map!(
             i,
-            flat_map!(take!(hdr.len),parse_der),
-            |b| { DerObject::from_header_and_content(hdr,DerObjectContent::ContextSpecific(hdr.elt.tag,Some(Box::new(b)))) }
+            take!(hdr.len),
+            |b| { DerObject::from_header_and_content(hdr,DerObjectContent::Unknown(b)) }
         ),
         // private
         0b11 => (),
@@ -596,7 +602,7 @@ pub fn der_read_element_content<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IRe
         IResult::Error(Err::Code(ErrorKind::Custom(130))) => {
             map!(i,
                  take!(hdr.len),
-                 |b| { DerObject::from_header_and_content(hdr,DerObjectContent::Unknown(hdr, b)) }
+                 |b| { DerObject::from_header_and_content(hdr,DerObjectContent::Unknown(b)) }
             )
         }
         IResult::Error(e) => IResult::Error(e),
@@ -1013,14 +1019,15 @@ fn test_der_generalizedtime() {
 #[test]
 fn test_der_contextspecific() {
     let _ = env_logger::init();
+    let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let empty = &b""[..];
     let expected = DerObject{
         class: 2,
         structured: 1,
         tag: 0,
-        content: DerObjectContent::ContextSpecific(0,Some(Box::new(DerObject::from_int(2)))),
+        content: DerObjectContent::Unknown(&bytes[2..]),
     };
-    assert_eq!(parse_der(&[0xa0, 0x03, 0x02, 0x01, 0x02]), IResult::Done(empty, expected));
+    assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
 }
 
 #[test]
