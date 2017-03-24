@@ -493,6 +493,7 @@ pub fn der_read_element_content_as<'a,'b>(i:&'a[u8], tag:u8, len:usize) -> IResu
         0x03 => {
                     do_parse!(i,
                         ignored_bits: be_u8 >>
+                        error_if!(len == 0, Err::Code(ErrorKind::LengthValue)) >>
                         s: take!(len - 1) >> // XXX we must check if constructed or not (8.7)
                         ( DerObjectContent::BitString(ignored_bits,s) )
                     )
