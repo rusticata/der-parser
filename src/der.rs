@@ -7,7 +7,7 @@ use nom::{be_u8,IResult,Err,ErrorKind};
 use rusticata_macros::bytes_to_u64;
 
 /// Defined in X.680 section 8.4
-#[derive(Debug)]
+#[derive(Debug,PartialEq)]
 #[repr(u8)]
 pub enum DerTag {
     EndOfContent = 0x0,
