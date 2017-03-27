@@ -9,6 +9,14 @@ version = "0.3.3"
 authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
 categories = ["parsing"]
 
+include = [
+  "COPYING",
+  ".gitignore",
+  ".travis.yml",
+  "Cargo.toml",
+  "src/*.rs",
+]
+
 [dependencies]
 nom = {version = "^2.0", features = ["verbose-errors"]}
 log = "0.3"
