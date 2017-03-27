@@ -410,9 +410,11 @@ named!(parse_der_length_byte<(&[u8],usize),(u8,u8)>,
 );
 
 
-fn der_read_oid<'a>(i: &'a[u8]) -> Vec<u64> {
+fn der_read_oid<'a>(i: &'a[u8]) -> Result<Vec<u64>,u64> {
     let mut oid = Vec::new();
     let mut acc : u64;
+
+    if i.len() == 0 { return Err(0); };
 
     /* first element = X*40 + Y (See 8.19.4) */
     acc = i[0] as u64;
@@ -427,9 +429,11 @@ fn der_read_oid<'a>(i: &'a[u8]) -> Vec<u64> {
             acc = 0;
         }
     }
-    assert!(acc == 0);
 
-    oid
+    match acc {
+        0 => Ok(oid),
+        _ => Err(acc),
+    }
 }
 
 
@@ -493,8 +497,8 @@ pub fn der_read_element_content_as<'a,'b>(i:&'a[u8], tag:u8, len:usize) -> IResu
         0x03 => {
                     do_parse!(i,
                         ignored_bits: be_u8 >>
-                        error_if!(len == 0, Err::Code(ErrorKind::LengthValue)) >>
-                        s: take!(len - 1) >> // XXX we must check if constructed or not (8.7)
+                                      error_if!(len == 0, Err::Code(ErrorKind::LengthValue)) >>
+                        s:            take!(len - 1) >> // XXX we must check if constructed or not (8.7)
                         ( DerObjectContent::BitString(ignored_bits,s) )
                     )
                 },
@@ -509,11 +513,11 @@ pub fn der_read_element_content_as<'a,'b>(i:&'a[u8], tag:u8, len:usize) -> IResu
         0x05 => { IResult::Done(i,DerObjectContent::Null) },
         // 0x06: object identified
         0x06 => {
-                    map!(i,
-                        map!(take!(len),der_read_oid),
-                        |i| {
-                            DerObjectContent::OID(i)
-                        }
+                    do_parse!(i,
+                             error_if!(len == 0, Err::Code(ErrorKind::LengthValue)) >>
+                        oid: map!(take!(len),der_read_oid) >>
+                             error_if!(oid.is_err(), Err::Code(ErrorKind::LengthValue)) >>
+                        ( DerObjectContent::OID(oid.unwrap()) )
                     )
                 },
         // 0x0a: enumerated
@@ -684,7 +688,8 @@ pub fn parse_der_oid(i:&[u8]) -> IResult<&[u8],DerObject> {
        hdr:     der_read_element_header >>
                 error_if!(hdr.elt.tag != DerTag::Oid as u8, Err::Code(ErrorKind::Custom(128))) >>
        content: map!(take!(hdr.len),der_read_oid) >>
-       ( DerObject::from_header_and_content(hdr, DerObjectContent::OID(content)) )
+                error_if!(content.is_err(), Err::Code(ErrorKind::Custom(129))) >>
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::OID(content.unwrap())) )
    )
 }
 
@@ -834,6 +839,8 @@ pub fn parse_der_implicit<F>(i:&[u8], tag: u8, f:F) -> IResult<&[u8],DerObject,u
 named!(pub parse_der<&[u8],DerObject>,
     do_parse!(
         hdr:     der_read_element_header >>
+                 // XXX safety check: length cannot be more than 2^32 bytes
+                 error_if!(hdr.len > ::std::u32::MAX as u64, Err::Code(ErrorKind::Custom(127))) >>
         content: apply!(der_read_element_content,hdr) >>
         ( {
             debug!("el: {:?}",hdr.elt);
