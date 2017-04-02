@@ -15,6 +15,7 @@ include = [
   ".travis.yml",
   "Cargo.toml",
   "src/*.rs",
+  "tests/*.rs"
 ]
 
 [dependencies]
