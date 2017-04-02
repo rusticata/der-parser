@@ -402,10 +402,9 @@ named!(parse_identifier<(&[u8],usize),DerElement>,
 );
 
 named!(parse_der_length_byte<(&[u8],usize),(u8,u8)>,
-  do_parse!(
-    msb:  take_bits!(u8, 1) >>
-    low7: take_bits!(u8, 7) >>
-    ( { debug!("(msb,low7)=({},{})",msb,low7); (msb,low7) } )
+  tuple!(
+    take_bits!(u8, 1),
+    take_bits!(u8, 7)
   )
 );
 
@@ -444,7 +443,6 @@ named!(pub der_read_element_header<&[u8],DerElementHeader>,
         llen: cond!(len.0 == 1, take!(len.1)) >>
 
         ( {
-            debug!("hdr: {:?}",el);
             let len : u64 = match len.0 {
                 0 => len.1 as u64,
                 _ => {
@@ -591,8 +589,6 @@ pub fn der_read_element_content_as<'a,'b>(i:&'a[u8], tag:u8, len:usize) -> IResu
 
 
 pub fn der_read_element_content<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResult<&'a [u8], DerObject<'a>> {
-    debug!("der_read_element_content: {:?}", hdr);
-    debug!("i len: {}", i.len());
     match hdr.elt.class {
         // universal
         0b00 => (),
@@ -796,14 +792,12 @@ pub fn parse_der_explicit<F>(i:&[u8], tag: u8, f:F) -> IResult<&[u8],DerObject,u
             hdr:     der_read_element_header >>
             error_if!(hdr.elt.tag != tag as u8, Err::Code(ErrorKind::Custom(127))) >>
             content: f >>
-            ( {
-                debug!("el: {:?}",hdr.elt);
-                debug!("content: {:?}",content);
+            (
                 DerObject::from_header_and_content(
                     hdr,
                     DerObjectContent::ContextSpecific(tag,Some(Box::new(content)))
                 )
-            } )
+            )
         ) |
         apply!(parse_der_explicit_failed,tag)
     )
@@ -822,14 +816,12 @@ pub fn parse_der_implicit<F>(i:&[u8], tag: u8, f:F) -> IResult<&[u8],DerObject,u
                 apply!(f, tag, hdr.len as usize),
                 |b| { DerObject::from_obj(b) }
             ) >>
-            ( {
-                debug!("el: {:?}",hdr.elt);
-                debug!("content: {:?}",content);
+            (
                 DerObject::from_header_and_content(
                     hdr,
                     DerObjectContent::ContextSpecific(tag,Some(Box::new(content)))
                 )
-            } )
+            )
         ) |
         apply!(parse_der_explicit_failed,tag)
     )
@@ -842,11 +834,7 @@ named!(pub parse_der<&[u8],DerObject>,
                  // XXX safety check: length cannot be more than 2^32 bytes
                  error_if!(hdr.len > ::std::u32::MAX as u64, Err::Code(ErrorKind::Custom(127))) >>
         content: apply!(der_read_element_content,hdr) >>
-        ( {
-            debug!("el: {:?}",hdr.elt);
-            debug!("content: {:?}",content);
-            content
-        } )
+        ( content )
     )
 );
 
@@ -854,8 +842,6 @@ named!(pub parse_der<&[u8],DerObject>,
 mod tests {
     use der::*;
     use nom::{IResult,Err,ErrorKind};
-
-    extern crate env_logger;
 
 #[test]
 fn test_der_bool() {
@@ -1040,7 +1026,6 @@ fn test_der_generalizedtime() {
 
 #[test]
 fn test_der_contextspecific() {
-    let _ = env_logger::init();
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let empty = &b""[..];
     let expected = DerObject{
@@ -1054,7 +1039,6 @@ fn test_der_contextspecific() {
 
 #[test]
 fn test_der_explicit() {
-    let _ = env_logger::init();
     let empty = &b""[..];
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let expected = DerObject{
@@ -1070,7 +1054,6 @@ fn test_der_explicit() {
 
 #[test]
 fn test_der_implicit() {
-    let _ = env_logger::init();
     let empty = &b""[..];
     let bytes = [0x81, 0x04, 0x70, 0x61, 0x73, 0x73];
     let pass = DerObject::from_obj(DerObjectContent::IA5String(b"pass"));
@@ -1090,7 +1073,6 @@ fn test_der_implicit() {
 
 #[test]
 fn test_der_optional() {
-    let _ = env_logger::init();
     let empty = &b""[..];
     let bytes1 = [ 0x30, 0x0a,
                   0x0a, 0x03, 0x00, 0x00, 0x01,
@@ -1225,8 +1207,6 @@ fn test_der_seq_dn_defined() {
 
 #[test]
 fn test_der_seq_iter() {
-    let _ = env_logger::init();
-
     let empty = &b""[..];
     let bytes = [ 0x30, 0x0a,
                   0x02, 0x03, 0x01, 0x00, 0x01,
@@ -1248,7 +1228,7 @@ fn test_der_seq_iter() {
             //     idx += 1;
             // }
             for v in res.ref_iter() {
-                debug!("v: {:?}", v);
+                println!("v: {:?}", v);
                 assert_eq!((*v),expected_values[idx]);
                 idx += 1;
             }
