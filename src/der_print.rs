@@ -2,6 +2,8 @@ use std::fmt;
 use std::str;
 use der::{DerObject,DerObjectContent};
 
+use rusticata_macros::debug;
+
 #[derive(Clone,PartialEq)]
 pub enum PrettyPrinterFlag {
     ShowHeader,
@@ -64,9 +66,8 @@ impl<'a> fmt::Debug for PrettyDer<'a> {
             DerObjectContent::Enum(i)                => write!(f, "Enum({})\n", i),
             DerObjectContent::OID(ref v)             => write!(f, "OID({:?})\n", v),
             DerObjectContent::Null                   => write!(f, "Null\n"),
-            // XXX print OctetString and BitString as Hex
-            DerObjectContent::OctetString(ref v)     => write!(f, "OctetString({:?})\n", v),
-            DerObjectContent::BitString(u,ref v)     => write!(f, "BitString({},{:?})\n", u, v),
+            DerObjectContent::OctetString(ref v)     => write!(f, "OctetString({:?})\n", debug::HexSlice{d:v}),
+            DerObjectContent::BitString(u,ref v)     => write!(f, "BitString({},{:?})\n", u, debug::HexSlice{d:v}),
             DerObjectContent::GeneralizedTime(ref s) => print_utf8_string_with_type(f, s, "GeneralizedTime"),
             DerObjectContent::UTCTime(ref s)         => print_utf8_string_with_type(f, s, "UTCTime"),
             DerObjectContent::PrintableString(ref s) => print_utf8_string_with_type(f, s, "PrintableString"),
