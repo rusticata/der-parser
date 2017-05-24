@@ -654,6 +654,7 @@ pub fn parse_der_bitstring(i:&[u8]) -> IResult<&[u8],DerObject> {
        hdr:          der_read_element_header >>
                      error_if!(hdr.elt.tag != DerTag::BitString as u8, Err::Code(ErrorKind::Custom(128))) >>
        ignored_bits: be_u8 >>
+                     error_if!(hdr.len < 1, Err::Code(ErrorKind::Custom(128))) >>
        content:      take!(hdr.len - 1) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::BitString(ignored_bits,content)) )
    )
