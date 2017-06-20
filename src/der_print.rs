@@ -62,7 +62,7 @@ impl<'a> fmt::Debug for PrettyDer<'a> {
         }
         match self.obj.content {
             DerObjectContent::Boolean(b)             => write!(f, "Boolean({:?})\n", b),
-            DerObjectContent::Integer(i)             => write!(f, "Integer({})\n", i),
+            DerObjectContent::Integer(i)             => write!(f, "Integer({:?})\n", debug::HexSlice{d:i}),
             DerObjectContent::Enum(i)                => write!(f, "Enum({})\n", i),
             DerObjectContent::OID(ref v)             => write!(f, "OID({:?})\n", v),
             DerObjectContent::Null                   => write!(f, "Null\n"),
@@ -113,11 +113,11 @@ mod tests {
 #[test]
 fn test_pretty_print() {
     let d = DerObject::from_obj(DerObjectContent::Sequence(vec![
-        DerObject::from_int(65537),
-        DerObject::from_int(65537),
+        DerObject::new_int(b"\x01\x00\x01"),
+        DerObject::new_int(b"\x01\x00\x01"),
         DerObject::from_obj(DerObjectContent::Set(vec![
-            DerObject::from_int(1),
-            DerObject::from_int(2),
+            DerObject::new_int(b"\x01"),
+            DerObject::new_int(b"\x02"),
         ]))
     ]));
 

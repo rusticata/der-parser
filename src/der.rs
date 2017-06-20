@@ -64,7 +64,7 @@ pub struct DerElementHeader {
 #[derive(Debug,Clone,PartialEq)]
 pub enum DerObjectContent<'a> {
     Boolean(bool),
-    Integer(u64),
+    Integer(&'a[u8]),
     BitString(u8, &'a [u8]),
     OctetString(&'a [u8]),
     Null,
@@ -133,7 +133,7 @@ impl<'a> DerObject<'a> {
             content:    c,
         }
     }
-    pub fn from_int(i: u64) -> DerObject<'a> {
+    pub fn new_int(i: &'a[u8]) -> DerObject<'a> {
         DerObject{
             class:      0,
             structured: 0,
@@ -146,7 +146,10 @@ impl<'a> DerObject<'a> {
 impl<'a> DerObjectContent<'a> {
     pub fn as_u32(&self) -> Option<u32> {
         match self {
-            &DerObjectContent::Integer(i) => Some(i as u32),
+            &DerObjectContent::Integer(i) => {
+                if i.len() <= 4 { bytes_to_u64(i).map(|x| x as u32).ok() }
+                else { None }
+            },
             &DerObjectContent::Enum(i)    => Some(i as u32),
             _ => None,
         }
@@ -154,6 +157,7 @@ impl<'a> DerObjectContent<'a> {
 
     pub fn as_slice(&self) -> Option<&'a [u8]> {
         match self {
+            &DerObjectContent::Integer(s)         => Some(s),
             &DerObjectContent::BitString(_,s)     => Some(s),
             &DerObjectContent::OctetString(s)     => Some(s),
             &DerObjectContent::NumericString(s)   => Some(s),
@@ -487,7 +491,7 @@ pub fn der_read_element_content_as<'a,'b>(i:&'a[u8], tag:u8, len:usize) -> IResu
         // 0x02: integer
         0x02 => {
                     map!(i,
-                        parse_hex_to_u64!(len),
+                        take!(len),
                         |i| { DerObjectContent::Integer(i) }
                     )
                 },
@@ -643,7 +647,7 @@ pub fn parse_der_integer(i:&[u8]) -> IResult<&[u8],DerObject> {
        i,
        hdr:     der_read_element_header >>
                 error_if!(hdr.elt.tag != DerTag::Integer as u8, Err::Code(ErrorKind::Custom(128))) >>
-       content: parse_hex_to_u64!(hdr.len) >>
+       content: take!(hdr.len) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::Integer(content)) )
    )
 }
@@ -859,7 +863,23 @@ fn test_der_bool() {
 fn test_der_int() {
     let empty = &b""[..];
     let bytes = [0x02, 0x03, 0x01, 0x00, 0x01];
-    let expected  = DerObject::from_obj(DerObjectContent::Integer(65537));
+    let expected  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
+    assert_eq!(parse_der_integer(&bytes), IResult::Done(empty, expected));
+}
+
+#[test]
+fn test_der_int_as_u32() {
+    let val  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
+    assert_eq!(val.content.as_u32(), Some(65537));
+    let val  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01\x00\x01"));
+    assert_eq!(val.content.as_u32(), None);
+}
+
+#[test]
+fn test_der_int_long() {
+    let empty = &b""[..];
+    let bytes = [0x02, 0x0a, 0x39, 0x11, 0x45, 0x10, 0x94, 0x39, 0x11, 0x45, 0x10, 0x94];
+    let expected  = DerObject::from_obj(DerObjectContent::Integer(&bytes[2..]));
     assert_eq!(parse_der_integer(&bytes), IResult::Done(empty, expected));
 }
 
@@ -912,7 +932,7 @@ fn test_der_seq() {
                   0x02, 0x03, 0x01, 0x00, 0x01,
     ];
     let expected  = DerObject::from_obj(DerObjectContent::Sequence(vec![
-        DerObject::from_int(65537),
+        DerObject::new_int(b"\x01\x00\x01"),
     ]));
     assert_eq!(parse_der_sequence(&bytes), IResult::Done(empty, expected));
 }
@@ -925,7 +945,7 @@ fn test_der_set() {
         0x02, 0x03, 0x01, 0x00, 0x01, // Integer 65537
     ];
     let expected  = DerObject::from_obj(DerObjectContent::Set(vec![
-        DerObject::from_int(65537),
+        DerObject::new_int(b"\x01\x00\x01"),
     ]));
     assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
 }
@@ -938,8 +958,8 @@ fn test_der_set_defined() {
                   0x02, 0x03, 0x01, 0x00, 0x00,
     ];
     let expected  = DerObject::from_obj(DerObjectContent::Set(vec![
-        DerObject::from_int(65537),
-        DerObject::from_int(65536),
+        DerObject::new_int(b"\x01\x00\x01"),
+        DerObject::new_int(b"\x01\x00\x00"),
     ]));
     fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_set_defined!(i,
@@ -958,8 +978,8 @@ fn test_der_seq_defined() {
                   0x02, 0x03, 0x01, 0x00, 0x00,
     ];
     let expected  = DerObject::from_obj(DerObjectContent::Sequence(vec![
-        DerObject::from_int(65537),
-        DerObject::from_int(65536),
+        DerObject::new_int(b"\x01\x00\x01"),
+        DerObject::new_int(b"\x01\x00\x00"),
     ]));
     fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_sequence_defined!(i,
@@ -978,8 +998,8 @@ fn test_der_seq_of() {
                   0x02, 0x03, 0x01, 0x00, 0x00,
     ];
     let expected  = DerObject::from_obj(DerObjectContent::Sequence(vec![
-        DerObject::from_int(65537),
-        DerObject::from_int(65536),
+        DerObject::new_int(b"\x01\x00\x01"),
+        DerObject::new_int(b"\x01\x00\x00"),
     ]));
     fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_sequence_of!(i, parse_der_integer)
@@ -1046,7 +1066,7 @@ fn test_der_explicit() {
         class: 2,
         structured: 1,
         tag: 0,
-        content: DerObjectContent::ContextSpecific(0,Some(Box::new(DerObject::from_int(2)))),
+        content: DerObjectContent::ContextSpecific(0,Some(Box::new(DerObject::new_int(b"\x02")))),
     };
     assert_eq!(parse_der_explicit(&bytes, 0, parse_der_integer), IResult::Done(empty, expected));
     let expected2 = DerObject::from_obj(DerObjectContent::ContextSpecific(1,None));
@@ -1086,13 +1106,13 @@ fn test_der_optional() {
         DerObject::from_obj(
             DerObjectContent::ContextSpecific(0, Some(Box::new(DerObject::from_obj(DerObjectContent::Enum(1)))))
         ),
-        DerObject::from_int(65537),
+        DerObject::new_int(b"\x01\x00\x01"),
     ]));
     let expected2  = DerObject::from_obj(DerObjectContent::Sequence(vec![
         DerObject::from_obj(
             DerObjectContent::ContextSpecific(0, None),
         ),
-        DerObject::from_int(65537),
+        DerObject::new_int(b"\x01\x00\x01"),
     ]));
     fn parse_optional_enum(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_optional!(i, parse_der_enum)
@@ -1214,8 +1234,8 @@ fn test_der_seq_iter() {
                   0x02, 0x03, 0x01, 0x00, 0x00,
     ];
     let expected_values = vec![
-        DerObject::from_int(65537),
-        DerObject::from_int(65536),
+        DerObject::new_int(b"\x01\x00\x01"),
+        DerObject::new_int(b"\x01\x00\x00"),
     ];
     let result = parse_der(&bytes);
 

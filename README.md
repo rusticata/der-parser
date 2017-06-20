@@ -10,7 +10,13 @@ der-parser is a parser for the DER protocol.
 
 ## Important
 
-*This parser is still very incomplete*
+*This parser is still experimental and very incomplete*
+
+## Changes
+
+### 0.4.0
+
+- Der Integers are now represented as slices (byte arrays) since they can be larger than u64.
 
 ## License
 
