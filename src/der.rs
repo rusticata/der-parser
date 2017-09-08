@@ -29,11 +29,13 @@ pub enum DerTag {
     Set = 0x11,
     NumericString = 0x12,
     PrintableString = 0x13,
+    T61String = 0x14,
 
     Ia5String = 0x16,
     UtcTime = 0x17,
     GeneralizedTime = 0x18,
 
+    BmpString = 0x1e,
 
     Invalid = 0xff,
 }
@@ -74,6 +76,9 @@ pub enum DerObjectContent<'a> {
     PrintableString(&'a[u8]),
     IA5String(&'a[u8]),
     UTF8String(&'a[u8]),
+    T61String(&'a[u8]),
+
+    BmpString(&'a[u8]),
 
     Sequence(Vec<DerObject<'a> >),
     Set(Vec<DerObject<'a> >),
@@ -98,6 +103,8 @@ pub fn tag_of_der_content(c: &DerObjectContent) -> DerTag {
         DerObjectContent::PrintableString(_)   => DerTag::PrintableString,
         DerObjectContent::IA5String(_)         => DerTag::Ia5String,
         DerObjectContent::UTF8String(_)        => DerTag::Utf8String,
+        DerObjectContent::T61String(_)         => DerTag::T61String,
+        DerObjectContent::BmpString(_)         => DerTag::BmpString,
         DerObjectContent::Sequence(_)          => DerTag::Sequence,
         DerObjectContent::Set(_)               => DerTag::Set,
         DerObjectContent::UTCTime(_)           => DerTag::UtcTime,
@@ -164,6 +171,8 @@ impl<'a> DerObjectContent<'a> {
             &DerObjectContent::PrintableString(s) => Some(s),
             &DerObjectContent::IA5String(s)       => Some(s),
             &DerObjectContent::UTF8String(s)      => Some(s),
+            &DerObjectContent::T61String(s)       => Some(s),
+            &DerObjectContent::BmpString(s)       => Some(s),
             &DerObjectContent::Unknown(s)         => Some(s),
             _ => None,
         }
@@ -563,6 +572,13 @@ pub fn der_read_element_content_as<'a,'b>(i:&'a[u8], tag:u8, len:usize) -> IResu
                         |s| { DerObjectContent::PrintableString(s) }
                     )
                 },
+        // 0x14: t61string
+        0x14 => {
+                    map!(i,
+                        take!(len), // XXX we must check if constructed or not (8.7)
+                        |s| { DerObjectContent::T61String(s) }
+                    )
+                },
 
         // 0x16: ia5string
         0x16 => {
@@ -583,6 +599,14 @@ pub fn der_read_element_content_as<'a,'b>(i:&'a[u8], tag:u8, len:usize) -> IResu
                     map!(i,
                         take!(len), // XXX we must check if constructed or not (8.7)
                         |s| { DerObjectContent::GeneralizedTime(s) }
+                    )
+                },
+                //
+        // 0x1e: bmpstring
+        0x1e => {
+                    map!(i,
+                        take!(len), // XXX we must check if constructed or not (8.7)
+                        |s| { DerObjectContent::BmpString(s) }
                     )
                 },
         // all unknown values
@@ -759,6 +783,26 @@ pub fn parse_der_ia5string(i:&[u8]) -> IResult<&[u8],DerObject> {
                 error_if!(hdr.elt.tag != DerTag::Ia5String as u8, Err::Code(ErrorKind::Custom(128))) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::IA5String(content)) )
+   )
+}
+
+pub fn parse_der_t61string(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::T61String as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::T61String(content)) )
+   )
+}
+
+pub fn parse_der_bmpstring(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.elt.tag != DerTag::BmpString as u8, Err::Code(ErrorKind::Custom(128))) >>
+       content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::BmpString(content)) )
    )
 }
 
