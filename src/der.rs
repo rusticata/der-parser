@@ -358,7 +358,7 @@ macro_rules! parse_der_set_of(
         do_parse!(
             $i,
             hdr:     der_read_element_header >>
-                     error_if!(hdr.elt.tag != DerTag::Sequence as u8, Err::Code(ErrorKind::Custom(128))) >>
+                     error_if!(hdr.elt.tag != DerTag::Set as u8, Err::Code(ErrorKind::Custom(128))) >>
             content: flat_map!(take!(hdr.len),
                 do_parse!(
                     r: many0!($f) >>
