@@ -15,3 +15,6 @@ mod der_print;
 pub use der_print::*;
 
 pub mod oid;
+
+#[cfg(feature="bigint")]
+extern crate num;

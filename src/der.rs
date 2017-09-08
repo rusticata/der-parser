@@ -179,6 +179,28 @@ impl<'a> DerObjectContent<'a> {
     }
 }
 
+#[cfg(feature="bigint")]
+mod bigint {
+    use super::{DerObject,DerObjectContent};
+    use num::bigint::{Sign,BigInt,BigUint};
+
+    impl<'a> DerObject<'a> {
+        pub fn as_bigint(&self) -> Option<BigInt> {
+            match self.content {
+                DerObjectContent::Integer(s)         => Some(BigInt::from_bytes_be(Sign::Plus, s)),
+                _ => None,
+            }
+        }
+
+        pub fn as_biguint(&self) -> Option<BigUint> {
+            match self.content {
+                DerObjectContent::Integer(s)         => Some(BigUint::from_bytes_be(s)),
+                _ => None,
+            }
+        }
+    }
+}
+
 // This is a consuming iterator
 impl<'a> IntoIterator for DerObject<'a> {
     type Item = DerObject<'a>;
@@ -1300,6 +1322,23 @@ fn test_der_seq_iter() {
     }
 }
 
+#[cfg(feature="bigint")]
+#[test]
+fn test_der_to_bigint() {
+    let obj  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
+    let expected = ::num::bigint::BigInt::from(0x10001);
+
+    assert_eq!(obj.as_bigint(), Some(expected));
+}
+
+#[cfg(feature="bigint")]
+#[test]
+fn test_der_to_biguint() {
+    let obj  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
+    let expected = ::num::bigint::BigUint::from(0x10001 as u32);
+
+    assert_eq!(obj.as_biguint(), Some(expected));
+}
 
 }
 
