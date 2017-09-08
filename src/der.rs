@@ -3,8 +3,8 @@ use std::ops::Index;
 //use nom::{IResult, space, alpha, alphanumeric, digit};
 use nom::{be_u8,IResult,Err,ErrorKind};
 
-//use common::{Tag};
 use rusticata_macros::bytes_to_u64;
+use oid::Oid;
 
 /// Defined in X.680 section 8.4
 #[derive(Debug,PartialEq)]
@@ -69,7 +69,7 @@ pub enum DerObjectContent<'a> {
     OctetString(&'a [u8]),
     Null,
     Enum(u64),
-    OID(Vec<u64>),
+    OID(Oid),
     NumericString(&'a[u8]),
     PrintableString(&'a[u8]),
     IA5String(&'a[u8]),
@@ -517,9 +517,8 @@ pub fn der_read_element_content_as<'a,'b>(i:&'a[u8], tag:u8, len:usize) -> IResu
         0x06 => {
                     do_parse!(i,
                              error_if!(len == 0, Err::Code(ErrorKind::LengthValue)) >>
-                        oid: map!(take!(len),der_read_oid) >>
-                             error_if!(oid.is_err(), Err::Code(ErrorKind::LengthValue)) >>
-                        ( DerObjectContent::OID(oid.unwrap()) )
+                        oid: map_res!(take!(len),der_read_oid) >>
+                        ( DerObjectContent::OID(Oid::from_vec(&oid)) )
                     )
                 },
         // 0x0a: enumerated
@@ -688,9 +687,8 @@ pub fn parse_der_oid(i:&[u8]) -> IResult<&[u8],DerObject> {
        i,
        hdr:     der_read_element_header >>
                 error_if!(hdr.elt.tag != DerTag::Oid as u8, Err::Code(ErrorKind::Custom(128))) >>
-       content: map!(take!(hdr.len),der_read_oid) >>
-                error_if!(content.is_err(), Err::Code(ErrorKind::Custom(129))) >>
-       ( DerObject::from_header_and_content(hdr, DerObjectContent::OID(content.unwrap())) )
+       content: map_res!(take!(hdr.len),der_read_oid) >>
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::OID(Oid::from_vec(&content))) )
    )
 }
 
@@ -904,7 +902,7 @@ fn test_der_null() {
 fn test_der_oid() {
     let empty = &b""[..];
     let bytes = [0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x05];
-    let expected  = DerObject::from_obj(DerObjectContent::OID(vec![1, 2, 840, 113549, 1, 1, 5]));
+    let expected  = DerObject::from_obj(DerObjectContent::OID(Oid::from(&[1, 2, 840, 113549, 1, 1, 5])));
     assert_eq!(parse_der_oid(&bytes), IResult::Done(empty, expected));
 }
 
@@ -1143,19 +1141,19 @@ fn test_der_seq_dn() {
             vec![
                 DerObject::from_obj(DerObjectContent::Set(vec![
                     DerObject::from_obj(DerObjectContent::Sequence(vec![
-                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 6])), // countryName
+                        DerObject::from_obj(DerObjectContent::OID(Oid::from(&[2, 5, 4, 6]))), // countryName
                         DerObject::from_obj(DerObjectContent::PrintableString(b"FR")),
                     ])),
                 ])),
                 DerObject::from_obj(DerObjectContent::Set(vec![
                     DerObject::from_obj(DerObjectContent::Sequence(vec![
-                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 8])), // stateOrProvinceName
+                        DerObject::from_obj(DerObjectContent::OID(Oid::from(&[2, 5, 4, 8]))), // stateOrProvinceName
                         DerObject::from_obj(DerObjectContent::UTF8String(b"Some-State")),
                     ])),
                 ])),
                 DerObject::from_obj(DerObjectContent::Set(vec![
                     DerObject::from_obj(DerObjectContent::Sequence(vec![
-                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 10])), // organizationName
+                        DerObject::from_obj(DerObjectContent::OID(Oid::from(&[2, 5, 4, 10]))), // organizationName
                         DerObject::from_obj(DerObjectContent::UTF8String(b"Internet Widgits Pty Ltd")),
                     ])),
                 ])),
@@ -1181,19 +1179,19 @@ fn test_der_seq_dn_defined() {
             vec![
                 DerObject::from_obj(DerObjectContent::Set(vec![
                     DerObject::from_obj(DerObjectContent::Sequence(vec![
-                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 6])), // countryName
+                        DerObject::from_obj(DerObjectContent::OID(Oid::from(&[2, 5, 4, 6]))), // countryName
                         DerObject::from_obj(DerObjectContent::PrintableString(b"FR")),
                     ])),
                 ])),
                 DerObject::from_obj(DerObjectContent::Set(vec![
                     DerObject::from_obj(DerObjectContent::Sequence(vec![
-                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 8])), // stateOrProvinceName
+                        DerObject::from_obj(DerObjectContent::OID(Oid::from(&[2, 5, 4, 8]))), // stateOrProvinceName
                         DerObject::from_obj(DerObjectContent::UTF8String(b"Some-State")),
                     ])),
                 ])),
                 DerObject::from_obj(DerObjectContent::Set(vec![
                     DerObject::from_obj(DerObjectContent::Sequence(vec![
-                        DerObject::from_obj(DerObjectContent::OID(vec![2, 5, 4, 10])), // organizationName
+                        DerObject::from_obj(DerObjectContent::OID(Oid::from(&[2, 5, 4, 10]))), // organizationName
                         DerObject::from_obj(DerObjectContent::UTF8String(b"Internet Widgits Pty Ltd")),
                     ])),
                 ])),

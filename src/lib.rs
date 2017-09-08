@@ -13,3 +13,5 @@ pub use der::*;
 
 mod der_print;
 pub use der_print::*;
+
+pub mod oid;
