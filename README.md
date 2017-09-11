@@ -14,6 +14,13 @@ der-parser is a parser for the DER protocol.
 
 ## Changes
 
+### 0.4.1
+
+- Add new feature 'bigint' to export DER integers
+- OID is now a specific type
+- Add new types T61String and BmpString
+- Fix wrong expected tag in parse_der_set_of
+
 ### 0.4.0
 
 - Der Integers are now represented as slices (byte arrays) since they can be larger than u64.
