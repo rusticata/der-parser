@@ -6,6 +6,16 @@ use nom::{be_u8,IResult,Err,ErrorKind};
 use rusticata_macros::bytes_to_u64;
 use oid::Oid;
 
+#[derive(Debug,PartialEq)]
+pub enum DerError {
+    /// Der object does not have the expected type
+    DerTypeError,
+    DerValueError,
+
+    /// Der integer is too large to fit in a native type. Use `as_bigint()`
+    IntegerTooLarge,
+}
+
 /// Defined in X.680 section 8.4
 #[derive(Debug,PartialEq)]
 #[repr(u8)]
@@ -151,30 +161,65 @@ impl<'a> DerObject<'a> {
 }
 
 impl<'a> DerObjectContent<'a> {
-    pub fn as_u32(&self) -> Option<u32> {
+    pub fn as_u32(&self) -> Result<u32,DerError> {
         match self {
             &DerObjectContent::Integer(i) => {
-                if i.len() <= 4 { bytes_to_u64(i).map(|x| x as u32).ok() }
-                else { None }
+                if i.len() <= 4 { bytes_to_u64(i).map(|x| x as u32).or(Err(DerError::DerTypeError)) }
+                else { Err(DerError::IntegerTooLarge) }
             },
-            &DerObjectContent::Enum(i)    => Some(i as u32),
-            _ => None,
+            &DerObjectContent::Enum(i)    => Ok(i as u32),
+            _ => Err(DerError::DerTypeError),
         }
     }
 
-    pub fn as_slice(&self) -> Option<&'a [u8]> {
+    pub fn as_bool(&self) -> Result<bool,DerError> {
         match self {
-            &DerObjectContent::Integer(s)         => Some(s),
-            &DerObjectContent::BitString(_,s)     => Some(s),
-            &DerObjectContent::OctetString(s)     => Some(s),
-            &DerObjectContent::NumericString(s)   => Some(s),
-            &DerObjectContent::PrintableString(s) => Some(s),
-            &DerObjectContent::IA5String(s)       => Some(s),
-            &DerObjectContent::UTF8String(s)      => Some(s),
-            &DerObjectContent::T61String(s)       => Some(s),
-            &DerObjectContent::BmpString(s)       => Some(s),
-            &DerObjectContent::Unknown(s)         => Some(s),
-            _ => None,
+            &DerObjectContent::Boolean(b) => Ok(b),
+            _ => Err(DerError::DerTypeError),
+        }
+    }
+
+    pub fn as_oid(&self) -> Result<&Oid,DerError> {
+        match self {
+            &DerObjectContent::OID(ref o) => Ok(o),
+            _ => Err(DerError::DerTypeError),
+        }
+    }
+
+    pub fn as_context_specific(&self) -> Result<(u8,Option<Box<DerObject<'a>>>),DerError> {
+        match self {
+            &DerObjectContent::ContextSpecific(u,ref o) => Ok((u,o.clone())),
+            _ => Err(DerError::DerTypeError),
+        }
+    }
+
+    pub fn as_sequence(&self) -> Result<&Vec<DerObject<'a>>,DerError> {
+        match self {
+            &DerObjectContent::Sequence(ref s) => Ok(s),
+            _ => Err(DerError::DerTypeError),
+        }
+    }
+
+    pub fn as_set(&self) -> Result<&Vec<DerObject<'a>>,DerError> {
+        match self {
+            &DerObjectContent::Set(ref s) => Ok(s),
+            _ => Err(DerError::DerTypeError),
+        }
+    }
+
+    pub fn as_slice(&self) -> Result<&'a [u8],DerError> {
+        match self {
+            &DerObjectContent::Integer(s)         => Ok(s),
+            &DerObjectContent::BitString(_,s)     => Ok(s),
+            &DerObjectContent::OctetString(s)     => Ok(s),
+            &DerObjectContent::NumericString(s)   => Ok(s),
+            &DerObjectContent::PrintableString(s) => Ok(s),
+            &DerObjectContent::IA5String(s)       => Ok(s),
+            &DerObjectContent::UTF8String(s)      => Ok(s),
+            &DerObjectContent::T61String(s)       => Ok(s),
+            &DerObjectContent::BmpString(s)       => Ok(s),
+            &DerObjectContent::Unknown(s)         => Ok(s),
+            _ => Err(DerError::DerTypeError),
         }
     }
 }
@@ -934,9 +979,9 @@ fn test_der_int() {
 #[test]
 fn test_der_int_as_u32() {
     let val  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
-    assert_eq!(val.content.as_u32(), Some(65537));
+    assert_eq!(val.content.as_u32(), Ok(65537));
     let val  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01\x00\x01"));
-    assert_eq!(val.content.as_u32(), None);
+    assert_eq!(val.content.as_u32(), Err(DerError::IntegerTooLarge));
 }
 
 #[test]
