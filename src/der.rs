@@ -1,5 +1,6 @@
 use std::vec::Vec;
 use std::ops::Index;
+use std::convert::From;
 //use nom::{IResult, space, alpha, alphanumeric, digit};
 use nom::{be_u8,IResult,Err,ErrorKind};
 
@@ -157,6 +158,12 @@ impl<'a> DerObject<'a> {
             tag:        DerTag::Integer as u8,
             content:    DerObjectContent::Integer(i),
         }
+    }
+}
+
+impl<'a> From<Oid> for DerObject<'a> {
+    fn from(oid: Oid) -> DerObject<'a> {
+        DerObject::from_obj(DerObjectContent::OID(oid))
     }
 }
 
@@ -1365,6 +1372,14 @@ fn test_der_seq_iter() {
         },
         _ => assert_eq!(result,IResult::Done(empty,DerObject::from_obj(DerObjectContent::Sequence(expected_values)))),
     }
+}
+
+#[test]
+fn test_der_from_oid() {
+    let obj : DerObject = Oid::from(&[1,2]).into();
+    let expected = DerObject::from_obj(DerObjectContent::OID(Oid::from(&[1,2])));
+
+    assert_eq!(obj, expected);
 }
 
 #[cfg(feature="bigint")]
