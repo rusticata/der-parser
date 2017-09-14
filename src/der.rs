@@ -159,6 +159,20 @@ impl<'a> DerObject<'a> {
             content:    DerObjectContent::Integer(i),
         }
     }
+
+    pub fn as_u32(&self) -> Result<u32,DerError> { self.content.as_u32() }
+    pub fn as_bool(&self) -> Result<bool,DerError> { self.content.as_bool() }
+    pub fn as_oid(&self) -> Result<&Oid,DerError> { self.content.as_oid() }
+    pub fn as_context_specific(&self) -> Result<(u8,Option<Box<DerObject<'a>>>),DerError> {
+        self.content.as_context_specific()
+    }
+    pub fn as_sequence(&self) -> Result<&Vec<DerObject<'a>>,DerError> {
+        self.content.as_sequence()
+    }
+    pub fn as_set(&self) -> Result<&Vec<DerObject<'a>>,DerError> {
+        self.content.as_set()
+    }
+    pub fn as_slice(&self) -> Result<&'a [u8],DerError> { self.content.as_slice() }
 }
 
 impl<'a> From<Oid> for DerObject<'a> {
