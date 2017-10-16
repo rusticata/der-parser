@@ -740,15 +740,16 @@ pub fn der_read_element_content<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IRe
     }
 }
 
+/// Read a boolean value
+///
+/// If the boolean value is FALSE, the octet shall be zero.
+/// If the boolean value is TRUE, the octet shall have any non-zero value, as a sender's option.
 pub fn parse_der_bool(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
                 error_if!(hdr.elt.tag != DerTag::Boolean as u8, Err::Code(ErrorKind::Custom(128))) >>
-       content: switch!(take!(1),
-                        b"\x00" => value!(true) |
-                        b"\xff" => value!(false)
-       ) >>
+       content: map!(be_u8, |x| x!=0) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::Boolean(content)) )
    )
 }
@@ -983,10 +984,9 @@ fn test_der_bool() {
     let empty = &b""[..];
     let b_true  = DerObject::from_obj(DerObjectContent::Boolean(true));
     let b_false  = DerObject::from_obj(DerObjectContent::Boolean(false));
-    assert_eq!(parse_der_bool(&[0x01, 0x01, 0x00]), IResult::Done(empty, b_true));
-    assert_eq!(parse_der_bool(&[0x01, 0x01, 0xff]), IResult::Done(empty, b_false));
-    let bytes = [0x01, 0x01, 0x7f];
-    assert_eq!(parse_der_bool(&bytes[..]), IResult::Error(Err::Position(ErrorKind::Switch, &bytes[2..])));
+    assert_eq!(parse_der_bool(&[0x01, 0x01, 0x00]), IResult::Done(empty, b_false));
+    assert_eq!(parse_der_bool(&[0x01, 0x01, 0xff]), IResult::Done(empty, b_true.clone()));
+    assert_eq!(parse_der_bool(&[0x01, 0x01, 0x7f]), IResult::Done(empty, b_true));
 }
 
 #[test]
