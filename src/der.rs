@@ -742,6 +742,9 @@ pub fn der_read_element_content<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IRe
 
 /// Read a boolean value
 ///
+/// The encoding of a boolean value shall be primitive. The contents octets shall consist of a
+/// single octet.
+///
 /// If the boolean value is FALSE, the octet shall be zero.
 /// If the boolean value is TRUE, the octet shall have any non-zero value, as a sender's option.
 pub fn parse_der_bool(i:&[u8]) -> IResult<&[u8],DerObject> {
@@ -749,6 +752,7 @@ pub fn parse_der_bool(i:&[u8]) -> IResult<&[u8],DerObject> {
        i,
        hdr:     der_read_element_header >>
                 error_if!(hdr.elt.tag != DerTag::Boolean as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.len != 1, Err::Code(ErrorKind::Custom(129))) >>
        content: map!(be_u8, |x| x!=0) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::Boolean(content)) )
    )
