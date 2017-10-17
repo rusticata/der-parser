@@ -160,6 +160,14 @@ impl<'a> DerObject<'a> {
         }
     }
 
+    pub fn from_seq<'b>(l:Vec<DerObject<'b>>) -> DerObject<'b> {
+        DerObject::from_obj( DerObjectContent::Sequence(l) )
+    }
+
+    pub fn from_set<'b>(l:Vec<DerObject<'b>>) -> DerObject<'b> {
+        DerObject::from_obj( DerObjectContent::Set(l) )
+    }
+
     pub fn as_u32(&self) -> Result<u32,DerError> { self.content.as_u32() }
     pub fn as_bool(&self) -> Result<bool,DerError> { self.content.as_bool() }
     pub fn as_oid(&self) -> Result<&Oid,DerError> { self.content.as_oid() }
