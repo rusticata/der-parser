@@ -115,11 +115,11 @@ mod tests {
 #[test]
 fn test_pretty_print() {
     let d = DerObject::from_obj(DerObjectContent::Sequence(vec![
-        DerObject::new_int(b"\x01\x00\x01"),
-        DerObject::new_int(b"\x01\x00\x01"),
+        DerObject::from_int_slice(b"\x01\x00\x01"),
+        DerObject::from_int_slice(b"\x01\x00\x01"),
         DerObject::from_obj(DerObjectContent::Set(vec![
-            DerObject::new_int(b"\x01"),
-            DerObject::new_int(b"\x02"),
+            DerObject::from_int_slice(b"\x01"),
+            DerObject::from_int_slice(b"\x02"),
         ]))
     ]));
 

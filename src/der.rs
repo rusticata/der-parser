@@ -141,7 +141,9 @@ impl<'a> DerObject<'a> {
             content:    c,
         }
     }
-    pub fn new_int(i: &'a[u8]) -> DerObject<'a> {
+
+    /// Build a DER integer object from a slice containing an encoded integer
+    pub fn from_int_slice(i: &'a[u8]) -> DerObject<'a> {
         DerObject{
             class:      0,
             structured: 0,
@@ -361,12 +363,12 @@ mod tests {
 #[test]
 fn test_der_seq_iter() {
     let der_obj  = DerObject::from_obj(DerObjectContent::Sequence(vec![
-        DerObject::new_int(b"\x01\x00\x01"),
-        DerObject::new_int(b"\x01\x00\x00"),
+        DerObject::from_int_slice(b"\x01\x00\x01"),
+        DerObject::from_int_slice(b"\x01\x00\x00"),
     ]));
     let expected_values = vec![
-        DerObject::new_int(b"\x01\x00\x01"),
-        DerObject::new_int(b"\x01\x00\x00"),
+        DerObject::from_int_slice(b"\x01\x00\x01"),
+        DerObject::from_int_slice(b"\x01\x00\x00"),
     ];
 
     let mut idx = 0;

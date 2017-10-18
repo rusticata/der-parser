@@ -77,8 +77,8 @@ macro_rules! fold_der_defined_m(
 ///               0x02, 0x03, 0x01, 0x00, 0x00,
 /// ];
 /// let expected  = DerObject::from_obj(DerObjectContent::Sequence(vec![
-///     DerObject::new_int(b"\x01\x00\x01"),
-///     DerObject::new_int(b"\x01\x00\x00"),
+///     DerObject::from_int_slice(b"\x01\x00\x01"),
+///     DerObject::from_int_slice(b"\x01\x00\x00"),
 /// ]));
 /// assert_eq!(localparse_seq(&bytes), IResult::Done(empty, expected));
 /// # }

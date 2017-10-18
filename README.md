@@ -14,6 +14,10 @@ der-parser is a parser for the DER protocol.
 
 ## Changes
 
+### 0.4.4
+
+- Rename `DerObject::new_int` to `DerObject::from_int_slice`
+
 ### 0.4.1
 
 - Add new feature 'bigint' to export DER integers
