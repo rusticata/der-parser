@@ -41,6 +41,7 @@ pub enum DerTag {
     Invalid = 0xff,
 }
 
+/// Representation of a DER-encoded (X.690) object
 #[derive(Debug,Clone,PartialEq)]
 pub struct DerObject<'a> {
     pub class: u8,
@@ -116,6 +117,9 @@ pub fn tag_of_der_content(c: &DerObjectContent) -> DerTag {
 }
 
 impl<'a> DerObject<'a> {
+    /// Build a DerObject from a header and content.
+    /// Note: values are not checked, so the tag can be different from the real content, or flags
+    /// can be invalid.
     pub fn from_header_and_content(hdr: DerElementHeader, c: DerObjectContent) -> DerObject {
         DerObject{
             class:      hdr.elt.class,
@@ -152,29 +156,56 @@ impl<'a> DerObject<'a> {
         }
     }
 
+    /// Build a DER sequence object from a vector of DER objects
     pub fn from_seq<'b>(l:Vec<DerObject<'b>>) -> DerObject<'b> {
         DerObject::from_obj( DerObjectContent::Sequence(l) )
     }
 
+    /// Build a DER set object from a vector of DER objects
     pub fn from_set<'b>(l:Vec<DerObject<'b>>) -> DerObject<'b> {
         DerObject::from_obj( DerObjectContent::Set(l) )
     }
 
+    /// Attempt to read integer value from DER object.
+    /// This can fail if the object is not an integer, or if it is too large.
     pub fn as_u32(&self) -> Result<u32,DerError> { self.content.as_u32() }
+
+    /// Attempt to read integer value from DER object.
+    /// This can fail if the object is not a boolean.
     pub fn as_bool(&self) -> Result<bool,DerError> { self.content.as_bool() }
+
+    /// Attempt to read an OID value from DER object.
+    /// This can fail if the object is not an OID.
     pub fn as_oid(&self) -> Result<&Oid,DerError> { self.content.as_oid() }
+
+    /// Attempt to read the content from a context-specific DER object.
+    /// This can fail if the object is not context-specific.
+    ///
+    /// Note: the object is cloned.
     pub fn as_context_specific(&self) -> Result<(u8,Option<Box<DerObject<'a>>>),DerError> {
         self.content.as_context_specific()
     }
+
+    /// Attempt to extract the list of objects from a DER sequence.
+    /// This can fail if the object is not a sequence.
     pub fn as_sequence(&self) -> Result<&Vec<DerObject<'a>>,DerError> {
         self.content.as_sequence()
     }
+
+    /// Attempt to extract the list of objects from a DER set.
+    /// This can fail if the object is not a set.
     pub fn as_set(&self) -> Result<&Vec<DerObject<'a>>,DerError> {
         self.content.as_set()
     }
+
+    /// Attempt to get the content from a DER object, as a slice.
+    /// This can fail if the object does not contain a type directly equivalent to a slice (e.g a
+    /// sequence).
+    /// This function mostly concerns string types, integers, or unknown DER objects.
     pub fn as_slice(&self) -> Result<&'a [u8],DerError> { self.content.as_slice() }
 }
 
+/// Build a DER object from an OID.
 impl<'a> From<Oid> for DerObject<'a> {
     fn from(oid: Oid) -> DerObject<'a> {
         DerObject::from_obj(DerObjectContent::OID(oid))
