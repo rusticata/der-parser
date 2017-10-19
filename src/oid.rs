@@ -1,10 +1,14 @@
+//! Object ID (OID) representation
+
 use std::fmt;
 use std::slice;
 
+/// Object ID (OID) representation
 #[derive(PartialEq,Eq,Clone)]
 pub struct Oid (Vec<u64>);
 
 impl Oid {
+    /// Build an OID from an array of `u64` integers
     pub fn from(s: &[u64]) -> Oid {
         let v : Vec<u64> = s.iter().fold(
             Vec::new(),
@@ -13,11 +17,14 @@ impl Oid {
         Oid(v)
     }
 
+    /// Build an OID from a vector of `u64` integers
     pub fn from_vec(v: &Vec<u64>) -> Oid {
         Oid(v.clone())
     }
 
-    pub fn to_hex(&self) -> String {
+    /// Convert the OID to a string representation.
+    /// The string contains the IDs separated by dots, for ex: "1.2.840.113549.1.1.5"
+    pub fn to_string(&self) -> String {
         if self.0.len() == 0 { return String::new(); }
 
         let mut s = self.0[0].to_string();
@@ -30,6 +37,7 @@ impl Oid {
         s
     }
 
+    /// Return an iterator on every ID
     pub fn iter(&self) -> slice::Iter<u64> {
         self.0.iter()
     }
@@ -37,13 +45,13 @@ impl Oid {
 
 impl fmt::Display for Oid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.to_hex())
+        f.write_str(&self.to_string())
     }
 }
 
 impl fmt::Debug for Oid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&format!("OID({})", self.to_hex()))
+        f.write_str(&format!("OID({})", self.to_string()))
     }
 }
 

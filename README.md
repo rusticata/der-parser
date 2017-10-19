@@ -16,7 +16,11 @@ der-parser is a parser for the DER protocol.
 
 ### 0.4.4
 
+- Add macro parse_der_defined_m, to parse a defined sequence or set
+  This macro differs from `parse_der_defined` because it allows using macros
 - Rename `DerObject::new_int` to `DerObject::from_int_slice`
+- Rename `Oid::to_hex` to `Oid::to_string`
+- Document more functions
 
 ### 0.4.1
 
