@@ -87,6 +87,7 @@ macro_rules! fold_der_defined_m(
 macro_rules! parse_der_defined_m(
     ($i:expr, $tag:expr, $($args:tt)*) => (
         {
+            use $crate::der_read_element_header;
             do_parse!(
                 $i,
                 hdr:     der_read_element_header >>
@@ -95,7 +96,7 @@ macro_rules! parse_der_defined_m(
                          error_if!(hdr.elt.tag != $tag, Err::Code(ErrorKind::Custom(130))) >>
                 content: flat_map!(take!(hdr.len), fold_der_defined_m!( $($args)* )) >>
                 ( {
-                    DerObject::from_header_and_content(hdr,DerObjectContent::Sequence(content))
+                    $crate::DerObject::from_header_and_content(hdr,$crate::DerObjectContent::Sequence(content))
                 } )
             )
         }
@@ -130,6 +131,7 @@ macro_rules! fold_parsers(
 macro_rules! parse_der_defined(
     ($i:expr, $ty:expr, $($args:tt)*) => (
         {
+            use $crate::der_read_element_header;
             let res =
             do_parse!(
                 $i,
@@ -164,7 +166,7 @@ macro_rules! parse_der_sequence_defined(
         map!(
             $i,
             parse_der_defined!(0x10, $($args)*),
-            |(hdr,o)| DerObject::from_header_and_content(hdr,DerObjectContent::Sequence(o))
+            |(hdr,o)| $crate::DerObject::from_header_and_content(hdr,$crate::DerObjectContent::Sequence(o))
         )
     );
 );
@@ -175,14 +177,15 @@ macro_rules! parse_der_set_defined(
         map!(
             $i,
             parse_der_defined!(0x11, $($args)*),
-            |(hdr,o)| DerObject::from_header_and_content(hdr,DerObjectContent::Set(o))
+            |(hdr,o)| $crate::DerObject::from_header_and_content(hdr,$crate::DerObjectContent::Set(o))
         )
     );
 );
 
 #[macro_export]
 macro_rules! parse_der_sequence_of(
-    ($i:expr, $f:ident) => (
+    ($i:expr, $f:ident) => ({
+        use $crate::der_read_element_header;
         do_parse!(
             $i,
             hdr:     der_read_element_header >>
@@ -194,14 +197,15 @@ macro_rules! parse_der_sequence_of(
                     ( r )
                 )
             ) >>
-            ( DerObject::from_header_and_content(hdr, DerObjectContent::Sequence(content)) )
+            ( $crate::DerObject::from_header_and_content(hdr, $crate::DerObjectContent::Sequence(content)) )
         )
-    )
+    })
 );
 
 #[macro_export]
 macro_rules! parse_der_set_of(
-    ($i:expr, $f:ident) => (
+    ($i:expr, $f:ident) => ({
+        use $crate::der_read_element_header;
         do_parse!(
             $i,
             hdr:     der_read_element_header >>
@@ -213,9 +217,9 @@ macro_rules! parse_der_set_of(
                     ( r )
                 )
             ) >>
-            ( DerObject::from_header_and_content(hdr, DerObjectContent::Sequence(content)) )
+            ( $crate::DerObject::from_header_and_content(hdr, $crate::DerObjectContent::Sequence(content)) )
         )
-    )
+    })
 );
 
 #[macro_export]
@@ -226,8 +230,8 @@ macro_rules! parse_der_optional(
             do_parse!(
                 content: call!($f) >>
                 (
-                    DerObject::from_obj(
-                        DerObjectContent::ContextSpecific(0 /* XXX */,Some(Box::new(content)))
+                    $crate::DerObject::from_obj(
+                        $crate::DerObjectContent::ContextSpecific(0 /* XXX */,Some(Box::new(content)))
                     )
                 )
             ) |
@@ -235,5 +239,3 @@ macro_rules! parse_der_optional(
         )
     )
 );
-
-
