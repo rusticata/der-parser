@@ -344,6 +344,14 @@ pub fn parse_der_utf8string(i:&[u8]) -> IResult<&[u8],DerObject> {
    )
 }
 
+/// Parse a sequence of DER elements
+///
+/// Read a sequence of DER objects, without any constraint on the types.
+/// Sequence is parsed recursively, so if structured elements are found, they are parsed using the
+/// same function.
+///
+/// To read a specific sequence of objects (giving the expected types), use the
+/// [parse_der_sequence_defined](macro.parse_der_sequence_defined.html) macro.
 pub fn parse_der_sequence(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
@@ -354,6 +362,14 @@ pub fn parse_der_sequence(i:&[u8]) -> IResult<&[u8],DerObject> {
    )
 }
 
+/// Parse a set of DER elements
+///
+/// Read a set of DER objects, without any constraint on the types.
+/// Sequence is parsed recursively, so if structured elements are found, they are parsed using the
+/// same function.
+///
+/// To read a specific set of objects (giving the expected types), use the
+/// [parse_der_set_defined](macro.parse_der_set_defined.html) macro.
 pub fn parse_der_set(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
@@ -674,6 +690,23 @@ fn test_der_seq_of_incomplete() {
 }
 
 #[test]
+fn test_der_set_of() {
+    let empty = &b""[..];
+    let bytes = [ 0x31, 0x0a,
+                  0x02, 0x03, 0x01, 0x00, 0x01,
+                  0x02, 0x03, 0x01, 0x00, 0x00,
+    ];
+    let expected  = DerObject::from_obj(DerObjectContent::Set(vec![
+        DerObject::from_int_slice(b"\x01\x00\x01"),
+        DerObject::from_int_slice(b"\x01\x00\x00"),
+    ]));
+    fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
+        parse_der_set_of!(i, parse_der_integer)
+    };
+    assert_eq!(parser(&bytes), IResult::Done(empty, expected));
+}
+
+#[test]
 fn test_der_utctime() {
     let empty = &b""[..];
     let bytes = [0x17, 0x0D, 0x30, 0x32, 0x31, 0x32, 0x31, 0x33, 0x31, 0x34, 0x32, 0x39, 0x32, 0x33, 0x5A ];
@@ -883,7 +916,7 @@ fn test_der_seq_dn_defined() {
 #[test]
 fn test_der_defined_seq_macros() {
     fn localparse_seq(i:&[u8]) -> IResult<&[u8],DerObject> {
-        parse_der_defined_m!(i, 0x10,
+        parse_der_sequence_defined_m!(i,
             parse_der_integer >>
             call!(parse_der_integer)
         )
@@ -898,6 +931,26 @@ fn test_der_defined_seq_macros() {
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]));
     assert_eq!(localparse_seq(&bytes), IResult::Done(empty, expected));
+}
+
+#[test]
+fn test_der_defined_set_macros() {
+    fn localparse_set(i:&[u8]) -> IResult<&[u8],DerObject> {
+        parse_der_set_defined_m!(i,
+            parse_der_integer >>
+            call!(parse_der_integer)
+        )
+    }
+    let empty = &b""[..];
+    let bytes = [ 0x31, 0x0a,
+                  0x02, 0x03, 0x01, 0x00, 0x01,
+                  0x02, 0x03, 0x01, 0x00, 0x00,
+    ];
+    let expected  = DerObject::from_obj(DerObjectContent::Set(vec![
+        DerObject::from_int_slice(b"\x01\x00\x01"),
+        DerObject::from_int_slice(b"\x01\x00\x00"),
+    ]));
+    assert_eq!(localparse_set(&bytes), IResult::Done(empty, expected));
 }
 
 }
