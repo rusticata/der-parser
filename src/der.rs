@@ -92,30 +92,6 @@ pub enum DerObjectContent<'a> {
     Unknown(&'a[u8]),
 }
 
-pub fn tag_of_der_content(c: &DerObjectContent) -> DerTag {
-    match *c {
-        DerObjectContent::Boolean(_)           => DerTag::Boolean,
-        DerObjectContent::Integer(_)           => DerTag::Integer,
-        DerObjectContent::BitString(_,_)       => DerTag::BitString,
-        DerObjectContent::OctetString(_)       => DerTag::OctetString,
-        DerObjectContent::Null                 => DerTag::Null,
-        DerObjectContent::Enum(_)              => DerTag::Enumerated,
-        DerObjectContent::OID(_)               => DerTag::Oid,
-        DerObjectContent::NumericString(_)     => DerTag::NumericString,
-        DerObjectContent::PrintableString(_)   => DerTag::PrintableString,
-        DerObjectContent::IA5String(_)         => DerTag::Ia5String,
-        DerObjectContent::UTF8String(_)        => DerTag::Utf8String,
-        DerObjectContent::T61String(_)         => DerTag::T61String,
-        DerObjectContent::BmpString(_)         => DerTag::BmpString,
-        DerObjectContent::Sequence(_)          => DerTag::Sequence,
-        DerObjectContent::Set(_)               => DerTag::Set,
-        DerObjectContent::UTCTime(_)           => DerTag::UtcTime,
-        DerObjectContent::GeneralizedTime(_)   => DerTag::GeneralizedTime,
-        DerObjectContent::ContextSpecific(_,_) => DerTag::Invalid,
-        DerObjectContent::Unknown(_)           => DerTag::Invalid,
-    }
-}
-
 impl<'a> DerObject<'a> {
     /// Build a DerObject from a header and content.
     /// Note: values are not checked, so the tag can be different from the real content, or flags
@@ -132,7 +108,7 @@ impl<'a> DerObject<'a> {
     /// and structured flag set only for Set and Sequence)
     pub fn from_obj(c: DerObjectContent) -> DerObject {
         let class = 0;
-        let tag = tag_of_der_content(&c);
+        let tag = c.tag();
         let structured = match tag {
             DerTag::Sequence => 1,
             DerTag::Set      => 1,
@@ -272,6 +248,30 @@ impl<'a> DerObjectContent<'a> {
             &DerObjectContent::BmpString(s)       => Ok(s),
             &DerObjectContent::Unknown(s)         => Ok(s),
             _ => Err(DerError::DerTypeError),
+        }
+    }
+
+    pub fn tag(&self) -> DerTag {
+        match *self {
+            DerObjectContent::Boolean(_)           => DerTag::Boolean,
+            DerObjectContent::Integer(_)           => DerTag::Integer,
+            DerObjectContent::BitString(_,_)       => DerTag::BitString,
+            DerObjectContent::OctetString(_)       => DerTag::OctetString,
+            DerObjectContent::Null                 => DerTag::Null,
+            DerObjectContent::Enum(_)              => DerTag::Enumerated,
+            DerObjectContent::OID(_)               => DerTag::Oid,
+            DerObjectContent::NumericString(_)     => DerTag::NumericString,
+            DerObjectContent::PrintableString(_)   => DerTag::PrintableString,
+            DerObjectContent::IA5String(_)         => DerTag::Ia5String,
+            DerObjectContent::UTF8String(_)        => DerTag::Utf8String,
+            DerObjectContent::T61String(_)         => DerTag::T61String,
+            DerObjectContent::BmpString(_)         => DerTag::BmpString,
+            DerObjectContent::Sequence(_)          => DerTag::Sequence,
+            DerObjectContent::Set(_)               => DerTag::Set,
+            DerObjectContent::UTCTime(_)           => DerTag::UtcTime,
+            DerObjectContent::GeneralizedTime(_)   => DerTag::GeneralizedTime,
+            DerObjectContent::ContextSpecific(_,_) => DerTag::Invalid,
+            DerObjectContent::Unknown(_)           => DerTag::Invalid,
         }
     }
 }
