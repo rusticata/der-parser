@@ -59,9 +59,9 @@ macro_rules! parse_der_defined_m(
             do_parse!(
                 $i,
                 hdr:     der_read_element_header >>
-                         error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
-                         error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom(129))) >>
-                         error_if!(hdr.elt.tag != $tag, Err::Code(ErrorKind::Custom(130))) >>
+                         error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom($crate::DER_CLASS_ERROR))) >>
+                         error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom($crate::DER_STRUCT_ERROR))) >>
+                         error_if!(hdr.elt.tag != $tag, Err::Code(ErrorKind::Custom($crate::DER_TAG_ERROR))) >>
                 content: flat_map!(take!(hdr.len), fold_der_defined_m!( $($args)* )) >>
                 ( {
                     (hdr,content)
@@ -198,9 +198,9 @@ macro_rules! parse_der_defined(
             do_parse!(
                 $i,
                 hdr:     der_read_element_header >>
-                         error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom(128))) >>
-                         error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom(129))) >>
-                         error_if!(hdr.elt.tag != $ty, Err::Code(ErrorKind::Custom(130))) >>
+                         error_if!(hdr.elt.class != 0b00, Err::Code(ErrorKind::Custom($crate::DER_CLASS_ERROR))) >>
+                         error_if!(hdr.elt.structured != 0b1, Err::Code(ErrorKind::Custom($crate::DER_STRUCT_ERROR))) >>
+                         error_if!(hdr.elt.tag != $ty, Err::Code(ErrorKind::Custom($crate::DER_TAG_ERROR))) >>
                 content: take!(hdr.len) >>
                 ( (hdr,content) )
             );
@@ -208,7 +208,7 @@ macro_rules! parse_der_defined(
                 IResult::Done(_rem,o)   => {
                     match fold_parsers!(o.1, $($args)* ) {
                         IResult::Done(rem,v)   => {
-                            if rem.len() != 0 { IResult::Error(Err::Code(ErrorKind::Custom(131))) }
+                            if rem.len() != 0 { IResult::Error(Err::Code(ErrorKind::Custom(DER_OBJ_TOOSHORT))) }
                             else { IResult::Done(_rem,(o.0,v)) }
                         },
                         IResult::Incomplete(e) => IResult::Incomplete(e),
@@ -348,7 +348,7 @@ macro_rules! parse_der_sequence_of(
         do_parse!(
             $i,
             hdr:     der_read_element_header >>
-                     error_if!(hdr.elt.tag != DerTag::Sequence as u8, Err::Code(ErrorKind::Custom(128))) >>
+                     error_if!(hdr.elt.tag != DerTag::Sequence as u8, Err::Code(ErrorKind::Custom($crate::DER_TAG_ERROR))) >>
             content: flat_map!(take!(hdr.len),
                 do_parse!(
                     r: many0!($f) >>
@@ -395,7 +395,7 @@ macro_rules! parse_der_set_of(
         do_parse!(
             $i,
             hdr:     der_read_element_header >>
-                     error_if!(hdr.elt.tag != DerTag::Set as u8, Err::Code(ErrorKind::Custom(128))) >>
+                     error_if!(hdr.elt.tag != DerTag::Set as u8, Err::Code(ErrorKind::Custom($crate::DER_TAG_ERROR))) >>
             content: flat_map!(take!(hdr.len),
                 do_parse!(
                     r: many0!($f) >>

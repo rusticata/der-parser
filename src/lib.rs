@@ -16,7 +16,7 @@ mod der_print;
 pub use der_print::*;
 
 mod error;
-pub use error::DerError;
+pub use error::*;
 
 pub mod oid;
 

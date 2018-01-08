@@ -2,6 +2,7 @@ use nom::{be_u8,IResult,Err,ErrorKind};
 use rusticata_macros::bytes_to_u64;
 
 use der::*;
+use error::*;
 use oid::Oid;
 
 
@@ -64,7 +65,7 @@ named!(pub der_read_element_header<&[u8],DerElementHeader>,
                     // XXX llen: test if 0 (indefinite form), if len is 0xff -> error
                     match bytes_to_u64(llen.unwrap()) {
                         Ok(l)  => l,
-                        Err(_) => { return IResult::Error(Err::Code(ErrorKind::Custom(128))); },
+                        Err(_) => { return IResult::Error(Err::Code(ErrorKind::Custom(DER_TAG_ERROR))); },
                     }
                 },
             };
@@ -213,7 +214,7 @@ pub fn der_read_element_content_as<'a,'b>(i:&'a[u8], tag:u8, len:usize) -> IResu
                     )
                 },
         // all unknown values
-        _    => { IResult::Error(Err::Code(ErrorKind::Custom(130))) },
+        _    => { IResult::Error(Err::Code(ErrorKind::Custom(DER_TAG_UNKNOWN))) },
     }
 }
 
@@ -238,13 +239,13 @@ pub fn der_read_element_content<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IRe
         ),
         // private
         0b11 => (),
-        _    => { return IResult::Error(Err::Code(ErrorKind::Custom(129))); },
+        _    => { return IResult::Error(Err::Code(ErrorKind::Custom(DER_CLASS_ERROR))); },
     }
     match der_read_element_content_as(i, hdr.elt.tag, hdr.len as usize) {
         IResult::Done(rem,content) => {
             IResult::Done(rem, DerObject::from_header_and_content(hdr,content))
         },
-        IResult::Error(Err::Code(ErrorKind::Custom(130))) => {
+        IResult::Error(Err::Code(ErrorKind::Custom(DER_TAG_UNKNOWN))) => {
             map!(i,
                  take!(hdr.len),
                  |b| { DerObject::from_header_and_content(hdr,DerObjectContent::Unknown(b)) }
@@ -266,8 +267,8 @@ pub fn parse_der_bool(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::Boolean as u8, Err::Code(ErrorKind::Custom(128))) >>
-                error_if!(hdr.len != 1, Err::Code(ErrorKind::Custom(129))) >>
+                error_if!(hdr.elt.tag != DerTag::Boolean as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
+                error_if!(hdr.len != 1, Err::Code(ErrorKind::Custom(DER_INVALID_LENGTH))) >>
        content: map!(be_u8, |x| x!=0) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::Boolean(content)) )
    )
@@ -277,7 +278,7 @@ pub fn parse_der_integer(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::Integer as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::Integer as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: take!(hdr.len) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::Integer(content)) )
    )
@@ -287,9 +288,9 @@ pub fn parse_der_bitstring(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:          der_read_element_header >>
-                     error_if!(hdr.elt.tag != DerTag::BitString as u8, Err::Code(ErrorKind::Custom(128))) >>
+                     error_if!(hdr.elt.tag != DerTag::BitString as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        ignored_bits: be_u8 >>
-                     error_if!(hdr.len < 1, Err::Code(ErrorKind::Custom(128))) >>
+                     error_if!(hdr.len < 1, Err::Code(ErrorKind::Custom(DER_INVALID_LENGTH))) >>
        content:      take!(hdr.len - 1) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::BitString(ignored_bits,content)) )
    )
@@ -299,7 +300,7 @@ pub fn parse_der_octetstring(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::OctetString as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::OctetString as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::OctetString(content)) )
    )
@@ -309,7 +310,7 @@ pub fn parse_der_null(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::Null as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::Null as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::Null) )
    )
 }
@@ -318,7 +319,7 @@ pub fn parse_der_oid(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::Oid as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::Oid as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: map_res!(take!(hdr.len),der_read_oid) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::OID(Oid::from_vec(&content))) )
    )
@@ -328,7 +329,7 @@ pub fn parse_der_enum(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::Enumerated as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::Enumerated as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: parse_hex_to_u64!(hdr.len) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::Enum(content)) )
    )
@@ -338,7 +339,7 @@ pub fn parse_der_utf8string(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::Utf8String as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::Utf8String as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::UTF8String(content)) )
    )
@@ -356,7 +357,7 @@ pub fn parse_der_sequence(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::Sequence as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::Sequence as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: flat_map!(take!(hdr.len),der_read_sequence_content) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::Sequence(content)) )
    )
@@ -374,7 +375,7 @@ pub fn parse_der_set(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::Set as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::Set as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: flat_map!(take!(hdr.len),der_read_set_content) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::Set(content)) )
    )
@@ -384,7 +385,7 @@ pub fn parse_der_numericstring(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::NumericString as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::NumericString as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::NumericString(content)) )
    )
@@ -394,7 +395,7 @@ pub fn parse_der_printablestring(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::PrintableString as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::PrintableString as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::PrintableString(content)) )
    )
@@ -404,7 +405,7 @@ pub fn parse_der_ia5string(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::Ia5String as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::Ia5String as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::IA5String(content)) )
    )
@@ -414,7 +415,7 @@ pub fn parse_der_t61string(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::T61String as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::T61String as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::T61String(content)) )
    )
@@ -424,7 +425,7 @@ pub fn parse_der_bmpstring(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::BmpString as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::BmpString as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::BmpString(content)) )
    )
@@ -434,7 +435,7 @@ pub fn parse_der_utctime(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::UtcTime as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::UtcTime as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::UTCTime(content)) )
    )
@@ -444,7 +445,7 @@ pub fn parse_der_generalizedtime(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
-                error_if!(hdr.elt.tag != DerTag::GeneralizedTime as u8, Err::Code(ErrorKind::Custom(128))) >>
+                error_if!(hdr.elt.tag != DerTag::GeneralizedTime as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::GeneralizedTime(content)) )
    )
@@ -461,7 +462,7 @@ pub fn parse_der_explicit<F>(i:&[u8], tag: u8, f:F) -> IResult<&[u8],DerObject,u
         i,
         do_parse!(
             hdr:     der_read_element_header >>
-            error_if!(hdr.elt.tag != tag as u8, Err::Code(ErrorKind::Custom(127))) >>
+            error_if!(hdr.elt.tag != tag as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
             content: f >>
             (
                 DerObject::from_header_and_content(
@@ -482,7 +483,7 @@ pub fn parse_der_implicit<F>(i:&[u8], tag: u8, f:F) -> IResult<&[u8],DerObject,u
         i,
         do_parse!(
             hdr:     der_read_element_header >>
-            error_if!(hdr.elt.tag != tag as u8, Err::Code(ErrorKind::Custom(127))) >>
+            error_if!(hdr.elt.tag != tag as u8, Err::Code(ErrorKind::Custom(DER_TAG_ERROR))) >>
             content: map!(
                 apply!(f, tag, hdr.len as usize),
                 |b| { DerObject::from_obj(b) }
@@ -503,7 +504,7 @@ named!(pub parse_der<&[u8],DerObject>,
     do_parse!(
         hdr:     der_read_element_header >>
                  // XXX safety check: length cannot be more than 2^32 bytes
-                 error_if!(hdr.len > ::std::u32::MAX as u64, Err::Code(ErrorKind::Custom(127))) >>
+                 error_if!(hdr.len > ::std::u32::MAX as u64, Err::Code(ErrorKind::Custom(DER_INVALID_LENGTH))) >>
         content: apply!(der_read_element_content,hdr) >>
         ( content )
     )
@@ -516,7 +517,6 @@ named!(pub parse_der<&[u8],DerObject>,
 #[cfg(test)]
 mod tests {
     use der_parser::*;
-    use error::*;
     use nom::{IResult,Err,ErrorKind};
 
 #[test]
