@@ -25,11 +25,11 @@ named!(parse_der_length_byte<(&[u8],usize),(u8,u8)>,
 );
 
 
-fn der_read_oid<'a>(i: &'a[u8]) -> Result<Vec<u64>,u64> {
+fn der_read_oid(i: &[u8]) -> Result<Vec<u64>,u64> {
     let mut oid = Vec::new();
     let mut acc : u64;
 
-    if i.len() == 0 { return Err(0); };
+    if i.is_empty() { return Err(0); };
 
     /* first element = X*40 + Y (See 8.19.4) */
     acc = i[0] as u64;
@@ -38,7 +38,7 @@ fn der_read_oid<'a>(i: &'a[u8]) -> Result<Vec<u64>,u64> {
 
     acc = 0;
     for &c in &i[1..] {
-        acc = (acc << 7) | (c & 0b01111111) as u64;
+        acc = (acc << 7) | (c & 0b0111_1111) as u64;
         if (c & (1<<7)) == 0 {
             oid.push(acc);
             acc = 0;
@@ -88,7 +88,7 @@ named!(der_read_set_content<&[u8],Vec<DerObject> >,
 /// Parse the next bytes as the content of a DER object.
 ///
 /// Content type is *not* checked, caller is reponsible of providing the correct tag
-pub fn der_read_element_content_as<'a,'b>(i:&'a[u8], tag:u8, len:usize) -> IResult<&'a [u8], DerObjectContent<'a>> {
+pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8], DerObjectContent> {
     match tag {
         // 0x00 end-of-content
         // 0x01 bool
@@ -219,12 +219,14 @@ pub fn der_read_element_content_as<'a,'b>(i:&'a[u8], tag:u8, len:usize) -> IResu
 }
 
 
-pub fn der_read_element_content<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IResult<&'a [u8], DerObject<'a>> {
+pub fn der_read_element_content(i: &[u8], hdr: DerElementHeader) -> IResult<&[u8], DerObject> {
     match hdr.elt.class {
         // universal
-        0b00 => (),
+        0b00 |
         // application
-        0b01 => (),
+        0b01 |
+        // private
+        0b11 => (),
         // context-specific
         // 0b10 => return map!(
         //     i,
@@ -237,8 +239,6 @@ pub fn der_read_element_content<'a,'b>(i: &'a[u8], hdr: DerElementHeader) -> IRe
             take!(hdr.len),
             |b| { DerObject::from_header_and_content(hdr,DerObjectContent::Unknown(b)) }
         ),
-        // private
-        0b11 => (),
         _    => { return IResult::Error(Err::Code(ErrorKind::Custom(DER_CLASS_ERROR))); },
     }
     match der_read_element_content_as(i, hdr.elt.tag, hdr.len as usize) {
@@ -352,7 +352,7 @@ pub fn parse_der_utf8string(i:&[u8]) -> IResult<&[u8],DerObject> {
 /// same function.
 ///
 /// To read a specific sequence of objects (giving the expected types), use the
-/// [parse_der_sequence_defined](macro.parse_der_sequence_defined.html) macro.
+/// [`parse_der_sequence_defined`](macro.parse_der_sequence_defined.html) macro.
 pub fn parse_der_sequence(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
@@ -370,7 +370,7 @@ pub fn parse_der_sequence(i:&[u8]) -> IResult<&[u8],DerObject> {
 /// same function.
 ///
 /// To read a specific set of objects (giving the expected types), use the
-/// [parse_der_set_defined](macro.parse_der_set_defined.html) macro.
+/// [`parse_der_set_defined`](macro.parse_der_set_defined.html) macro.
 pub fn parse_der_set(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,

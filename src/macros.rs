@@ -75,10 +75,10 @@ macro_rules! parse_der_defined_m(
 
 /// Parse a sequence of DER elements (macro version)
 ///
-/// Unlike [parse_der_sequence](fn.parse_der_sequence.html), this function allows to specify the
+/// Unlike [`parse_der_sequence`](fn.parse_der_sequence.html), this function allows to specify the
 /// list of expected types in the DER sequence.
 ///
-/// Similar to [parse_der_sequence_defined](macro.parse_der_sequence_defined.html), but not using `fold`.
+/// Similar to [`parse_der_sequence_defined`](macro.parse_der_sequence_defined.html), but not using `fold`.
 /// This allow using macros.
 ///
 /// ```rust,no_run
@@ -120,10 +120,10 @@ macro_rules! parse_der_sequence_defined_m(
 
 /// Parse a set of DER elements (macro version)
 ///
-/// Unlike [parse_der_set](fn.parse_der_set.html), this function allows to specify the
+/// Unlike [`parse_der_set`](fn.parse_der_set.html), this function allows to specify the
 /// list of expected types in the DER set.
 ///
-/// Similar to [parse_der_set_defined](macro.parse_der_set_defined.html), but not using `fold`.
+/// Similar to [`parse_der_set_defined`](macro.parse_der_set_defined.html), but not using `fold`.
 /// This allow using macros.
 ///
 /// ```rust,no_run
@@ -224,10 +224,10 @@ macro_rules! parse_der_defined(
 
 /// Parse a sequence of DER elements (folding version)
 ///
-/// Unlike [parse_der_sequence](fn.parse_der_sequence.html), this function allows to specify the
+/// Unlike [`parse_der_sequence`](fn.parse_der_sequence.html), this function allows to specify the
 /// list of expected types in the DER sequence.
 ///
-/// Similar to [parse_der_sequence_defined_m](macro.parse_der_sequence_defined_m.html), but uses
+/// Similar to [`parse_der_sequence_defined_m`](macro.parse_der_sequence_defined_m.html), but uses
 /// `fold` internally.
 /// Because of that, macros cannot be used as subparsers.
 ///
@@ -270,10 +270,10 @@ macro_rules! parse_der_sequence_defined(
 
 /// Parse a set of DER elements (folding version)
 ///
-/// Unlike [parse_der_set](fn.parse_der_set.html), this function allows to specify the
+/// Unlike [`parse_der_set`](fn.parse_der_set.html), this function allows to specify the
 /// list of expected types in the DER sequence.
 ///
-/// Similar to [parse_der_set_defined_m](macro.parse_der_set_defined_m.html), but uses
+/// Similar to [`parse_der_set_defined_m`](macro.parse_der_set_defined_m.html), but uses
 /// `fold` internally.
 /// Because of that, macros cannot be used as subparsers.
 ///

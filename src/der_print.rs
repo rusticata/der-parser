@@ -66,22 +66,22 @@ impl<'a> fmt::Debug for PrettyDer<'a> {
             DerObjectContent::Enum(i)                => write!(f, "Enum({})\n", i),
             DerObjectContent::OID(ref v)             => write!(f, "OID({:?})\n", v),
             DerObjectContent::Null                   => write!(f, "Null\n"),
-            DerObjectContent::OctetString(ref v)     => write!(f, "OctetString({:?})\n", debug::HexSlice{d:v}),
-            DerObjectContent::BitString(u,ref v)     => write!(f, "BitString({},{:?})\n", u, debug::HexSlice{d:v}),
-            DerObjectContent::GeneralizedTime(ref s) => print_utf8_string_with_type(f, s, "GeneralizedTime"),
-            DerObjectContent::UTCTime(ref s)         => print_utf8_string_with_type(f, s, "UTCTime"),
-            DerObjectContent::PrintableString(ref s) => print_utf8_string_with_type(f, s, "PrintableString"),
-            DerObjectContent::NumericString(ref s)   => print_utf8_string_with_type(f, s, "NumericString"),
-            DerObjectContent::UTF8String(ref s)      => print_utf8_string_with_type(f, s, "UTF8String"),
-            DerObjectContent::IA5String(ref s)       => print_utf8_string_with_type(f, s, "IA5String"),
-            DerObjectContent::T61String(ref s)       => print_utf8_string_with_type(f, s, "T61String"),
-            DerObjectContent::BmpString(ref s)       => print_utf8_string_with_type(f, s, "BmpString"),
+            DerObjectContent::OctetString(v)         => write!(f, "OctetString({:?})\n", debug::HexSlice{d:v}),
+            DerObjectContent::BitString(u,v)         => write!(f, "BitString({},{:?})\n", u, debug::HexSlice{d:v}),
+            DerObjectContent::GeneralizedTime(s)     => print_utf8_string_with_type(f, s, "GeneralizedTime"),
+            DerObjectContent::UTCTime(s)             => print_utf8_string_with_type(f, s, "UTCTime"),
+            DerObjectContent::PrintableString(s)     => print_utf8_string_with_type(f, s, "PrintableString"),
+            DerObjectContent::NumericString(s)       => print_utf8_string_with_type(f, s, "NumericString"),
+            DerObjectContent::UTF8String(s)          => print_utf8_string_with_type(f, s, "UTF8String"),
+            DerObjectContent::IA5String(s)           => print_utf8_string_with_type(f, s, "IA5String"),
+            DerObjectContent::T61String(s)           => print_utf8_string_with_type(f, s, "T61String"),
+            DerObjectContent::BmpString(s)           => print_utf8_string_with_type(f, s, "BmpString"),
             DerObjectContent::ContextSpecific(n,ref o) => {
                 let new_indent = self.indent + self.inc;
                 try!(write!(f, "ContextSpecific [{}] {{\n", n));
-                match o {
-                    &Some(ref obj) => try!(write!(f, "{:?}", self.next_indent(obj))),
-                    &None          => try!(write!(f, "{:1$}None\n", " ", new_indent)),
+                match *o {
+                    Some(ref obj) => try!(write!(f, "{:?}", self.next_indent(obj))),
+                    None          => try!(write!(f, "{:1$}None\n", " ", new_indent)),
                 };
                 if self.indent > 0 {
                     try!(write!(f, "{:1$}", " ", self.indent));
@@ -102,7 +102,7 @@ impl<'a> fmt::Debug for PrettyDer<'a> {
                 try!(write!(f, "]\n"));
                 Ok(())
             },
-            DerObjectContent::Unknown(ref o)         => write!(f, "Unknown({:?})\n", o),
+            DerObjectContent::Unknown(o)             => write!(f, "Unknown({:?})\n", o),
         }
     }
 }

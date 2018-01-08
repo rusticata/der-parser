@@ -19,13 +19,13 @@ impl Oid {
 
     /// Build an OID from a vector of `u64` integers
     pub fn from_vec(v: &Vec<u64>) -> Oid {
-        Oid(v.clone())
+        Oid(v.to_owned())
     }
 
     /// Convert the OID to a string representation.
     /// The string contains the IDs separated by dots, for ex: "1.2.840.113549.1.1.5"
     pub fn to_string(&self) -> String {
-        if self.0.len() == 0 { return String::new(); }
+        if self.0.is_empty() { return String::new(); }
 
         let mut s = self.0[0].to_string();
 

@@ -110,7 +110,7 @@ impl<'a> DerObject<'a> {
         let class = 0;
         let tag = c.tag();
         let structured = match tag {
-            DerTag::Sequence => 1,
+            DerTag::Sequence |
             DerTag::Set      => 1,
             _                => 0,
         };
@@ -133,12 +133,12 @@ impl<'a> DerObject<'a> {
     }
 
     /// Build a DER sequence object from a vector of DER objects
-    pub fn from_seq<'b>(l:Vec<DerObject<'b>>) -> DerObject<'b> {
+    pub fn from_seq(l:Vec<DerObject>) -> DerObject {
         DerObject::from_obj( DerObjectContent::Sequence(l) )
     }
 
     /// Build a DER set object from a vector of DER objects
-    pub fn from_set<'b>(l:Vec<DerObject<'b>>) -> DerObject<'b> {
+    pub fn from_set(l:Vec<DerObject>) -> DerObject {
         DerObject::from_obj( DerObjectContent::Set(l) )
     }
 
@@ -190,63 +190,63 @@ impl<'a> From<Oid> for DerObject<'a> {
 
 impl<'a> DerObjectContent<'a> {
     pub fn as_u32(&self) -> Result<u32,DerError> {
-        match self {
-            &DerObjectContent::Integer(i) => {
+        match *self {
+            DerObjectContent::Integer(i) => {
                 if i.len() <= 4 { bytes_to_u64(i).map(|x| x as u32).or(Err(DerError::DerTypeError)) }
                 else { Err(DerError::IntegerTooLarge) }
             },
-            &DerObjectContent::Enum(i)    => Ok(i as u32),
+            DerObjectContent::Enum(i)    => Ok(i as u32),
             _ => Err(DerError::DerTypeError),
         }
     }
 
     pub fn as_bool(&self) -> Result<bool,DerError> {
-        match self {
-            &DerObjectContent::Boolean(b) => Ok(b),
+        match *self {
+            DerObjectContent::Boolean(b) => Ok(b),
             _ => Err(DerError::DerTypeError),
         }
     }
 
     pub fn as_oid(&self) -> Result<&Oid,DerError> {
-        match self {
-            &DerObjectContent::OID(ref o) => Ok(o),
+        match *self {
+            DerObjectContent::OID(ref o) => Ok(o),
             _ => Err(DerError::DerTypeError),
         }
     }
 
     pub fn as_context_specific(&self) -> Result<(u8,Option<Box<DerObject<'a>>>),DerError> {
-        match self {
-            &DerObjectContent::ContextSpecific(u,ref o) => Ok((u,o.clone())),
+        match *self {
+            DerObjectContent::ContextSpecific(u,ref o) => Ok((u,o.clone())),
             _ => Err(DerError::DerTypeError),
         }
     }
 
     pub fn as_sequence(&self) -> Result<&Vec<DerObject<'a>>,DerError> {
-        match self {
-            &DerObjectContent::Sequence(ref s) => Ok(s),
+        match *self {
+            DerObjectContent::Sequence(ref s) => Ok(s),
             _ => Err(DerError::DerTypeError),
         }
     }
 
     pub fn as_set(&self) -> Result<&Vec<DerObject<'a>>,DerError> {
-        match self {
-            &DerObjectContent::Set(ref s) => Ok(s),
+        match *self {
+            DerObjectContent::Set(ref s) => Ok(s),
             _ => Err(DerError::DerTypeError),
         }
     }
 
     pub fn as_slice(&self) -> Result<&'a [u8],DerError> {
-        match self {
-            &DerObjectContent::Integer(s)         => Ok(s),
-            &DerObjectContent::BitString(_,s)     => Ok(s),
-            &DerObjectContent::OctetString(s)     => Ok(s),
-            &DerObjectContent::NumericString(s)   => Ok(s),
-            &DerObjectContent::PrintableString(s) => Ok(s),
-            &DerObjectContent::IA5String(s)       => Ok(s),
-            &DerObjectContent::UTF8String(s)      => Ok(s),
-            &DerObjectContent::T61String(s)       => Ok(s),
-            &DerObjectContent::BmpString(s)       => Ok(s),
-            &DerObjectContent::Unknown(s)         => Ok(s),
+        match *self {
+            DerObjectContent::Integer(s) |
+            DerObjectContent::BitString(_,s) |
+            DerObjectContent::OctetString(s) |
+            DerObjectContent::NumericString(s) |
+            DerObjectContent::PrintableString(s) |
+            DerObjectContent::IA5String(s) |
+            DerObjectContent::UTF8String(s) |
+            DerObjectContent::T61String(s) |
+            DerObjectContent::BmpString(s) |
+            DerObjectContent::Unknown(s)         => Ok(s),
             _ => Err(DerError::DerTypeError),
         }
     }
@@ -270,7 +270,7 @@ impl<'a> DerObjectContent<'a> {
             DerObjectContent::Set(_)               => DerTag::Set,
             DerObjectContent::UTCTime(_)           => DerTag::UtcTime,
             DerObjectContent::GeneralizedTime(_)   => DerTag::GeneralizedTime,
-            DerObjectContent::ContextSpecific(_,_) => DerTag::Invalid,
+            DerObjectContent::ContextSpecific(_,_) |
             DerObjectContent::Unknown(_)           => DerTag::Invalid,
         }
     }
@@ -364,7 +364,7 @@ impl<'a> Iterator for DerObjectRefIterator<'a> {
 
 impl<'a> DerObject<'a> {
     pub fn ref_iter(&'a self) -> DerObjectRefIterator<'a> {
-        DerObjectRefIterator{ obj:&self, idx:0 }
+        DerObjectRefIterator{ obj:self, idx:0 }
     }
 }
 
