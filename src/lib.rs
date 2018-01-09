@@ -1,3 +1,7 @@
+#![deny(/*missing_docs,*/unsafe_code,
+        unstable_features,
+        unused_import_braces, unused_qualifications)]
+
 #[macro_use]
 extern crate nom;
 
