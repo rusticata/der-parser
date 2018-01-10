@@ -52,15 +52,10 @@ pub struct DerObject<'a> {
 }
 
 #[derive(Clone,Copy,Debug,PartialEq)]
-pub struct DerElement {
+pub struct DerObjectHeader {
     pub class: u8,
     pub structured: u8,
     pub tag: u8,
-}
-
-#[derive(Clone,Copy,Debug,PartialEq)]
-pub struct DerElementHeader {
-    pub elt: DerElement,
     pub len: u64,
 }
 
@@ -96,11 +91,11 @@ impl<'a> DerObject<'a> {
     /// Build a DerObject from a header and content.
     /// Note: values are not checked, so the tag can be different from the real content, or flags
     /// can be invalid.
-    pub fn from_header_and_content(hdr: DerElementHeader, c: DerObjectContent) -> DerObject {
+    pub fn from_header_and_content(hdr: DerObjectHeader, c: DerObjectContent) -> DerObject {
         DerObject{
-            class:      hdr.elt.class,
-            structured: hdr.elt.structured,
-            tag:        hdr.elt.tag,
+            class:      hdr.class,
+            structured: hdr.structured,
+            tag:        hdr.tag,
             content:    c,
         }
     }
