@@ -15,6 +15,18 @@ der-parser is a parser for the DER protocol.
 
 ## Changes
 
+### 0.5.0
+
+- Allow use of crate without extra use statements
+- Use constants for u32 errors instead of magical numbers
+- Rename `tag_of_der_content()` to `DerObjectContent::tag`
+- Rename DerElementxxx structs to have a consistent naming scheme
+- Add documentation for parsing DER sequences and sets, and fix wrong return type for sets
+- Fix a lot of clippy warnings
+- QA: add pragma rules (disable unsafe code, unstable features etc.)
+- More documentation
+- Switch license to MIT + APLv2
+
 ### 0.4.4
 
 - Add macro parse_der_defined_m, to parse a defined sequence or set
