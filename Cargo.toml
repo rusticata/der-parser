@@ -10,7 +10,7 @@ authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
 categories = ["parsing"]
 
 include = [
-  "COPYING",
+  "LICENSE-*",
   ".gitignore",
   ".travis.yml",
   "Cargo.toml",
