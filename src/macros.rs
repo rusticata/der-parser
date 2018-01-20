@@ -63,11 +63,7 @@ macro_rules! parse_der_defined_m(
                          error_if!(hdr.structured != 0b1, ErrorKind::Custom($crate::DER_STRUCT_ERROR)) >>
                          error_if!(hdr.tag != $tag, ErrorKind::Custom($crate::DER_TAG_ERROR)) >>
                 content: flat_map!(take!(hdr.len), fold_der_defined_m!( $($args)* )) >>
-                ( {
-                    (hdr,content)
-                    //$crate::DerObject::from_header_and_content(hdr,$crate::DerObjectContent::Sequence(content))
-                        // XXX this is wrong (using Sequence), we could be reading a Set
-                } )
+                (hdr,content)
             )
         }
     );
@@ -202,7 +198,7 @@ macro_rules! parse_der_defined(
                          error_if!(hdr.structured != 0b1, ErrorKind::Custom($crate::DER_STRUCT_ERROR)) >>
                          error_if!(hdr.tag != $ty, ErrorKind::Custom($crate::DER_TAG_ERROR)) >>
                 content: take!(hdr.len) >>
-                ( (hdr,content) )
+                (hdr,content)
             );
             match res {
                 IResult::Done(_rem,o)   => {

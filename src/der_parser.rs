@@ -13,7 +13,7 @@ named!(parse_identifier<(&[u8],usize),(u8,u8,u8)>,
     class:      take_bits!(u8, 2) >>
     structured: take_bits!(u8, 1) >>
     tag:        take_bits!(u8, 5) >>
-    ( (class,structured,tag) )
+    (class,structured,tag)
   )
 );
 
