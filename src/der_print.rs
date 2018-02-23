@@ -76,6 +76,7 @@ impl<'a> fmt::Debug for PrettyDer<'a> {
             DerObjectContent::IA5String(s)           => print_utf8_string_with_type(f, s, "IA5String"),
             DerObjectContent::T61String(s)           => print_utf8_string_with_type(f, s, "T61String"),
             DerObjectContent::BmpString(s)           => print_utf8_string_with_type(f, s, "BmpString"),
+            DerObjectContent::GeneralString(s)       => print_utf8_string_with_type(f, s, "GeneralString"),
             DerObjectContent::ContextSpecific(n,ref o) => {
                 let new_indent = self.indent + self.inc;
                 try!(write!(f, "ContextSpecific [{}] {{\n", n));

@@ -200,7 +200,7 @@ pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8],
                         |s| { DerObjectContent::UTCTime(s) }
                     )
                 },
-        // 0x18: utctime
+        // 0x18: generalizedtime
         0x18 => {
                     map!(i,
                         take!(len), // XXX we must check if constructed or not (8.7)
@@ -208,6 +208,13 @@ pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8],
                     )
                 },
                 //
+        // 0x1b: generalstring
+        0x1b => {
+                    map!(i,
+                        take!(len), // XXX we must check if constructed or not (8.7)
+                        |s| { DerObjectContent::GeneralString(s) }
+                    )
+                },
         // 0x1e: bmpstring
         0x1e => {
                     map!(i,
@@ -450,6 +457,16 @@ pub fn parse_der_generalizedtime(i:&[u8]) -> IResult<&[u8],DerObject> {
                 error_if!(hdr.tag != DerTag::GeneralizedTime as u8, ErrorKind::Custom(DER_TAG_ERROR)) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::GeneralizedTime(content)) )
+   )
+}
+
+pub fn parse_der_generalstring(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.tag != DerTag::GeneralString as u8, ErrorKind::Custom(DER_TAG_ERROR)) >>
+       content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::GeneralString(content)) )
    )
 }
 
@@ -732,6 +749,16 @@ fn test_der_generalizedtime() {
         content: DerObjectContent::GeneralizedTime(&bytes[2..]),
     };
     assert_eq!(parse_der_generalizedtime(&bytes), IResult::Done(empty, expected));
+}
+
+#[test]
+fn test_der_generalstring() {
+    let empty = &b""[..];
+    let bytes = [ 0x1b, 0x04,
+                  0x63, 0x69, 0x66, 0x73
+    ];
+    let expected  = DerObject::from_obj(DerObjectContent::GeneralString(b"cifs"));
+    assert_eq!(parse_der_generalstring(&bytes), IResult::Done(empty, expected));
 }
 
 #[test]

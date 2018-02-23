@@ -15,6 +15,10 @@ der-parser is a parser for the DER protocol.
 
 ## Changes
 
+### 0.5.1
+
+- Add type GeneralString
+
 ### 0.5.0
 
 - Allow use of crate without extra use statements

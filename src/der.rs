@@ -36,6 +36,8 @@ pub enum DerTag {
     UtcTime = 0x17,
     GeneralizedTime = 0x18,
 
+    GeneralString = 27, // 0x1b
+
     BmpString = 0x1e,
 
     Invalid = 0xff,
@@ -82,6 +84,8 @@ pub enum DerObjectContent<'a> {
 
     UTCTime(&'a [u8]),
     GeneralizedTime(&'a [u8]),
+
+    GeneralString(&'a [u8]),
 
     ContextSpecific(/*tag:*/u8, Option<Box<DerObject<'a>>>),
     Unknown(&'a[u8]),
@@ -241,6 +245,7 @@ impl<'a> DerObjectContent<'a> {
             DerObjectContent::UTF8String(s) |
             DerObjectContent::T61String(s) |
             DerObjectContent::BmpString(s) |
+            DerObjectContent::GeneralString(s) |
             DerObjectContent::Unknown(s)         => Ok(s),
             _ => Err(DerError::DerTypeError),
         }
@@ -265,6 +270,7 @@ impl<'a> DerObjectContent<'a> {
             DerObjectContent::Set(_)               => DerTag::Set,
             DerObjectContent::UTCTime(_)           => DerTag::UtcTime,
             DerObjectContent::GeneralizedTime(_)   => DerTag::GeneralizedTime,
+            DerObjectContent::GeneralString(_)     => DerTag::GeneralString,
             DerObjectContent::ContextSpecific(_,_) |
             DerObjectContent::Unknown(_)           => DerTag::Invalid,
         }
