@@ -468,3 +468,76 @@ macro_rules! parse_der_optional(
         )
     )
 );
+
+/// Parse a constructed DER element
+///
+/// Read a constructed DER element (sequence or set, typically) using the provided functions.
+/// This is generally used to build a struct from a DER sequence.
+///
+/// The returned object is a tuple containing a [`DerObjectHeader`](struct.DerObjectHeader.html)
+/// and the object returned by the subparser.
+///
+/// To ensure the subparser consumes all bytes from the constructed object, add the `eof!()`
+/// subparser as the last parsing item.
+///
+/// Similar to [`parse_der_sequence_defined`](macro.parse_der_sequence_defined.html), but using the
+/// `do_parse` macro from nom.
+/// This allows declaring variables, and running code at the end.
+///
+/// ```rust,no_run
+/// # #[macro_use] extern crate nom;
+/// # #[macro_use] extern crate rusticata_macros;
+/// # #[macro_use] extern crate der_parser;
+/// use der_parser::*;
+/// use nom::{IResult,Err,ErrorKind};
+///
+/// # fn main() {
+/// #[derive(Debug, PartialEq)]
+/// struct MyStruct<'a>{
+///     a: DerObject<'a>,
+///     b: DerObject<'a>,
+/// }
+///
+/// fn parse_struct01(i: &[u8]) -> IResult<&[u8],(DerObjectHeader,MyStruct)> {
+///     parse_der_struct!(
+///         i,
+///         a: parse_der_integer >>
+///         b: parse_der_integer >>
+///            eof!() >>
+///         ( MyStruct{ a: a, b: b } )
+///     )
+/// }
+///
+/// let bytes = [ 0x30, 0x0a,
+///               0x02, 0x03, 0x01, 0x00, 0x01,
+///               0x02, 0x03, 0x01, 0x00, 0x00,
+/// ];
+/// let empty = &b""[..];
+/// let expected = (
+///     DerObjectHeader{
+///         class: 0,
+///         structured: 1,
+///         tag: 0x10,
+///         len: 0xa,
+///     },
+///     MyStruct {
+///         a: DerObject::from_int_slice(b"\x01\x00\x01"),
+///         b: DerObject::from_int_slice(b"\x01\x00\x00"),
+///     }
+/// );
+/// let res = parse_struct01(&bytes);
+/// assert_eq!(res, IResult::Done(empty, expected));
+/// # }
+/// ```
+#[macro_export]
+macro_rules! parse_der_struct(
+    ($i:expr, $($rest:tt)*) => ({
+        use $crate::der_read_element_header;
+        do_parse!(
+            $i,
+            hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.structured == 1) >>
+            res: flat_map!(take!(hdr.len as usize), do_parse!( $($rest)* )) >>
+            (hdr,res)
+        )
+    });
+);

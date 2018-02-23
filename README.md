@@ -18,6 +18,7 @@ der-parser is a parser for the DER protocol.
 ### 0.5.1
 
 - Add type GeneralString
+- Add macro `parse_der_struct!`
 
 ### 0.5.0
 
