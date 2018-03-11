@@ -17,6 +17,9 @@ der-parser is a parser for the DER protocol.
 
 ### 0.5.2
 
+- Add functions to test object class and primitive/constructed state
+- Add macro `parse_der_application!`
+
 ### 0.5.1
 
 - Add type GeneralString

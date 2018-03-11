@@ -176,4 +176,30 @@ fn struct_with_garbage() {
     assert_eq!(parse_struct01_complete(&bytes), IResult::Error(error_position!(ErrorKind::Eof,&bytes[2..])));
 }
 
-
+#[test]
+fn application() {
+    #[derive(Debug, PartialEq)]
+    struct SimpleStruct {
+        a: u32,
+    };
+    fn parse_app01(i:&[u8]) -> IResult<&[u8],(DerObjectHeader,SimpleStruct)> {
+        parse_der_application!(
+            i,
+            APPLICATION 2,
+            a: map_res!(parse_der_integer,|x: DerObject| x.as_u32()) >>
+            ( SimpleStruct{ a:a } )
+        )
+    }
+    let bytes = &[0x62, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
+    let res = parse_app01(bytes);
+    match res {
+        IResult::Done(rem,(hdr,app)) => {
+            assert!(rem.is_empty());
+            assert_eq!(hdr.tag, 2);
+            assert!(hdr.is_application());
+            assert_eq!(hdr.structured, 1);
+            assert_eq!(app, SimpleStruct{ a:0x10001 });
+        },
+        _ => assert!(false)
+    }
+}

@@ -541,3 +541,64 @@ macro_rules! parse_der_struct(
         )
     });
 );
+
+/// Parse an application DER element
+///
+/// Read an application DER element using the provided functions.
+/// This is generally used to build a struct from a DER sequence.
+///
+/// The returned object is a tuple containing a [`DerObjectHeader`](struct.DerObjectHeader.html)
+/// and the object returned by the subparser.
+///
+/// To ensure the subparser consumes all bytes from the constructed object, add the `eof!()`
+/// subparser as the last parsing item.
+///
+/// ```rust,no_run
+/// # #[macro_use] extern crate nom;
+/// # #[macro_use] extern crate rusticata_macros;
+/// # #[macro_use] extern crate der_parser;
+/// use der_parser::*;
+/// use nom::{IResult,Err,ErrorKind};
+///
+/// # fn main() {
+/// #[derive(Debug, PartialEq)]
+/// struct SimpleStruct {
+///     a: u32,
+/// };
+/// fn parse_app01(i:&[u8]) -> IResult<&[u8],(DerObjectHeader,SimpleStruct)> {
+///     parse_der_application!(
+///         i,
+///         APPLICATION 2,
+///         a: map_res!(parse_der_integer,|x: DerObject| x.as_u32()) >>
+///            eof!() >>
+///         ( SimpleStruct{ a:a } )
+///     )
+/// }
+/// let bytes = &[0x62, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
+/// let res = parse_app01(bytes);
+/// match res {
+///     IResult::Done(rem,(hdr,app)) => {
+///         assert!(rem.is_empty());
+///         assert_eq!(hdr.tag, 2);
+///         assert!(hdr.is_application());
+///         assert_eq!(hdr.structured, 1);
+///         assert_eq!(app, SimpleStruct{ a:0x10001 });
+///     },
+///     _ => assert!(false)
+/// }
+/// # }
+/// ```
+#[macro_export]
+macro_rules! parse_der_application(
+    ($i:expr, APPLICATION $tag:expr, $($rest:tt)*) => ({
+        use $crate::der_read_element_header;
+        do_parse!(
+            $i,
+            hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader|
+                         hdr.class == 0b01 && hdr.tag == $tag) >>
+            res: flat_map!(take!(hdr.len as usize), do_parse!( $($rest)* )) >>
+            (hdr,res)
+        )
+    });
+    ($i:expr, $tag:expr, $($rest:tt)*) => ( parse_der_application!($i, $tag, $($rest)*) );
+);
