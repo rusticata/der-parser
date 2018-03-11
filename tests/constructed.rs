@@ -177,6 +177,48 @@ fn struct_with_garbage() {
 }
 
 #[test]
+fn tagged() {
+    fn parse_tag_explicit(i:&[u8]) -> IResult<&[u8],u32> {
+        map_res!(
+            i,
+            parse_der_tagged!(EXPLICIT 2, parse_der_integer),
+            |x: DerObject| x.as_u32()
+        )
+    }
+    fn parse_tag_noexplicit(i:&[u8]) -> IResult<&[u8],u32> {
+        map_res!(
+            i,
+            parse_der_tagged!(2, parse_der_integer),
+            |x: DerObject| x.as_u32()
+        )
+    }
+    let bytes = &[0xa2, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
+    // EXPLICIT tagged value parsing
+    let res = parse_tag_explicit(bytes);
+    match res {
+        IResult::Done(rem,val) => {
+            assert!(rem.is_empty());
+            assert_eq!(val, 0x10001);
+        },
+        _ => assert!(false)
+    }
+    // omitting EXPLICIT keyword
+    let a = parse_tag_explicit(bytes);
+    let b = parse_tag_noexplicit(bytes);
+    assert_eq!(a,b);
+    // wrong tag
+    assert_eq!(
+        parse_der_tagged!(bytes as &[u8],3,parse_der_integer),
+        IResult::Error(error_position!(ErrorKind::Verify,bytes as &[u8]))
+    );
+    // wrong type
+    assert_eq!(
+        parse_der_tagged!(bytes as &[u8],2,parse_der_bool),
+        IResult::Error(error_position!(ErrorKind::Custom(128),&bytes[2..]))
+    );
+}
+
+#[test]
 fn application() {
     #[derive(Debug, PartialEq)]
     struct SimpleStruct {

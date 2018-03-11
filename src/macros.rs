@@ -542,6 +542,70 @@ macro_rules! parse_der_struct(
     });
 );
 
+/// Parse a tagged DER element
+///
+/// Read a tagged DER element using the provided function.
+///
+/// The returned object is either the object returned by the subparser, or a nom error.
+///
+/// To specify the kind of tag, use the EXPLICIT or IMPLICIT keyword. If no keyword is specified,
+/// the parsing is EXPLICIT by default.
+///
+/// *IMPLICIT is not yet supported*
+///
+/// # Examples
+///
+/// The following parses `[2] INTEGER`:
+///
+/// ```rust,no_run
+/// # #[macro_use] extern crate nom;
+/// # #[macro_use] extern crate rusticata_macros;
+/// # #[macro_use] extern crate der_parser;
+/// use der_parser::*;
+/// use nom::{IResult,Err,ErrorKind};
+///
+/// # fn main() {
+/// fn parse_tag_explicit(i:&[u8]) -> IResult<&[u8],u32> {
+///     map_res!(
+///         i,
+///         parse_der_tagged!(EXPLICIT 2, parse_der_integer),
+///         |x: DerObject| x.as_u32()
+///     )
+/// }
+/// let bytes = &[0xa2, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
+/// let res = parse_tag_explicit(bytes);
+/// match res {
+///     IResult::Done(rem,val) => {
+///         assert!(rem.is_empty());
+///         assert_eq!(val, 0x10001);
+///     },
+///     _ => assert!(false)
+/// }
+/// # }
+/// ```
+#[macro_export]
+macro_rules! parse_der_tagged(
+    ($i:expr, EXPLICIT $tag:expr, $f:ident) => ({
+        use $crate::der_read_element_header;
+        do_parse!(
+            $i,
+            hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.tag == $tag) >>
+            res: flat_map!(take!(hdr.len as usize), call!( $f )) >>
+            (res)
+        )
+    });
+    ($i:expr, EXPLICIT $tag:expr, $submac:ident!( $($args:tt)*)) => ({
+        use $crate::der_read_element_header;
+        do_parse!(
+            $i,
+            hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.tag == $tag) >>
+            res: flat_map!(take!(hdr.len as usize), $submac!( $($args)* )) >>
+            (res)
+        )
+    });
+    ($i:expr, $tag:expr, $f:ident) => ( parse_der_tagged!($i, EXPLICIT $tag, $f) );
+);
+
 /// Parse an application DER element
 ///
 /// Read an application DER element using the provided functions.
@@ -552,6 +616,10 @@ macro_rules! parse_der_struct(
 ///
 /// To ensure the subparser consumes all bytes from the constructed object, add the `eof!()`
 /// subparser as the last parsing item.
+///
+/// # Examples
+///
+/// The following parses `[APPLICATION 2] INTEGER`:
 ///
 /// ```rust,no_run
 /// # #[macro_use] extern crate nom;
