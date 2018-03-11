@@ -91,6 +91,22 @@ pub enum DerObjectContent<'a> {
     Unknown(&'a[u8]),
 }
 
+impl DerObjectHeader {
+    /// Test if object class is Universal
+    pub fn is_universal(&self) -> bool { self.class == 0 }
+    /// Test if object class is Application
+    pub fn is_application(&self) -> bool { self.class == 0b01 }
+    /// Test if object class is Context-specific
+    pub fn is_contextspecific(&self) -> bool { self.class == 0b10 }
+    /// Test if object class is Private
+    pub fn is_private(&self) -> bool { self.class == 0b11 }
+
+    /// Test if object is primitive
+    pub fn is_primitive(&self) -> bool { self.structured == 0 }
+    /// Test if object is constructed
+    pub fn is_constructed(&self) -> bool { self.structured == 1 }
+}
+
 impl<'a> DerObject<'a> {
     /// Build a DerObject from a header and content.
     /// Note: values are not checked, so the tag can be different from the real content, or flags
@@ -178,6 +194,20 @@ impl<'a> DerObject<'a> {
     /// sequence).
     /// This function mostly concerns string types, integers, or unknown DER objects.
     pub fn as_slice(&self) -> Result<&'a [u8],DerError> { self.content.as_slice() }
+
+    /// Test if object class is Universal
+    pub fn is_universal(&self) -> bool { self.class == 0 }
+    /// Test if object class is Application
+    pub fn is_application(&self) -> bool { self.class == 0b01 }
+    /// Test if object class is Context-specific
+    pub fn is_contextspecific(&self) -> bool { self.class == 0b10 }
+    /// Test if object class is Private
+    pub fn is_private(&self) -> bool { self.class == 0b11 }
+
+    /// Test if object is primitive
+    pub fn is_primitive(&self) -> bool { self.structured == 0 }
+    /// Test if object is constructed
+    pub fn is_constructed(&self) -> bool { self.structured == 1 }
 }
 
 /// Build a DER object from an OID.
