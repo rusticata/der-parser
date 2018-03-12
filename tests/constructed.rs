@@ -177,15 +177,15 @@ fn struct_with_garbage() {
 }
 
 #[test]
-fn tagged() {
-    fn parse_tag_explicit(i:&[u8]) -> IResult<&[u8],u32> {
+fn tagged_explicit() {
+    fn parse_int_explicit(i:&[u8]) -> IResult<&[u8],u32> {
         map_res!(
             i,
             parse_der_tagged!(EXPLICIT 2, parse_der_integer),
             |x: DerObject| x.as_u32()
         )
     }
-    fn parse_tag_noexplicit(i:&[u8]) -> IResult<&[u8],u32> {
+    fn parse_int_noexplicit(i:&[u8]) -> IResult<&[u8],u32> {
         map_res!(
             i,
             parse_der_tagged!(2, parse_der_integer),
@@ -194,7 +194,7 @@ fn tagged() {
     }
     let bytes = &[0xa2, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
     // EXPLICIT tagged value parsing
-    let res = parse_tag_explicit(bytes);
+    let res = parse_int_explicit(bytes);
     match res {
         IResult::Done(rem,val) => {
             assert!(rem.is_empty());
@@ -203,8 +203,8 @@ fn tagged() {
         _ => assert!(false)
     }
     // omitting EXPLICIT keyword
-    let a = parse_tag_explicit(bytes);
-    let b = parse_tag_noexplicit(bytes);
+    let a = parse_int_explicit(bytes);
+    let b = parse_int_noexplicit(bytes);
     assert_eq!(a,b);
     // wrong tag
     assert_eq!(
@@ -214,7 +214,39 @@ fn tagged() {
     // wrong type
     assert_eq!(
         parse_der_tagged!(bytes as &[u8],2,parse_der_bool),
-        IResult::Error(error_position!(ErrorKind::Custom(128),&bytes[2..]))
+        IResult::Error(error_position!(ErrorKind::Custom(DER_TAG_ERROR),&bytes[2..]))
+    );
+}
+
+#[test]
+fn tagged_implicit() {
+    fn parse_int_implicit(i:&[u8]) -> IResult<&[u8],u32> {
+        map_res!(
+            i,
+            parse_der_tagged!(IMPLICIT 2, DerTag::Integer),
+            |x: DerObject| x.as_u32()
+        )
+    }
+    let bytes = &[0x82, 0x03, 0x01, 0x00, 0x01];
+    // IMPLICIT tagged value parsing
+    let res = parse_int_implicit(bytes);
+    match res {
+        IResult::Done(rem,val) => {
+            assert!(rem.is_empty());
+            assert_eq!(val, 0x10001);
+        },
+        _ => assert!(false)
+    }
+    // wrong tag
+    assert_eq!(
+        parse_der_tagged!(bytes as &[u8],IMPLICIT 3,parse_der_integer),
+        IResult::Error(error_position!(ErrorKind::Verify,bytes as &[u8]))
+    );
+    // wrong type -> parsing error, but the have no tag or length to
+    // predict the error
+    assert_eq!(
+        parse_der_tagged!(bytes as &[u8],IMPLICIT 2,parse_der_sequence),
+        IResult::Error(error_code!(ErrorKind::Custom(DER_TAG_UNKNOWN)))
     );
 }
 

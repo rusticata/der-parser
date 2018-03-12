@@ -547,11 +547,15 @@ macro_rules! parse_der_struct(
 /// Read a tagged DER element using the provided function.
 ///
 /// The returned object is either the object returned by the subparser, or a nom error.
+/// Unlike [`parse_der_explicit`](fn.parse_der_explicit.html) or
+/// [`parse_der_implicit`](fn.parse_der_implicit.html), the returned values are *not* encapsulated
+/// in a `DerObject` (they are directly returned, without the tag).
 ///
 /// To specify the kind of tag, use the EXPLICIT or IMPLICIT keyword. If no keyword is specified,
 /// the parsing is EXPLICIT by default.
 ///
-/// *IMPLICIT is not yet supported*
+/// When parsing IMPLICIT values, the third argument is a [`DerTag`](enum.DerTag.html) defining the
+/// subtype of the object.
 ///
 /// # Examples
 ///
@@ -565,7 +569,7 @@ macro_rules! parse_der_struct(
 /// use nom::{IResult,Err,ErrorKind};
 ///
 /// # fn main() {
-/// fn parse_tag_explicit(i:&[u8]) -> IResult<&[u8],u32> {
+/// fn parse_int_explicit(i:&[u8]) -> IResult<&[u8],u32> {
 ///     map_res!(
 ///         i,
 ///         parse_der_tagged!(EXPLICIT 2, parse_der_integer),
@@ -573,7 +577,36 @@ macro_rules! parse_der_struct(
 ///     )
 /// }
 /// let bytes = &[0xa2, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
-/// let res = parse_tag_explicit(bytes);
+/// let res = parse_int_explicit(bytes);
+/// match res {
+///     IResult::Done(rem,val) => {
+///         assert!(rem.is_empty());
+///         assert_eq!(val, 0x10001);
+///     },
+///     _ => assert!(false)
+/// }
+/// # }
+/// ```
+///
+/// The following parses `[2] IMPLICIT INTEGER`:
+///
+/// ```rust,no_run
+/// # #[macro_use] extern crate nom;
+/// # #[macro_use] extern crate rusticata_macros;
+/// # #[macro_use] extern crate der_parser;
+/// use der_parser::*;
+/// use nom::{IResult,Err,ErrorKind};
+///
+/// # fn main() {
+/// fn parse_int_implicit(i:&[u8]) -> IResult<&[u8],u32> {
+///     map_res!(
+///         i,
+///         parse_der_tagged!(IMPLICIT 2, DerTag::Integer),
+///         |x: DerObject| x.as_u32()
+///     )
+/// }
+/// let bytes = &[0xa2, 0x03, 0x01, 0x00, 0x01];
+/// let res = parse_int_implicit(bytes);
 /// match res {
 ///     IResult::Done(rem,val) => {
 ///         assert!(rem.is_empty());
@@ -601,6 +634,15 @@ macro_rules! parse_der_tagged(
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.tag == $tag) >>
             res: flat_map!(take!(hdr.len as usize), $submac!( $($args)* )) >>
             (res)
+        )
+    });
+    ($i:expr, IMPLICIT $tag:expr, $type:expr) => ({
+        use $crate::{der_read_element_header,der_read_element_content_as};
+        do_parse!(
+            $i,
+            hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.tag == $tag) >>
+            res: call!(der_read_element_content_as, $type as u8, hdr.len as usize) >>
+            (DerObject::from_obj(res))
         )
     });
     ($i:expr, $tag:expr, $f:ident) => ( parse_der_tagged!($i, EXPLICIT $tag, $f) );
