@@ -10,6 +10,7 @@ matrix:
       env:
        - NAME="nightly"
        - FEATURES=''
+       - BENCH=1
     - rust: stable
       env:
        - NAME="stable,bigint"
@@ -18,6 +19,7 @@ matrix:
       env:
        - NAME="nightly,bigint"
        - FEATURES='bigint'
+       - BENCH=1
 script:
   - |
       cargo build --verbose --features "$FEATURES" &&
