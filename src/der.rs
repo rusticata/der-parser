@@ -171,7 +171,14 @@ impl<'a> DerObject<'a> {
 
     /// Attempt to read an OID value from DER object.
     /// This can fail if the object is not an OID.
+    ///
+    /// Note that this function returns a reference to the OID. To get an owned value,
+    /// use [`as_oid_val`](struct.DerObject.html#method.as_oid_val)
     pub fn as_oid(&self) -> Result<&Oid,DerError> { self.content.as_oid() }
+
+    /// Attempt to read an OID value from DER object.
+    /// This can fail if the object is not an OID.
+    pub fn as_oid_val(&self) -> Result<Oid,DerError> { self.content.as_oid_val() }
 
     /// Attempt to read the content from a context-specific DER object.
     /// This can fail if the object is not context-specific.
@@ -253,6 +260,13 @@ impl<'a> DerObjectContent<'a> {
     pub fn as_oid(&self) -> Result<&Oid,DerError> {
         match *self {
             DerObjectContent::OID(ref o) => Ok(o),
+            _ => Err(DerError::DerTypeError),
+        }
+    }
+
+    pub fn as_oid_val(&self) -> Result<Oid,DerError> {
+        match *self {
+            DerObjectContent::OID(ref o) => Ok(o.to_owned()),
             _ => Err(DerError::DerTypeError),
         }
     }

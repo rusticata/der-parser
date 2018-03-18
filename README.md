@@ -18,6 +18,7 @@ der-parser is a parser for the DER protocol.
 ### 0.5.3
 
 - Add function `DerObject::as_u64`
+- Add function `DerObject::as_oid_val`
 
 ### 0.5.2
 
