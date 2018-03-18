@@ -285,6 +285,36 @@ pub fn parse_der_bool(i:&[u8]) -> IResult<&[u8],DerObject> {
    )
 }
 
+/// Read an integer value
+///
+/// The encoding of a boolean value shall be primitive. The contents octets shall consist of one or
+/// more octets.
+///
+/// To access the content, use the [`as_u64`](struct.DerObject.html#method.as_u64),
+/// [`as_u32`](struct.DerObject.html#method.as_u32),
+/// [`as_biguint`](struct.DerObject.html#method.as_biguint) or
+/// [`as_bigint`](struct.DerObject.html#method.as_bigint) methods.
+/// Remember that a DER integer has unlimited size, so these methods return `Result` or `Option`
+/// objects.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// # #[macro_use] extern crate der_parser;
+/// # extern crate nom;
+/// # use nom::IResult;
+/// # use der_parser::parse_der_integer;
+/// # use der_parser::{DerObject,DerObjectContent};
+/// # fn main() {
+/// let empty = &b""[..];
+/// let bytes = [0x02, 0x03, 0x01, 0x00, 0x01];
+/// let expected  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
+/// assert_eq!(
+///     parse_der_integer(&bytes),
+///     IResult::Done(empty, expected)
+/// );
+/// # }
+/// ```
 pub fn parse_der_integer(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
