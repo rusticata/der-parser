@@ -5,7 +5,7 @@ keywords = ["BER","DER","ASN1","parser","nom"]
 homepage = "https://github.com/rusticata/der-parser"
 repository = "https://github.com/rusticata/der-parser.git"
 name = "der-parser"
-version = "0.5.2"
+version = "0.5.3"
 authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
 categories = ["parsing"]
 

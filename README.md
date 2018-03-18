@@ -15,6 +15,8 @@ der-parser is a parser for the DER protocol.
 
 ## Changes
 
+### 0.5.3
+
 ### 0.5.2
 
 - Add functions to test object class and primitive/constructed state
