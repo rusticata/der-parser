@@ -17,6 +17,8 @@ der-parser is a parser for the DER protocol.
 
 ### 0.5.3
 
+- Add function `DerObject::as_u64`
+
 ### 0.5.2
 
 - Add functions to test object class and primitive/constructed state

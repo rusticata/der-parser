@@ -159,6 +159,10 @@ impl<'a> DerObject<'a> {
 
     /// Attempt to read integer value from DER object.
     /// This can fail if the object is not an integer, or if it is too large.
+    pub fn as_u64(&self) -> Result<u64,DerError> { self.content.as_u64() }
+
+    /// Attempt to read integer value from DER object.
+    /// This can fail if the object is not an integer, or if it is too large.
     pub fn as_u32(&self) -> Result<u32,DerError> { self.content.as_u32() }
 
     /// Attempt to read integer value from DER object.
@@ -218,6 +222,16 @@ impl<'a> From<Oid> for DerObject<'a> {
 }
 
 impl<'a> DerObjectContent<'a> {
+    pub fn as_u64(&self) -> Result<u64,DerError> {
+        match *self {
+            DerObjectContent::Integer(i) => {
+                bytes_to_u64(i).or(Err(DerError::IntegerTooLarge))
+            },
+            DerObjectContent::Enum(i)    => Ok(i as u64),
+            _ => Err(DerError::DerTypeError),
+        }
+    }
+
     pub fn as_u32(&self) -> Result<u32,DerError> {
         match *self {
             DerObjectContent::Integer(i) => {
@@ -421,6 +435,12 @@ impl<'a> Index<usize> for DerObject<'a> {
 #[cfg(test)]
 mod tests {
     use der::*;
+
+#[test]
+fn test_der_as_u64() {
+    let der_obj  = DerObject::from_int_slice(b"\x01\x00\x02");
+    assert_eq!(der_obj.as_u64(), Ok(0x10002));
+}
 
 #[test]
 fn test_der_seq_iter() {
