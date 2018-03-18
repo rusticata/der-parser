@@ -1,4 +1,4 @@
-use nom::{be_u8,IResult,Err,ErrorKind};
+use nom::{be_u8,IResult,Err,ErrorKind,Needed};
 use rusticata_macros::bytes_to_u64;
 
 use der::*;
@@ -8,22 +8,24 @@ use oid::Oid;
 
 
 
-named!(parse_identifier<(&[u8],usize),(u8,u8,u8)>,
-  do_parse!(
-    class:      take_bits!(u8, 2) >>
-    structured: take_bits!(u8, 1) >>
-    tag:        take_bits!(u8, 5) >>
-    (class,structured,tag)
-  )
-);
+fn parse_identifier(i: &[u8]) -> IResult<&[u8],(u8,u8,u8)> {
+    if i.len() == 0 { return IResult::Incomplete(Needed::Size(1)); }
+    else {
+        let a = i[0] >> 6;
+        let b = if i[0] & 0b0010_0000 != 0 {1} else {0};
+        let c = i[0] & 0b0001_1111;
+        IResult::Done(&i[1..],(a,b,c))
+    }
+}
 
-named!(parse_der_length_byte<(&[u8],usize),(u8,u8)>,
-  tuple!(
-    take_bits!(u8, 1),
-    take_bits!(u8, 7)
-  )
-);
-
+fn parse_der_length_byte(i: &[u8]) -> IResult<&[u8],(u8,u8)> {
+    if i.len() == 0 { return IResult::Incomplete(Needed::Size(1)); }
+    else {
+        let a = i[0] >> 7;
+        let b = i[0] & 0b0111_1111;
+        IResult::Done(&i[1..],(a,b))
+    }
+}
 
 fn der_read_oid(i: &[u8]) -> Result<Vec<u64>,u64> {
     let mut oid = Vec::new();
@@ -54,8 +56,8 @@ fn der_read_oid(i: &[u8]) -> Result<Vec<u64>,u64> {
 
 named!(pub der_read_element_header<&[u8],DerObjectHeader>,
     do_parse!(
-        el:   bits!( parse_identifier) >>
-        len:  bits!( parse_der_length_byte) >>
+        el:   parse_identifier >>
+        len:  parse_der_length_byte >>
         llen: cond!(len.0 == 1, take!(len.1)) >>
 
         ( {
@@ -65,7 +67,7 @@ named!(pub der_read_element_header<&[u8],DerObjectHeader>,
                     // XXX llen: test if 0 (indefinite form), if len is 0xff -> error
                     match bytes_to_u64(llen.unwrap()) {
                         Ok(l)  => l,
-                        Err(_) => { return IResult::Error(Err::Code(ErrorKind::Custom(DER_TAG_ERROR))); },
+                        Err(_) => { return IResult::Error(error_code!(ErrorKind::Custom(DER_TAG_ERROR))); },
                     }
                 },
             };
