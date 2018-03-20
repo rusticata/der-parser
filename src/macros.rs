@@ -480,9 +480,16 @@ macro_rules! parse_der_optional(
 /// To ensure the subparser consumes all bytes from the constructed object, add the `eof!()`
 /// subparser as the last parsing item.
 ///
+/// To verify the tag of the constructed element, use the `TAG` version, for ex
+/// `parse_der_struct!(i, TAG DerTag::Sequence, parse_der_integer)`
+///
 /// Similar to [`parse_der_sequence_defined`](macro.parse_der_sequence_defined.html), but using the
 /// `do_parse` macro from nom.
 /// This allows declaring variables, and running code at the end.
+///
+/// # Examples
+///
+/// Basic struct parsing (ignoring tag):
 ///
 /// ```rust,no_run
 /// # #[macro_use] extern crate nom;
@@ -529,8 +536,44 @@ macro_rules! parse_der_optional(
 /// assert_eq!(res, IResult::Done(empty, expected));
 /// # }
 /// ```
+///
+/// To check the expected tag, use the `TAG <tagname>` variant:
+///
+/// ```rust,no_run
+/// # #[macro_use] extern crate nom;
+/// # #[macro_use] extern crate der_parser;
+/// # use der_parser::*;
+/// # use nom::{IResult,Err,ErrorKind};
+/// # fn main() {
+/// struct MyStruct<'a>{
+///     a: DerObject<'a>,
+///     b: DerObject<'a>,
+/// }
+///
+/// fn parse_struct_with_tag(i: &[u8]) -> IResult<&[u8],(DerObjectHeader,MyStruct)> {
+///     parse_der_struct!(
+///         i,
+///         TAG DerTag::Sequence,
+///         a: parse_der_integer >>
+///         b: parse_der_integer >>
+///            eof!() >>
+///         ( MyStruct{ a: a, b: b } )
+///     )
+/// }
+/// # }
+/// ```
 #[macro_export]
 macro_rules! parse_der_struct(
+    ($i:expr, TAG $tag:expr, $($rest:tt)*) => ({
+        use $crate::der_read_element_header;
+        do_parse!(
+            $i,
+            hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader|
+                         hdr.structured == 1 && hdr.tag == $tag as u8) >>
+            res: flat_map!(take!(hdr.len as usize), do_parse!( $($rest)* )) >>
+            (hdr,res)
+        )
+    });
     ($i:expr, $($rest:tt)*) => ({
         use $crate::der_read_element_header;
         do_parse!(

@@ -58,6 +58,18 @@ fn parse_struct03(i: &[u8]) -> IResult<&[u8],(DerObjectHeader,())> {
     )
 }
 
+// verifying tag
+fn parse_struct04(i: &[u8], tag:DerTag) -> IResult<&[u8],(DerObjectHeader,MyStruct)> {
+    parse_der_struct!(
+        i,
+        TAG tag,
+        a: parse_der_integer >>
+        b: parse_der_integer >>
+           eof!() >>
+        ( MyStruct{ a: a, b: b } )
+    )
+}
+
 #[test]
 fn struct01() {
     let bytes = [ 0x30, 0x0a,
@@ -174,6 +186,31 @@ fn struct_with_garbage() {
     );
     assert_eq!(parse_struct01(&bytes), IResult::Done(empty, expected));
     assert_eq!(parse_struct01_complete(&bytes), IResult::Error(error_position!(ErrorKind::Eof,&bytes[2..])));
+}
+
+#[test]
+fn struct_verify_tag() {
+    let bytes = [ 0x30, 0x0a,
+                  0x02, 0x03, 0x01, 0x00, 0x01,
+                  0x02, 0x03, 0x01, 0x00, 0x00,
+    ];
+    let empty = &b""[..];
+    let expected = (
+        DerObjectHeader{
+            class: 0,
+            structured: 1,
+            tag: 0x10,
+            len: 0xa,
+        },
+        MyStruct {
+            a: DerObject::from_int_slice(b"\x01\x00\x01"),
+            b: DerObject::from_int_slice(b"\x01\x00\x00"),
+        }
+    );
+    let res = parse_struct04(&bytes, DerTag::Sequence);
+    assert_eq!(res, IResult::Done(empty, expected));
+    let res = parse_struct04(&bytes, DerTag::Set);
+    assert_eq!(res, IResult::Error(error_position!(ErrorKind::Verify,&bytes[..])));
 }
 
 #[test]

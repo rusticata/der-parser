@@ -30,8 +30,10 @@
 //! # }
 //! ```
 //!
-//! To specify the expected objects, the parsing methods must be specified for every object
-//! recursively.
+//! The second (and preferred) parsing method is to specify the expected objects recursively. The
+//! following macros can be used:
+//! [`parse_der_sequence_defined`](macro.parse_der_sequence_defined.html) and similar functions,
+//! [`parse_der_struct`](macro.parse_der_struct.html), etc.
 //!
 //! For example, to read a sequence containing two integers:
 //!
