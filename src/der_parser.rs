@@ -118,7 +118,7 @@ pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8],
                         ignored_bits: be_u8 >>
                                       error_if!(len == 0, ErrorKind::LengthValue) >>
                         s:            take!(len - 1) >> // XXX we must check if constructed or not (8.7)
-                        ( DerObjectContent::BitString(ignored_bits,s) )
+                        ( DerObjectContent::BitString(ignored_bits,BitStringObject{ data:s }) )
                     )
                 },
         // 0x04: octetstring
@@ -333,7 +333,7 @@ pub fn parse_der_bitstring(i:&[u8]) -> IResult<&[u8],DerObject> {
        ignored_bits: be_u8 >>
                      error_if!(hdr.len < 1, ErrorKind::Custom(DER_INVALID_LENGTH)) >>
        content:      take!(hdr.len - 1) >> // XXX we must check if constructed or not (8.7)
-       ( DerObject::from_header_and_content(hdr, DerObjectContent::BitString(ignored_bits,content)) )
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::BitString(ignored_bits,BitStringObject{data:content})) )
    )
 }
 

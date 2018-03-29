@@ -1,6 +1,7 @@
 use std::vec::Vec;
 use std::ops::Index;
 use std::convert::From;
+use std::convert::AsRef;
 //use nom::{IResult, space, alpha, alphanumeric, digit};
 
 use rusticata_macros::bytes_to_u64;
@@ -66,7 +67,7 @@ pub struct DerObjectHeader {
 pub enum DerObjectContent<'a> {
     Boolean(bool),
     Integer(&'a[u8]),
-    BitString(u8, &'a [u8]),
+    BitString(u8, BitStringObject<'a>),
     OctetString(&'a [u8]),
     Null,
     Enum(u64),
@@ -319,7 +320,7 @@ impl<'a> DerObjectContent<'a> {
     pub fn as_slice(&self) -> Result<&'a [u8],DerError> {
         match *self {
             DerObjectContent::Integer(s) |
-            DerObjectContent::BitString(_,s) |
+            DerObjectContent::BitString(_,BitStringObject{data:s}) |
             DerObjectContent::OctetString(s) |
             DerObjectContent::NumericString(s) |
             DerObjectContent::PrintableString(s) |
@@ -468,6 +469,28 @@ impl<'a> Index<usize> for DerObject<'a> {
     }
 }
 
+/// BitString wrapper
+#[derive(Clone, Debug,PartialEq)]
+pub struct BitStringObject<'a> {
+    pub data: &'a[u8],
+}
+
+impl<'a> BitStringObject<'a> {
+    /// Test if bit `bitnum` is set
+    pub fn is_set(&self, bitnum:usize) -> bool {
+        let byte_pos = bitnum / 8;
+        if byte_pos >= self.data.len () {
+            return false;
+        }
+        let b = 7 - (bitnum % 8);
+        (self.data[byte_pos] & (1 << b)) != 0
+    }
+}
+
+impl<'a> AsRef<[u8]> for BitStringObject<'a> {
+    fn as_ref(&self) -> &[u8] { self.data }
+}
+
 
 
 #[cfg(test)]
@@ -510,6 +533,25 @@ fn test_der_from_oid() {
     let expected = DerObject::from_obj(DerObjectContent::OID(Oid::from(&[1,2])));
 
     assert_eq!(obj, expected);
+}
+
+#[test]
+fn test_der_bistringobject() {
+    let obj = BitStringObject{ data: &[0x0f, 0x00, 0x40] };
+    assert!(!obj.is_set(0));
+    assert!(obj.is_set(7));
+    assert!(!obj.is_set(9));
+    assert!(obj.is_set(17));
+}
+
+#[test]
+fn test_der_bistringobject_asref() {
+    fn assert_equal<T: AsRef<[u8]>>(s: T, b: &[u8]) {
+       assert_eq!(s.as_ref(), b);
+    }
+    let b: &[u8] = &[0x0f, 0x00, 0x40];
+    let obj = BitStringObject{data:b};
+    assert_equal(obj, b);
 }
 
 #[cfg(feature="bigint")]

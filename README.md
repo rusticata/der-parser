@@ -17,6 +17,8 @@ der-parser is a parser for the DER protocol.
 
 ### 0.5.4
 
+- Add `BitStringObject` to wrap BitString objects
+
 ### 0.5.3
 
 - Add function `DerObject::as_u64`

@@ -1,6 +1,6 @@
 use std::fmt;
 use std::str;
-use der::{DerObject,DerObjectContent};
+use der::{DerObject,DerObjectContent,BitStringObject};
 
 use rusticata_macros::debug;
 
@@ -67,7 +67,8 @@ impl<'a> fmt::Debug for PrettyDer<'a> {
             DerObjectContent::OID(ref v)             => write!(f, "OID({:?})\n", v),
             DerObjectContent::Null                   => write!(f, "Null\n"),
             DerObjectContent::OctetString(v)         => write!(f, "OctetString({:?})\n", debug::HexSlice{d:v}),
-            DerObjectContent::BitString(u,v)         => write!(f, "BitString({},{:?})\n", u, debug::HexSlice{d:v}),
+            DerObjectContent::BitString(u,BitStringObject{data:v})
+                                                     => write!(f, "BitString({},{:?})\n", u, debug::HexSlice{d:v}),
             DerObjectContent::GeneralizedTime(s)     => print_utf8_string_with_type(f, s, "GeneralizedTime"),
             DerObjectContent::UTCTime(s)             => print_utf8_string_with_type(f, s, "UTCTime"),
             DerObjectContent::PrintableString(s)     => print_utf8_string_with_type(f, s, "PrintableString"),
