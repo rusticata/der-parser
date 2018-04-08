@@ -234,17 +234,11 @@ pub fn der_read_element_content(i: &[u8], hdr: DerObjectHeader) -> IResult<&[u8]
     match hdr.class {
         // universal
         0b00 |
-        // application
-        0b01 |
         // private
         0b11 => (),
+        // application
+        0b01 |
         // context-specific
-        // 0b10 => return map!(
-        //     i,
-        //     // XXX nope, we cannot parse what's inside !
-        //     flat_map!(take!(hdr.len),parse_der),
-        //     |b| { DerObject::from_header_and_content(hdr,DerObjectContent::ContextSpecific(hdr.tag,Some(Box::new(b)))) }
-        // ),
         0b10 => return map!(
             i,
             take!(hdr.len),

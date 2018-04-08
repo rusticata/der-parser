@@ -18,6 +18,7 @@ der-parser is a parser for the DER protocol.
 ### 0.5.4
 
 - Add `BitStringObject` to wrap BitString objects
+- Do not try to parse application-specific data in `parse_der`
 
 ### 0.5.3
 
