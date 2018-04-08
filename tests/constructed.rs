@@ -279,12 +279,6 @@ fn tagged_implicit() {
         parse_der_tagged!(bytes as &[u8],IMPLICIT 3,parse_der_integer),
         IResult::Error(error_position!(ErrorKind::Verify,bytes as &[u8]))
     );
-    // wrong type -> parsing error, but the have no tag or length to
-    // predict the error
-    assert_eq!(
-        parse_der_tagged!(bytes as &[u8],IMPLICIT 2,parse_der_sequence),
-        IResult::Error(error_code!(ErrorKind::Custom(DER_TAG_UNKNOWN)))
-    );
 }
 
 #[test]
