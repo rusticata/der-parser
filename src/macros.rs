@@ -565,7 +565,7 @@ macro_rules! parse_der_optional(
 #[macro_export]
 macro_rules! parse_der_struct(
     ($i:expr, TAG $tag:expr, $($rest:tt)*) => ({
-        use $crate::der_read_element_header;
+        use $crate::{DerObjectHeader,der_read_element_header};
         do_parse!(
             $i,
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader|
@@ -575,7 +575,7 @@ macro_rules! parse_der_struct(
         )
     });
     ($i:expr, $($rest:tt)*) => ({
-        use $crate::der_read_element_header;
+        use $crate::{DerObjectHeader,der_read_element_header};
         do_parse!(
             $i,
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.structured == 1) >>
@@ -662,7 +662,7 @@ macro_rules! parse_der_struct(
 #[macro_export]
 macro_rules! parse_der_tagged(
     ($i:expr, EXPLICIT $tag:expr, $f:ident) => ({
-        use $crate::der_read_element_header;
+        use $crate::{DerObjectHeader,der_read_element_header};
         do_parse!(
             $i,
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.tag == $tag) >>
@@ -671,7 +671,7 @@ macro_rules! parse_der_tagged(
         )
     });
     ($i:expr, EXPLICIT $tag:expr, $submac:ident!( $($args:tt)*)) => ({
-        use $crate::der_read_element_header;
+        use $crate::{DerObjectHeader,der_read_element_header};
         do_parse!(
             $i,
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.tag == $tag) >>
@@ -680,7 +680,7 @@ macro_rules! parse_der_tagged(
         )
     });
     ($i:expr, IMPLICIT $tag:expr, $type:expr) => ({
-        use $crate::{der_read_element_header,der_read_element_content_as};
+        use $crate::{DerObjectHeader,der_read_element_header,der_read_element_content_as};
         do_parse!(
             $i,
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.tag == $tag) >>
@@ -744,7 +744,7 @@ macro_rules! parse_der_tagged(
 #[macro_export]
 macro_rules! parse_der_application(
     ($i:expr, APPLICATION $tag:expr, $($rest:tt)*) => ({
-        use $crate::der_read_element_header;
+        use $crate::{DerObjectHeader,der_read_element_header};
         do_parse!(
             $i,
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader|
