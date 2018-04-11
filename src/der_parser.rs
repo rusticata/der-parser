@@ -117,7 +117,7 @@ pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8],
                     do_parse!(i,
                         ignored_bits: be_u8 >>
                                       error_if!(len == 0, ErrorKind::LengthValue) >>
-                        s:            take!(len - 1) >> // XXX we must check if constructed or not (8.7)
+                        s:            take!(len - 1) >> // XXX we must check if constructed or not (8.6.3)
                         ( DerObjectContent::BitString(ignored_bits,BitStringObject{ data:s }) )
                     )
                 },
@@ -326,7 +326,8 @@ pub fn parse_der_bitstring(i:&[u8]) -> IResult<&[u8],DerObject> {
                      error_if!(hdr.tag != DerTag::BitString as u8, ErrorKind::Custom(DER_TAG_ERROR)) >>
        ignored_bits: be_u8 >>
                      error_if!(hdr.len < 1, ErrorKind::Custom(DER_INVALID_LENGTH)) >>
-       content:      take!(hdr.len - 1) >> // XXX we must check if constructed or not (8.7)
+                     error_if!(hdr.is_constructed(), ErrorKind::Custom(DER_UNSUPPORTED)) >>
+       content:      take!(hdr.len - 1) >> // XXX we must check if constructed or not (8.6.3)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::BitString(ignored_bits,BitStringObject{data:content})) )
    )
 }

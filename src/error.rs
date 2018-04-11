@@ -9,6 +9,8 @@ pub enum DerError {
 
     /// Der integer is too large to fit in a native type. Use `as_bigint()`
     IntegerTooLarge,
+
+    Unsupported,
 }
 
 /// Unexpected DER tag
@@ -26,3 +28,6 @@ pub const DER_INVALID_LENGTH : u32 = 132;
 
 /// Items contained in a structured object do not fill the entire container object
 pub const DER_OBJ_TOOSHORT : u32 = 133;
+
+/// Unsupported object (parsing error)
+pub const DER_UNSUPPORTED : u32 = 150;
