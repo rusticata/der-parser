@@ -213,6 +213,17 @@ impl<'a> DerObject<'a> {
         self.content.as_context_specific()
     }
 
+    /// Attempt to read a reference to a BitString value from DER object.
+    /// This can fail if the object is not an BitString.
+    ///
+    /// Note that this function returns a reference to the BitString. To get an owned value,
+    /// use [`as_bitstring`](struct.DerObject.html#method.as_bitstring)
+    pub fn as_bitstring_ref(&self) -> Result<&BitStringObject,DerError> { self.content.as_bitstring_ref() }
+
+    /// Attempt to read a BitString value from DER object.
+    /// This can fail if the object is not an BitString.
+    pub fn as_bitstring(&'a self) -> Result<BitStringObject<'a>,DerError> { self.content.as_bitstring() }
+
     /// Attempt to extract the list of objects from a DER sequence.
     /// This can fail if the object is not a sequence.
     pub fn as_sequence(&self) -> Result<&Vec<DerObject<'a>>,DerError> {
@@ -299,6 +310,20 @@ impl<'a> DerObjectContent<'a> {
     pub fn as_context_specific(&self) -> Result<(u8,Option<Box<DerObject<'a>>>),DerError> {
         match *self {
             DerObjectContent::ContextSpecific(u,ref o) => Ok((u,o.clone())),
+            _ => Err(DerError::DerTypeError),
+        }
+    }
+
+    pub fn as_bitstring_ref(&self) -> Result<&BitStringObject,DerError> {
+        match *self {
+            DerObjectContent::BitString(_, ref b) => Ok(b),
+            _ => Err(DerError::DerTypeError),
+        }
+    }
+
+    pub fn as_bitstring(&'a self) -> Result<BitStringObject<'a>,DerError> {
+        match *self {
+            DerObjectContent::BitString(_, ref b) => Ok(b.to_owned()),
             _ => Err(DerError::DerTypeError),
         }
     }
