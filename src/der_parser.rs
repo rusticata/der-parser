@@ -27,6 +27,47 @@ fn parse_der_length_byte(i: &[u8]) -> IResult<&[u8],(u8,u8)> {
     }
 }
 
+/// Parse DER object and try to decode it as a 32-bits unsigned integer
+pub fn parse_der_u32(i:&[u8]) -> IResult<&[u8],u32> {
+    match parse_der_integer(i) {
+        IResult::Done(rem,ref obj) => {
+            match obj.content {
+                DerObjectContent::Integer(i) => {
+                    match i.len() {
+                        1 => IResult::Done(rem, i[0] as u32),
+                        2 => IResult::Done(rem, (i[0] as u32) << 8  | (i[1] as u32) ),
+                        3 => IResult::Done(rem, (i[0] as u32) << 16 | (i[1] as u32) << 8 | (i[2] as u32) ),
+                        4 => IResult::Done(rem, (i[0] as u32) << 24 | (i[1] as u32) << 16 | (i[2] as u32) << 8 | (i[3] as u32) ),
+                        _ => IResult::Error(error_code!(ErrorKind::Custom(DER_INTEGER_TOO_LARGE))),
+                    }
+                }
+                _ => IResult::Error(error_code!(ErrorKind::Custom(DER_TAG_ERROR))),
+            }
+        }
+        IResult::Incomplete(i) => IResult::Incomplete(i),
+        IResult::Error(e) => IResult::Error(e)
+    }
+}
+
+/// Parse DER object and try to decode it as a 64-bits unsigned integer
+pub fn parse_der_u64(i:&[u8]) -> IResult<&[u8],u64> {
+    match parse_der_integer(i) {
+        IResult::Done(rem,ref obj) => {
+            match obj.content {
+                DerObjectContent::Integer(i) => {
+                    match bytes_to_u64(i) {
+                        Ok(l)  => IResult::Done(rem, l),
+                        Err(_) => IResult::Error(error_code!(ErrorKind::Custom(DER_INTEGER_TOO_LARGE))),
+                    }
+                }
+                _ => IResult::Error(error_code!(ErrorKind::Custom(DER_TAG_ERROR))),
+            }
+        }
+        IResult::Incomplete(i) => IResult::Incomplete(i),
+        IResult::Error(e) => IResult::Error(e)
+    }
+}
+
 fn der_read_oid(i: &[u8]) -> Result<Vec<u64>,u64> {
     let mut oid = Vec::new();
     let mut acc : u64;
@@ -1007,6 +1048,38 @@ fn test_der_defined_set_macros() {
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]));
     assert_eq!(localparse_set(&bytes), IResult::Done(empty, expected));
+}
+
+#[test]
+fn test_parse_u32() {
+    let empty = &b""[..];
+    assert_eq!(parse_der_u32(&[0x02, 0x01, 0x01]),IResult::Done(empty,1));
+    assert_eq!(parse_der_u32(&[0x02, 0x01, 0xff]),IResult::Done(empty,255));
+    assert_eq!(parse_der_u32(&[0x02, 0x02, 0x01, 0x23]),IResult::Done(empty,0x123));
+    assert_eq!(parse_der_u32(&[0x02, 0x02, 0xff, 0xff]),IResult::Done(empty,0xffff));
+    assert_eq!(parse_der_u32(&[0x02, 0x03, 0x01, 0x23, 0x45]),IResult::Done(empty,0x12345));
+    assert_eq!(parse_der_u32(&[0x02, 0x03, 0xff, 0xff, 0xff]),IResult::Done(empty,0xffffff));
+    assert_eq!(parse_der_u32(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),IResult::Done(empty,0x1234567));
+    assert_eq!(parse_der_u32(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),IResult::Done(empty,0xffffffff));
+    assert_eq!(parse_der_u32(&[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89]),IResult::Error(error_code!(ErrorKind::Custom(DER_INTEGER_TOO_LARGE))));
+    let s = &[0x01, 0x01, 0xff];
+    assert_eq!(parse_der_u32(s),IResult::Error(error_position!(ErrorKind::Custom(DER_TAG_ERROR), &s[2..])));
+}
+
+#[test]
+fn test_parse_u64() {
+    let empty = &b""[..];
+    assert_eq!(parse_der_u64(&[0x02, 0x01, 0x01]),IResult::Done(empty,1));
+    assert_eq!(parse_der_u64(&[0x02, 0x01, 0xff]),IResult::Done(empty,255));
+    assert_eq!(parse_der_u64(&[0x02, 0x02, 0x01, 0x23]),IResult::Done(empty,0x123));
+    assert_eq!(parse_der_u64(&[0x02, 0x02, 0xff, 0xff]),IResult::Done(empty,0xffff));
+    assert_eq!(parse_der_u64(&[0x02, 0x03, 0x01, 0x23, 0x45]),IResult::Done(empty,0x12345));
+    assert_eq!(parse_der_u64(&[0x02, 0x03, 0xff, 0xff, 0xff]),IResult::Done(empty,0xffffff));
+    assert_eq!(parse_der_u64(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),IResult::Done(empty,0x1234567));
+    assert_eq!(parse_der_u64(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),IResult::Done(empty,0xffffffff));
+    assert_eq!(parse_der_u64(&[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89]),IResult::Done(empty,0x123456789));
+    let s = &[0x01, 0x01, 0xff];
+    assert_eq!(parse_der_u64(s),IResult::Error(error_position!(ErrorKind::Custom(DER_TAG_ERROR), &s[2..])));
 }
 
 }

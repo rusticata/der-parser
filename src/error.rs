@@ -29,5 +29,8 @@ pub const DER_INVALID_LENGTH : u32 = 132;
 /// Items contained in a structured object do not fill the entire container object
 pub const DER_OBJ_TOOSHORT : u32 = 133;
 
+/// Integer too large
+pub const DER_INTEGER_TOO_LARGE : u32 = 134;
+
 /// Unsupported object (parsing error)
 pub const DER_UNSUPPORTED : u32 = 150;
