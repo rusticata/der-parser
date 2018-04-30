@@ -264,6 +264,13 @@ impl<'a> From<Oid> for DerObject<'a> {
     }
 }
 
+/// Build a DER object from a DerObjectContent.
+impl<'a> From<DerObjectContent<'a>> for DerObject<'a> {
+    fn from(obj: DerObjectContent<'a>) -> DerObject<'a> {
+        DerObject::from_obj(obj)
+    }
+}
+
 impl<'a> DerObjectContent<'a> {
     pub fn as_u64(&self) -> Result<u64,DerError> {
         match *self {
