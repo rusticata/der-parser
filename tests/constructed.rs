@@ -294,7 +294,7 @@ fn application() {
             i,
             APPLICATION 2,
             a: map_res!(parse_der_integer,|x: DerObject| x.as_u32()) >>
-            ( SimpleStruct{ a:a } )
+            ( SimpleStruct{ a } )
         )
     }
     let bytes = &[0x62, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];

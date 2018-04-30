@@ -10,11 +10,7 @@ pub struct Oid (Vec<u64>);
 impl Oid {
     /// Build an OID from an array of `u64` integers
     pub fn from(s: &[u64]) -> Oid {
-        let v : Vec<u64> = s.iter().fold(
-            Vec::new(),
-            |mut acc,i| { acc.push(*i); acc }
-        );
-        Oid(v)
+        Oid(s.to_vec())
     }
 
     /// Build an OID from a vector of `u64` integers

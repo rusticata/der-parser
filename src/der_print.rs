@@ -56,19 +56,19 @@ impl<'a> fmt::Debug for PrettyDer<'a> {
         };
         fn print_utf8_string_with_type(f: &mut fmt::Formatter, s: &[u8], ty: &str) -> fmt::Result {
             match str::from_utf8(s) {
-                Ok(b)  => write!(f, "{}(\"{}\")\n", ty, b),
-                Err(e) => write!(f, "{}({:?}) <error decoding utf8 string: {:?}>\n", ty, s, e),
+                Ok(b)  => writeln!(f, "{}(\"{}\")", ty, b),
+                Err(e) => writeln!(f, "{}({:?}) <error decoding utf8 string: {:?}>", ty, s, e),
             }
         }
         match self.obj.content {
-            DerObjectContent::Boolean(b)             => write!(f, "Boolean({:?})\n", b),
-            DerObjectContent::Integer(i)             => write!(f, "Integer({:?})\n", debug::HexSlice{d:i}),
-            DerObjectContent::Enum(i)                => write!(f, "Enum({})\n", i),
-            DerObjectContent::OID(ref v)             => write!(f, "OID({:?})\n", v),
-            DerObjectContent::Null                   => write!(f, "Null\n"),
-            DerObjectContent::OctetString(v)         => write!(f, "OctetString({:?})\n", debug::HexSlice{d:v}),
+            DerObjectContent::Boolean(b)             => writeln!(f, "Boolean({:?})", b),
+            DerObjectContent::Integer(i)             => writeln!(f, "Integer({:?})", debug::HexSlice{d:i}),
+            DerObjectContent::Enum(i)                => writeln!(f, "Enum({})", i),
+            DerObjectContent::OID(ref v)             => writeln!(f, "OID({:?})", v),
+            DerObjectContent::Null                   => writeln!(f, "Null"),
+            DerObjectContent::OctetString(v)         => writeln!(f, "OctetString({:?})", debug::HexSlice{d:v}),
             DerObjectContent::BitString(u,BitStringObject{data:v})
-                                                     => write!(f, "BitString({},{:?})\n", u, debug::HexSlice{d:v}),
+                                                     => writeln!(f, "BitString({},{:?})", u, debug::HexSlice{d:v}),
             DerObjectContent::GeneralizedTime(s)     => print_utf8_string_with_type(f, s, "GeneralizedTime"),
             DerObjectContent::UTCTime(s)             => print_utf8_string_with_type(f, s, "UTCTime"),
             DerObjectContent::PrintableString(s)     => print_utf8_string_with_type(f, s, "PrintableString"),
@@ -80,31 +80,31 @@ impl<'a> fmt::Debug for PrettyDer<'a> {
             DerObjectContent::GeneralString(s)       => print_utf8_string_with_type(f, s, "GeneralString"),
             DerObjectContent::ContextSpecific(n,ref o) => {
                 let new_indent = self.indent + self.inc;
-                try!(write!(f, "ContextSpecific [{}] {{\n", n));
+                writeln!(f, "ContextSpecific [{}] {{", n)?;
                 match *o {
-                    Some(ref obj) => try!(write!(f, "{:?}", self.next_indent(obj))),
-                    None          => try!(write!(f, "{:1$}None\n", " ", new_indent)),
+                    Some(ref obj) => write!(f, "{:?}", self.next_indent(obj))?,
+                    None          => writeln!(f, "{:1$}None", " ", new_indent)?,
                 };
                 if self.indent > 0 {
-                    try!(write!(f, "{:1$}", " ", self.indent));
+                    write!(f, "{:1$}", " ", self.indent)?;
                 };
-                try!(write!(f, "}}\n"));
+                writeln!(f, "}}")?;
                 Ok(())
             },
             DerObjectContent::Set(ref v) |
             DerObjectContent::Sequence(ref v)        => {
                 let ty = if self.obj.tag == 0x10 { "Sequence" } else { "Set" };
-                try!(write!(f, "{}[\n", ty));
+                writeln!(f, "{}[", ty)?;
                 for o in v {
-                    try!(write!(f, "{:?}", self.next_indent(o)));
+                    write!(f, "{:?}", self.next_indent(o))?;
                 };
                 if self.indent > 0 {
-                    try!(write!(f, "{:1$}", " ", self.indent));
+                    write!(f, "{:1$}", " ", self.indent)?;
                 };
-                try!(write!(f, "]\n"));
+                writeln!(f, "]")?;
                 Ok(())
             },
-            DerObjectContent::Unknown(o)             => write!(f, "Unknown({:?})\n", o),
+            DerObjectContent::Unknown(o)             => writeln!(f, "Unknown({:?})", o),
         }
     }
 }
