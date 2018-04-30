@@ -1,3 +1,34 @@
+/// Combination and flat_map! and take! as first combinator
+#[macro_export]
+macro_rules! flat_take (
+    ($i:expr, $len:expr, $f:ident) => ({
+        use nom::Needed;
+        if $i.len() < $len { IResult::Incomplete(Needed::Size($len)) }
+        else {
+            let taken = &$i[0..$len];
+            let rem = &$i[$len..];
+            match $f(taken) {
+                IResult::Done(_,res)   => IResult::Done(rem,res),
+                IResult::Incomplete(i) => IResult::Incomplete(i),
+                IResult::Error(e)      => IResult::Error(e),
+            }
+        }
+    });
+    ($i:expr, $len:expr, $submac:ident!( $($args:tt)*)) => ({
+        use nom::Needed;
+        if $i.len() < $len { IResult::Incomplete(Needed::Size($len)) }
+        else {
+            let taken = &$i[0..$len];
+            let rem = &$i[$len..];
+            match $submac!(taken, $($args)*) {
+                IResult::Done(_,res)   => IResult::Done(rem,res),
+                IResult::Incomplete(i) => IResult::Incomplete(i),
+                IResult::Error(e)      => IResult::Error(e),
+            }
+        }
+    });
+);
+
 /// Internal parser, do not use directly
 #[doc(hidden)]
 #[macro_export]
@@ -62,7 +93,7 @@ macro_rules! parse_der_defined_m(
                          error_if!(hdr.class != 0b00, ErrorKind::Custom($crate::DER_CLASS_ERROR)) >>
                          error_if!(hdr.structured != 0b1, ErrorKind::Custom($crate::DER_STRUCT_ERROR)) >>
                          error_if!(hdr.tag != $tag, ErrorKind::Custom($crate::DER_TAG_ERROR)) >>
-                content: flat_map!(take!(hdr.len), fold_der_defined_m!( $($args)* )) >>
+                content: flat_take!(hdr.len as usize, fold_der_defined_m!( $($args)* )) >>
                 (hdr,content)
             )
         }
@@ -345,7 +376,7 @@ macro_rules! parse_der_sequence_of(
             $i,
             hdr:     der_read_element_header >>
                      error_if!(hdr.tag != DerTag::Sequence as u8, ErrorKind::Custom($crate::DER_TAG_ERROR)) >>
-            content: flat_map!(take!(hdr.len),
+            content: flat_take!(hdr.len as usize,
                 do_parse!(
                     r: many0!($f) >>
                        eof!() >>
@@ -392,7 +423,7 @@ macro_rules! parse_der_set_of(
             $i,
             hdr:     der_read_element_header >>
                      error_if!(hdr.tag != DerTag::Set as u8, ErrorKind::Custom($crate::DER_TAG_ERROR)) >>
-            content: flat_map!(take!(hdr.len),
+            content: flat_take!(hdr.len as usize,
                 do_parse!(
                     r: many0!($f) >>
                        eof!() >>
@@ -570,7 +601,7 @@ macro_rules! parse_der_struct(
             $i,
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader|
                          hdr.structured == 1 && hdr.tag == $tag as u8) >>
-            res: flat_map!(take!(hdr.len as usize), do_parse!( $($rest)* )) >>
+            res: flat_take!(hdr.len as usize, do_parse!( $($rest)* )) >>
             (hdr,res)
         )
     });
@@ -579,7 +610,7 @@ macro_rules! parse_der_struct(
         do_parse!(
             $i,
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.structured == 1) >>
-            res: flat_map!(take!(hdr.len as usize), do_parse!( $($rest)* )) >>
+            res: flat_take!(hdr.len as usize, do_parse!( $($rest)* )) >>
             (hdr,res)
         )
     });
@@ -666,7 +697,7 @@ macro_rules! parse_der_tagged(
         do_parse!(
             $i,
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.tag == $tag) >>
-            res: flat_map!(take!(hdr.len as usize), call!( $f )) >>
+            res: flat_take!(hdr.len as usize, call!( $f )) >>
             (res)
         )
     });
@@ -675,7 +706,7 @@ macro_rules! parse_der_tagged(
         do_parse!(
             $i,
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader| hdr.tag == $tag) >>
-            res: flat_map!(take!(hdr.len as usize), $submac!( $($args)* )) >>
+            res: flat_take!(hdr.len as usize, $submac!( $($args)* )) >>
             (res)
         )
     });
@@ -749,7 +780,7 @@ macro_rules! parse_der_application(
             $i,
             hdr: verify!(der_read_element_header, |ref hdr: DerObjectHeader|
                          hdr.class == 0b01 && hdr.tag == $tag) >>
-            res: flat_map!(take!(hdr.len as usize), do_parse!( $($rest)* )) >>
+            res: flat_take!(hdr.len as usize, do_parse!( $($rest)* )) >>
             (hdr,res)
         )
     });

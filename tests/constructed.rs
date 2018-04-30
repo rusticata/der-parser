@@ -1,3 +1,5 @@
+#[macro_use] extern crate pretty_assertions;
+
 #[macro_use]
 extern crate der_parser;
 
@@ -6,7 +8,7 @@ extern crate nom;
 
 use der_parser::*;
 use oid::Oid;
-use nom::{IResult,ErrorKind};
+use nom::{IResult,ErrorKind,Needed,be_u16,be_u32};
 
 #[derive(Debug, PartialEq)]
 struct MyStruct<'a>{
@@ -185,7 +187,7 @@ fn struct_with_garbage() {
         }
     );
     assert_eq!(parse_struct01(&bytes), IResult::Done(empty, expected));
-    assert_eq!(parse_struct01_complete(&bytes), IResult::Error(error_position!(ErrorKind::Eof,&bytes[2..])));
+    assert_eq!(parse_struct01_complete(&bytes), IResult::Error(error_position!(ErrorKind::Eof,&bytes[12..])));
 }
 
 #[test]
@@ -251,7 +253,7 @@ fn tagged_explicit() {
     // wrong type
     assert_eq!(
         parse_der_tagged!(bytes as &[u8],2,parse_der_bool),
-        IResult::Error(error_position!(ErrorKind::Custom(DER_TAG_ERROR),&bytes[2..]))
+        IResult::Error(error_position!(ErrorKind::Custom(DER_TAG_ERROR),&bytes[4..]))
     );
 }
 
@@ -308,3 +310,17 @@ fn application() {
         _ => assert!(false)
     }
 }
+
+#[test]
+fn test_flat_take() {
+    let input = &[0x00, 0x01, 0xff];
+    // read first 2 bytes and use correct combinator: OK
+    assert_eq!(flat_take!(input,2,be_u16), IResult::Done(&input[2..], 0x0001));
+    // read 3 bytes and use 2: OK (some input is just lost)
+    assert_eq!(flat_take!(input,3,be_u16), IResult::Done(&b""[..], 0x0001));
+    // read 2 bytes and a combinator requiring more bytes
+    assert_eq!(flat_take!(input,2,be_u32), IResult::Incomplete(Needed::Size(4)));
+    // test with macro as sub-combinator
+    assert_eq!(flat_take!(input,2,call!(be_u16)), IResult::Done(&input[2..], 0x0001));
+}
+

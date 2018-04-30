@@ -196,14 +196,14 @@ pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8],
         // 0x10: sequence
         0x10 => {
                     map!(i,
-                        flat_map!(take!(len),der_read_sequence_content),
+                        flat_take!(len,der_read_sequence_content),
                         |l| { DerObjectContent::Sequence(l) }
                     )
                 },
         // 0x11: set
         0x11 => {
                     map!(i,
-                        flat_map!(take!(len),der_read_set_content),
+                        flat_take!(len,der_read_set_content),
                         |l| { DerObjectContent::Set(l) }
                     )
                 },
@@ -435,7 +435,7 @@ pub fn parse_der_sequence(i:&[u8]) -> IResult<&[u8],DerObject> {
        i,
        hdr:     der_read_element_header >>
                 error_if!(hdr.tag != DerTag::Sequence as u8, ErrorKind::Custom(DER_TAG_ERROR)) >>
-       content: flat_map!(take!(hdr.len),der_read_sequence_content) >>
+       content: flat_take!(hdr.len as usize,der_read_sequence_content) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::Sequence(content)) )
    )
 }
@@ -453,7 +453,7 @@ pub fn parse_der_set(i:&[u8]) -> IResult<&[u8],DerObject> {
        i,
        hdr:     der_read_element_header >>
                 error_if!(hdr.tag != DerTag::Set as u8, ErrorKind::Custom(DER_TAG_ERROR)) >>
-       content: flat_map!(take!(hdr.len),der_read_set_content) >>
+       content: flat_take!(hdr.len as usize,der_read_set_content) >>
        ( DerObject::from_header_and_content(hdr, DerObjectContent::Set(content)) )
    )
 }
@@ -773,7 +773,7 @@ fn test_der_seq_of_incomplete() {
     fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_sequence_of!(i, parse_der_integer)
     };
-    assert_eq!(parser(&bytes), IResult::Error(Err::Position(ErrorKind::Eof, &bytes[2..])));
+    assert_eq!(parser(&bytes), IResult::Error(Err::Position(ErrorKind::Eof, &bytes[7..])));
 }
 
 #[test]
