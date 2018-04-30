@@ -176,7 +176,7 @@ pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8],
                     do_parse!(i,
                              error_if!(len == 0, ErrorKind::LengthValue) >>
                         oid: map_res!(take!(len),der_read_oid) >>
-                        ( DerObjectContent::OID(Oid::from_vec(&oid)) )
+                        ( DerObjectContent::OID(Oid::from(&oid)) )
                     )
                 },
         // 0x0a: enumerated
@@ -398,7 +398,7 @@ pub fn parse_der_oid(i:&[u8]) -> IResult<&[u8],DerObject> {
        hdr:     der_read_element_header >>
                 error_if!(hdr.tag != DerTag::Oid as u8, ErrorKind::Custom(DER_TAG_ERROR)) >>
        content: map_res!(take!(hdr.len),der_read_oid) >>
-       ( DerObject::from_header_and_content(hdr, DerObjectContent::OID(Oid::from_vec(&content))) )
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::OID(Oid::from(&content))) )
    )
 }
 

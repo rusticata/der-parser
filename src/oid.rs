@@ -10,12 +10,7 @@ pub struct Oid (Vec<u64>);
 impl Oid {
     /// Build an OID from an array of `u64` integers
     pub fn from(s: &[u64]) -> Oid {
-        Oid(s.to_vec())
-    }
-
-    /// Build an OID from a vector of `u64` integers
-    pub fn from_vec(v: &Vec<u64>) -> Oid {
-        Oid(v.to_owned())
+        Oid(s.to_owned())
     }
 
     /// Convert the OID to a string representation.
