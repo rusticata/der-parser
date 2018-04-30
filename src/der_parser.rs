@@ -138,15 +138,14 @@ pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8],
         // 0x00 end-of-content
         // 0x01 bool
         0x01 => {
-                    map!(i,
-                        switch!(take!(1),
-                          b"\x00" => value!(true) |
-                          b"\xff" => value!(false)
-                        ),
-                        |b| { DerObjectContent::Boolean(b) }
-                    )
-                },
-        // 0x02: integer
+            match be_u8(i) {
+                IResult::Done(rem,0x00) => IResult::Done(rem,DerObjectContent::Boolean(false)),
+                IResult::Done(rem,0xff) => IResult::Done(rem,DerObjectContent::Boolean(true)),
+                IResult::Done(_,_)      => IResult::Error(error_code!(ErrorKind::Verify)),
+                IResult::Error(e)       => IResult::Error(e),
+                IResult::Incomplete(i)  => IResult::Incomplete(i),
+            }
+        },
         0x02 => {
                     map!(i,
                         take!(len),
@@ -308,15 +307,15 @@ pub fn der_read_element_content(i: &[u8], hdr: DerObjectHeader) -> IResult<&[u8]
 /// single octet.
 ///
 /// If the boolean value is FALSE, the octet shall be zero.
-/// If the boolean value is TRUE, the octet shall have any non-zero value, as a sender's option.
+/// If the boolean value is TRUE, the octet shall be one byte, and have all bits set to one (0xff).
 pub fn parse_der_bool(i:&[u8]) -> IResult<&[u8],DerObject> {
    do_parse!(
        i,
        hdr:     der_read_element_header >>
                 error_if!(hdr.tag != DerTag::Boolean as u8, ErrorKind::Custom(DER_TAG_ERROR)) >>
                 error_if!(hdr.len != 1, ErrorKind::Custom(DER_INVALID_LENGTH)) >>
-       content: map!(be_u8, |x| x!=0) >>
-       ( DerObject::from_header_and_content(hdr, DerObjectContent::Boolean(content)) )
+       b:       verify!(be_u8, |b| b==0x00 || b==0xff) >>
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::Boolean(b != 0)) )
    )
 }
 
@@ -612,8 +611,8 @@ fn test_der_bool() {
     let b_true  = DerObject::from_obj(DerObjectContent::Boolean(true));
     let b_false  = DerObject::from_obj(DerObjectContent::Boolean(false));
     assert_eq!(parse_der_bool(&[0x01, 0x01, 0x00]), IResult::Done(empty, b_false));
-    assert_eq!(parse_der_bool(&[0x01, 0x01, 0xff]), IResult::Done(empty, b_true.clone()));
-    assert_eq!(parse_der_bool(&[0x01, 0x01, 0x7f]), IResult::Done(empty, b_true));
+    assert_eq!(parse_der_bool(&[0x01, 0x01, 0xff]), IResult::Done(empty, b_true));
+    assert_eq!(parse_der_bool(&[0x01, 0x01, 0x7f]), IResult::Error(error_position!(ErrorKind::Verify,&[0x7f][..])));
 }
 
 #[test]
