@@ -18,6 +18,8 @@ der-parser is a parser for the DER protocol.
 ### 0.5.5
 
 - Add functions `parse_der_u32` and `parse_der_u64` to quickly parse integers
+- Remove `Oid::from_vec`, `Oid::from` does the same
+- Enforce constraints on DER booleans
 
 ### 0.5.4
 
