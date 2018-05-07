@@ -9,7 +9,7 @@ use oid::Oid;
 
 
 fn parse_identifier(i: &[u8]) -> IResult<&[u8],(u8,u8,u8)> {
-    if i.len() == 0 { return IResult::Incomplete(Needed::Size(1)); }
+    if i.is_empty() { IResult::Incomplete(Needed::Size(1)) }
     else {
         let a = i[0] >> 6;
         let b = if i[0] & 0b0010_0000 != 0 {1} else {0};
@@ -19,7 +19,7 @@ fn parse_identifier(i: &[u8]) -> IResult<&[u8],(u8,u8,u8)> {
 }
 
 fn parse_der_length_byte(i: &[u8]) -> IResult<&[u8],(u8,u8)> {
-    if i.len() == 0 { return IResult::Incomplete(Needed::Size(1)); }
+    if i.is_empty() { IResult::Incomplete(Needed::Size(1)) }
     else {
         let a = i[0] >> 7;
         let b = i[0] & 0b0111_1111;
@@ -116,7 +116,7 @@ named!(pub der_read_element_header<&[u8],DerObjectHeader>,
                 class: el.0,
                 structured: el.1,
                 tag: el.2,
-                len: len,
+                len,
             }
         } )
     )

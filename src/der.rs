@@ -131,8 +131,8 @@ impl<'a> DerObject<'a> {
             _                => 0,
         };
         DerObject{
-            class:      class,
-            structured: structured,
+            class,
+            structured,
             tag:        tag as u8,
             content:    c,
         }
