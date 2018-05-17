@@ -1,4 +1,4 @@
-use nom::{be_u8,IResult,Err,ErrorKind,Needed};
+use nom::{be_u8,IResult,Context,Err,ErrorKind,Needed};
 use rusticata_macros::bytes_to_u64;
 
 use der::*;
@@ -9,62 +9,60 @@ use oid::Oid;
 
 
 fn parse_identifier(i: &[u8]) -> IResult<&[u8],(u8,u8,u8)> {
-    if i.is_empty() { IResult::Incomplete(Needed::Size(1)) }
+    if i.is_empty() { Err(Err::Incomplete(Needed::Size(1))) }
     else {
         let a = i[0] >> 6;
         let b = if i[0] & 0b0010_0000 != 0 {1} else {0};
         let c = i[0] & 0b0001_1111;
-        IResult::Done(&i[1..],(a,b,c))
+        Ok((&i[1..],(a,b,c)))
     }
 }
 
 fn parse_der_length_byte(i: &[u8]) -> IResult<&[u8],(u8,u8)> {
-    if i.is_empty() { IResult::Incomplete(Needed::Size(1)) }
+    if i.is_empty() { Err(Err::Incomplete(Needed::Size(1))) }
     else {
         let a = i[0] >> 7;
         let b = i[0] & 0b0111_1111;
-        IResult::Done(&i[1..],(a,b))
+        Ok((&i[1..],(a,b)))
     }
 }
 
 /// Parse DER object and try to decode it as a 32-bits unsigned integer
 pub fn parse_der_u32(i:&[u8]) -> IResult<&[u8],u32> {
     match parse_der_integer(i) {
-        IResult::Done(rem,ref obj) => {
+        Ok((rem,ref obj)) => {
             match obj.content {
                 DerObjectContent::Integer(i) => {
                     match i.len() {
-                        1 => IResult::Done(rem, i[0] as u32),
-                        2 => IResult::Done(rem, (i[0] as u32) << 8  | (i[1] as u32) ),
-                        3 => IResult::Done(rem, (i[0] as u32) << 16 | (i[1] as u32) << 8 | (i[2] as u32) ),
-                        4 => IResult::Done(rem, (i[0] as u32) << 24 | (i[1] as u32) << 16 | (i[2] as u32) << 8 | (i[3] as u32) ),
-                        _ => IResult::Error(error_code!(ErrorKind::Custom(DER_INTEGER_TOO_LARGE))),
+                        1 => Ok((rem, i[0] as u32)),
+                        2 => Ok((rem, (i[0] as u32) << 8  | (i[1] as u32) )),
+                        3 => Ok((rem, (i[0] as u32) << 16 | (i[1] as u32) << 8 | (i[2] as u32) )),
+                        4 => Ok((rem, (i[0] as u32) << 24 | (i[1] as u32) << 16 | (i[2] as u32) << 8 | (i[3] as u32) )),
+                        _ => Err(Err::Error(error_position!(i, ErrorKind::Custom(DER_INTEGER_TOO_LARGE)))),
                     }
                 }
-                _ => IResult::Error(error_code!(ErrorKind::Custom(DER_TAG_ERROR))),
+                _ => Err(Err::Error(error_position!(i, ErrorKind::Custom(DER_TAG_ERROR)))),
             }
         }
-        IResult::Incomplete(i) => IResult::Incomplete(i),
-        IResult::Error(e) => IResult::Error(e)
+        Err(e) => Err(e)
     }
 }
 
 /// Parse DER object and try to decode it as a 64-bits unsigned integer
 pub fn parse_der_u64(i:&[u8]) -> IResult<&[u8],u64> {
     match parse_der_integer(i) {
-        IResult::Done(rem,ref obj) => {
+        Ok((rem,ref obj)) => {
             match obj.content {
                 DerObjectContent::Integer(i) => {
                     match bytes_to_u64(i) {
-                        Ok(l)  => IResult::Done(rem, l),
-                        Err(_) => IResult::Error(error_code!(ErrorKind::Custom(DER_INTEGER_TOO_LARGE))),
+                        Ok(l)  => Ok((rem, l)),
+                        Err(_) => Err(Err::Error(error_position!(i, ErrorKind::Custom(DER_INTEGER_TOO_LARGE)))),
                     }
                 }
-                _ => IResult::Error(error_code!(ErrorKind::Custom(DER_TAG_ERROR))),
+                _ => Err(Err::Error(error_position!(i, ErrorKind::Custom(DER_TAG_ERROR)))),
             }
         }
-        IResult::Incomplete(i) => IResult::Incomplete(i),
-        IResult::Error(e) => IResult::Error(e)
+        Err(e) => Err(e)
     }
 }
 
@@ -108,7 +106,7 @@ named!(pub der_read_element_header<&[u8],DerObjectHeader>,
                     // XXX llen: test if 0 (indefinite form), if len is 0xff -> error
                     match bytes_to_u64(llen.unwrap()) {
                         Ok(l)  => l,
-                        Err(_) => { return IResult::Error(error_code!(ErrorKind::Custom(DER_TAG_ERROR))); },
+                        Err(_) => { return Err(::nom::Err::Error(error_position!(llen.unwrap(), ErrorKind::Custom(DER_TAG_ERROR)))); },
                     }
                 },
             };
@@ -123,11 +121,11 @@ named!(pub der_read_element_header<&[u8],DerObjectHeader>,
 );
 
 named!(der_read_sequence_content<&[u8],Vec<DerObject> >,
-    many0!(parse_der)
+    many0!(complete!(parse_der))
 );
 
 named!(der_read_set_content<&[u8],Vec<DerObject> >,
-    many0!(parse_der)
+    many0!(complete!(parse_der))
 );
 
 /// Parse the next bytes as the content of a DER object.
@@ -139,11 +137,10 @@ pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8],
         // 0x01 bool
         0x01 => {
             match be_u8(i) {
-                IResult::Done(rem,0x00) => IResult::Done(rem,DerObjectContent::Boolean(false)),
-                IResult::Done(rem,0xff) => IResult::Done(rem,DerObjectContent::Boolean(true)),
-                IResult::Done(_,_)      => IResult::Error(error_code!(ErrorKind::Verify)),
-                IResult::Error(e)       => IResult::Error(e),
-                IResult::Incomplete(i)  => IResult::Incomplete(i),
+                Ok((rem,0x00)) => Ok((rem,DerObjectContent::Boolean(false))),
+                Ok((rem,0xff)) => Ok((rem,DerObjectContent::Boolean(true))),
+                Ok((_,_)     ) => Err(Err::Error(error_position!(i, ErrorKind::Verify))),
+                Err(e)         => Err(e)
             }
         },
         0x02 => {
@@ -169,7 +166,7 @@ pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8],
                     )
                 },
         // 0x05: null
-        0x05 => { IResult::Done(i,DerObjectContent::Null) },
+        0x05 => { Ok((i,DerObjectContent::Null)) },
         // 0x06: object identified
         0x06 => {
                     do_parse!(i,
@@ -265,7 +262,7 @@ pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8],
                     )
                 },
         // all unknown values
-        _    => { IResult::Error(Err::Code(ErrorKind::Custom(DER_TAG_UNKNOWN))) },
+        _    => { Err(Err::Error(error_position!(i, ErrorKind::Custom(DER_TAG_UNKNOWN)))) },
     }
 }
 
@@ -284,20 +281,19 @@ pub fn der_read_element_content(i: &[u8], hdr: DerObjectHeader) -> IResult<&[u8]
             take!(hdr.len),
             |b| { DerObject::from_header_and_content(hdr,DerObjectContent::Unknown(b)) }
         ),
-        _    => { return IResult::Error(Err::Code(ErrorKind::Custom(DER_CLASS_ERROR))); },
+        _    => { return Err(Err::Error(error_position!(i, ErrorKind::Custom(DER_CLASS_ERROR)))); },
     }
     match der_read_element_content_as(i, hdr.tag, hdr.len as usize) {
-        IResult::Done(rem,content) => {
-            IResult::Done(rem, DerObject::from_header_and_content(hdr,content))
+        Ok((rem,content)) => {
+            Ok((rem, DerObject::from_header_and_content(hdr,content)))
         },
-        IResult::Error(Err::Code(ErrorKind::Custom(DER_TAG_UNKNOWN))) => {
+        Err(Err::Error(Context::Code(_, ErrorKind::Custom(DER_TAG_UNKNOWN)))) => {
             map!(i,
                  take!(hdr.len),
                  |b| { DerObject::from_header_and_content(hdr,DerObjectContent::Unknown(b)) }
             )
         }
-        IResult::Error(e) => IResult::Error(e),
-        IResult::Incomplete(e) => IResult::Incomplete(e),
+        Err(e) => Err(e)
     }
 }
 
@@ -345,7 +341,7 @@ pub fn parse_der_bool(i:&[u8]) -> IResult<&[u8],DerObject> {
 /// let expected  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
 /// assert_eq!(
 ///     parse_der_integer(&bytes),
-///     IResult::Done(empty, expected)
+///     Ok((empty, expected))
 /// );
 /// # }
 /// ```
@@ -610,9 +606,9 @@ fn test_der_bool() {
     let empty = &b""[..];
     let b_true  = DerObject::from_obj(DerObjectContent::Boolean(true));
     let b_false  = DerObject::from_obj(DerObjectContent::Boolean(false));
-    assert_eq!(parse_der_bool(&[0x01, 0x01, 0x00]), IResult::Done(empty, b_false));
-    assert_eq!(parse_der_bool(&[0x01, 0x01, 0xff]), IResult::Done(empty, b_true));
-    assert_eq!(parse_der_bool(&[0x01, 0x01, 0x7f]), IResult::Error(error_position!(ErrorKind::Verify,&[0x7f][..])));
+    assert_eq!(parse_der_bool(&[0x01, 0x01, 0x00]), Ok((empty, b_false)));
+    assert_eq!(parse_der_bool(&[0x01, 0x01, 0xff]), Ok((empty, b_true)));
+    assert_eq!(parse_der_bool(&[0x01, 0x01, 0x7f]), Err(Err::Error(error_position!(&[0x7f][..],ErrorKind::Verify))));
 }
 
 #[test]
@@ -620,7 +616,7 @@ fn test_der_int() {
     let empty = &b""[..];
     let bytes = [0x02, 0x03, 0x01, 0x00, 0x01];
     let expected  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
-    assert_eq!(parse_der_integer(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der_integer(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -636,7 +632,7 @@ fn test_der_int_long() {
     let empty = &b""[..];
     let bytes = [0x02, 0x0a, 0x39, 0x11, 0x45, 0x10, 0x94, 0x39, 0x11, 0x45, 0x10, 0x94];
     let expected  = DerObject::from_obj(DerObjectContent::Integer(&bytes[2..]));
-    assert_eq!(parse_der_integer(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der_integer(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -646,14 +642,14 @@ fn test_der_octetstring() {
                   0x41, 0x41, 0x41, 0x41, 0x41,
     ];
     let expected  = DerObject::from_obj(DerObjectContent::OctetString(b"AAAAA"));
-    assert_eq!(parse_der_octetstring(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der_octetstring(&bytes), Ok((empty, expected)));
 }
 
 #[test]
 fn test_der_null() {
     let empty = &b""[..];
     let expected  = DerObject::from_obj(DerObjectContent::Null);
-    assert_eq!(parse_der_null(&[0x05, 0x00]), IResult::Done(empty, expected));
+    assert_eq!(parse_der_null(&[0x05, 0x00]), Ok((empty, expected)));
 }
 
 #[test]
@@ -661,14 +657,14 @@ fn test_der_oid() {
     let empty = &b""[..];
     let bytes = [0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x05];
     let expected  = DerObject::from_obj(DerObjectContent::OID(Oid::from(&[1, 2, 840, 113549, 1, 1, 5])));
-    assert_eq!(parse_der_oid(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der_oid(&bytes), Ok((empty, expected)));
 }
 
 #[test]
 fn test_der_enum() {
     let empty = &b""[..];
     let expected  = DerObject::from_obj(DerObjectContent::Enum(2));
-    assert_eq!(parse_der_enum(&[0x0a, 0x01, 0x02]), IResult::Done(empty, expected));
+    assert_eq!(parse_der_enum(&[0x0a, 0x01, 0x02]), Ok((empty, expected)));
 }
 
 #[test]
@@ -678,7 +674,7 @@ fn test_der_utf8string() {
                   0x53, 0x6f, 0x6d, 0x65, 0x2d, 0x53, 0x74, 0x61, 0x74, 0x65
     ];
     let expected  = DerObject::from_obj(DerObjectContent::UTF8String(b"Some-State"));
-    assert_eq!(parse_der_utf8string(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der_utf8string(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -690,7 +686,7 @@ fn test_der_seq() {
     let expected  = DerObject::from_obj(DerObjectContent::Sequence(vec![
         DerObject::from_int_slice(b"\x01\x00\x01"),
     ]));
-    assert_eq!(parse_der_sequence(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der_sequence(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -703,7 +699,7 @@ fn test_der_set() {
     let expected  = DerObject::from_obj(DerObjectContent::Set(vec![
         DerObject::from_int_slice(b"\x01\x00\x01"),
     ]));
-    assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -723,7 +719,7 @@ fn test_der_set_defined() {
             parse_der_integer
         )
     };
-    assert_eq!(parser(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parser(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -743,7 +739,7 @@ fn test_der_seq_defined() {
             parse_der_integer
         )
     };
-    assert_eq!(parser(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parser(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -760,7 +756,7 @@ fn test_der_seq_of() {
     fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_sequence_of!(i, parse_der_integer)
     };
-    assert_eq!(parser(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parser(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -772,7 +768,7 @@ fn test_der_seq_of_incomplete() {
     fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_sequence_of!(i, parse_der_integer)
     };
-    assert_eq!(parser(&bytes), IResult::Error(Err::Position(ErrorKind::Eof, &bytes[7..])));
+    assert_eq!(parser(&bytes), Err(Err::Error(error_position!(&bytes[7..], ErrorKind::Eof))));
 }
 
 #[test]
@@ -789,7 +785,7 @@ fn test_der_set_of() {
     fn parser(i:&[u8]) -> IResult<&[u8],DerObject> {
         parse_der_set_of!(i, parse_der_integer)
     };
-    assert_eq!(parser(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parser(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -802,7 +798,7 @@ fn test_der_utctime() {
         tag: DerTag::UtcTime as u8,
         content: DerObjectContent::UTCTime(&bytes[2..]),
     };
-    assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -815,7 +811,7 @@ fn test_der_generalizedtime() {
         tag: DerTag::GeneralizedTime as u8,
         content: DerObjectContent::GeneralizedTime(&bytes[2..]),
     };
-    assert_eq!(parse_der_generalizedtime(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der_generalizedtime(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -825,7 +821,7 @@ fn test_der_generalstring() {
                   0x63, 0x69, 0x66, 0x73
     ];
     let expected  = DerObject::from_obj(DerObjectContent::GeneralString(b"cifs"));
-    assert_eq!(parse_der_generalstring(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der_generalstring(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -838,7 +834,7 @@ fn test_der_contextspecific() {
         tag: 0,
         content: DerObjectContent::Unknown(&bytes[2..]),
     };
-    assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -851,9 +847,9 @@ fn test_der_explicit() {
         tag: 0,
         content: DerObjectContent::ContextSpecific(0,Some(Box::new(DerObject::from_int_slice(b"\x02")))),
     };
-    assert_eq!(parse_der_explicit(&bytes, 0, parse_der_integer), IResult::Done(empty, expected));
+    assert_eq!(parse_der_explicit(&bytes, 0, parse_der_integer), Ok((empty, expected)));
     let expected2 = DerObject::from_obj(DerObjectContent::ContextSpecific(1,None));
-    assert_eq!(parse_der_explicit(&bytes, 1, parse_der_integer), IResult::Done(&bytes[..], expected2));
+    assert_eq!(parse_der_explicit(&bytes, 1, parse_der_integer), Ok((&bytes[..], expected2)));
 }
 
 #[test]
@@ -870,9 +866,9 @@ fn test_der_implicit() {
     fn der_read_ia5string_content(i:&[u8], _tag:u8, len: usize) -> IResult<&[u8],DerObjectContent,u32> {
         der_read_element_content_as(i, DerTag::Ia5String as u8, len)
     }
-    assert_eq!(parse_der_implicit(&bytes, 1, der_read_ia5string_content), IResult::Done(empty, expected));
+    assert_eq!(parse_der_implicit(&bytes, 1, der_read_ia5string_content), Ok((empty, expected)));
     let expected2 = DerObject::from_obj(DerObjectContent::ContextSpecific(2,None));
-    assert_eq!(parse_der_implicit(&bytes, 2, der_read_ia5string_content), IResult::Done(&bytes[..], expected2));
+    assert_eq!(parse_der_implicit(&bytes, 2, der_read_ia5string_content), Ok((&bytes[..], expected2)));
 }
 
 #[test]
@@ -906,8 +902,8 @@ fn test_der_optional() {
             parse_der_integer
         )
     };
-    assert_eq!(parser(&bytes1), IResult::Done(empty, expected1));
-    assert_eq!(parser(&bytes2), IResult::Done(empty, expected2));
+    assert_eq!(parser(&bytes1), Ok((empty, expected1)));
+    assert_eq!(parser(&bytes2), Ok((empty, expected2)));
 }
 
 #[test]
@@ -945,7 +941,7 @@ fn test_der_seq_dn() {
             ]
         )
     );
-    assert_eq!(parse_der(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_der(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -1006,7 +1002,7 @@ fn test_der_seq_dn_defined() {
             parse_rdn
         )
     }
-    assert_eq!(parse_name(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_name(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -1026,7 +1022,7 @@ fn test_der_defined_seq_macros() {
         DerObject::from_int_slice(b"\x01\x00\x01"),
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]));
-    assert_eq!(localparse_seq(&bytes), IResult::Done(empty, expected));
+    assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -1046,39 +1042,40 @@ fn test_der_defined_set_macros() {
         DerObject::from_int_slice(b"\x01\x00\x01"),
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]));
-    assert_eq!(localparse_set(&bytes), IResult::Done(empty, expected));
+    assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
 }
 
 #[test]
 fn test_parse_u32() {
     let empty = &b""[..];
-    assert_eq!(parse_der_u32(&[0x02, 0x01, 0x01]),IResult::Done(empty,1));
-    assert_eq!(parse_der_u32(&[0x02, 0x01, 0xff]),IResult::Done(empty,255));
-    assert_eq!(parse_der_u32(&[0x02, 0x02, 0x01, 0x23]),IResult::Done(empty,0x123));
-    assert_eq!(parse_der_u32(&[0x02, 0x02, 0xff, 0xff]),IResult::Done(empty,0xffff));
-    assert_eq!(parse_der_u32(&[0x02, 0x03, 0x01, 0x23, 0x45]),IResult::Done(empty,0x12345));
-    assert_eq!(parse_der_u32(&[0x02, 0x03, 0xff, 0xff, 0xff]),IResult::Done(empty,0xffffff));
-    assert_eq!(parse_der_u32(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),IResult::Done(empty,0x1234567));
-    assert_eq!(parse_der_u32(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),IResult::Done(empty,0xffffffff));
-    assert_eq!(parse_der_u32(&[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89]),IResult::Error(error_code!(ErrorKind::Custom(DER_INTEGER_TOO_LARGE))));
+    assert_eq!(parse_der_u32(&[0x02, 0x01, 0x01]),Ok((empty,1)));
+    assert_eq!(parse_der_u32(&[0x02, 0x01, 0xff]),Ok((empty,255)));
+    assert_eq!(parse_der_u32(&[0x02, 0x02, 0x01, 0x23]),Ok((empty,0x123)));
+    assert_eq!(parse_der_u32(&[0x02, 0x02, 0xff, 0xff]),Ok((empty,0xffff)));
+    assert_eq!(parse_der_u32(&[0x02, 0x03, 0x01, 0x23, 0x45]),Ok((empty,0x12345)));
+    assert_eq!(parse_der_u32(&[0x02, 0x03, 0xff, 0xff, 0xff]),Ok((empty,0xffffff)));
+    assert_eq!(parse_der_u32(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),Ok((empty,0x1234567)));
+    assert_eq!(parse_der_u32(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),Ok((empty,0xffffffff)));
+    let s = &[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89];
+    assert_eq!(parse_der_u32(s),Err(Err::Error(error_position!(&s[2..],ErrorKind::Custom(DER_INTEGER_TOO_LARGE)))));
     let s = &[0x01, 0x01, 0xff];
-    assert_eq!(parse_der_u32(s),IResult::Error(error_position!(ErrorKind::Custom(DER_TAG_ERROR), &s[2..])));
+    assert_eq!(parse_der_u32(s),Err(Err::Error(error_position!(&s[2..], ErrorKind::Custom(DER_TAG_ERROR)))));
 }
 
 #[test]
 fn test_parse_u64() {
     let empty = &b""[..];
-    assert_eq!(parse_der_u64(&[0x02, 0x01, 0x01]),IResult::Done(empty,1));
-    assert_eq!(parse_der_u64(&[0x02, 0x01, 0xff]),IResult::Done(empty,255));
-    assert_eq!(parse_der_u64(&[0x02, 0x02, 0x01, 0x23]),IResult::Done(empty,0x123));
-    assert_eq!(parse_der_u64(&[0x02, 0x02, 0xff, 0xff]),IResult::Done(empty,0xffff));
-    assert_eq!(parse_der_u64(&[0x02, 0x03, 0x01, 0x23, 0x45]),IResult::Done(empty,0x12345));
-    assert_eq!(parse_der_u64(&[0x02, 0x03, 0xff, 0xff, 0xff]),IResult::Done(empty,0xffffff));
-    assert_eq!(parse_der_u64(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),IResult::Done(empty,0x1234567));
-    assert_eq!(parse_der_u64(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),IResult::Done(empty,0xffffffff));
-    assert_eq!(parse_der_u64(&[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89]),IResult::Done(empty,0x123456789));
+    assert_eq!(parse_der_u64(&[0x02, 0x01, 0x01]),Ok((empty,1)));
+    assert_eq!(parse_der_u64(&[0x02, 0x01, 0xff]),Ok((empty,255)));
+    assert_eq!(parse_der_u64(&[0x02, 0x02, 0x01, 0x23]),Ok((empty,0x123)));
+    assert_eq!(parse_der_u64(&[0x02, 0x02, 0xff, 0xff]),Ok((empty,0xffff)));
+    assert_eq!(parse_der_u64(&[0x02, 0x03, 0x01, 0x23, 0x45]),Ok((empty,0x12345)));
+    assert_eq!(parse_der_u64(&[0x02, 0x03, 0xff, 0xff, 0xff]),Ok((empty,0xffffff)));
+    assert_eq!(parse_der_u64(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),Ok((empty,0x1234567)));
+    assert_eq!(parse_der_u64(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),Ok((empty,0xffffffff)));
+    assert_eq!(parse_der_u64(&[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89]),Ok((empty,0x123456789)));
     let s = &[0x01, 0x01, 0xff];
-    assert_eq!(parse_der_u64(s),IResult::Error(error_position!(ErrorKind::Custom(DER_TAG_ERROR), &s[2..])));
+    assert_eq!(parse_der_u64(s),Err(Err::Error(error_position!(&s[2..], ErrorKind::Custom(DER_TAG_ERROR)))));
 }
 
 }

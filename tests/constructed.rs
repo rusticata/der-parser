@@ -1,4 +1,5 @@
 #[macro_use] extern crate pretty_assertions;
+#[macro_use] extern crate rusticata_macros;
 
 #[macro_use]
 extern crate der_parser;
@@ -8,7 +9,7 @@ extern crate nom;
 
 use der_parser::*;
 use oid::Oid;
-use nom::{IResult,ErrorKind,Needed,be_u16,be_u32};
+use nom::{IResult,Err,ErrorKind,Needed,be_u16,be_u32};
 
 #[derive(Debug, PartialEq)]
 struct MyStruct<'a>{
@@ -30,7 +31,7 @@ fn parse_struct01_complete(i: &[u8]) -> IResult<&[u8],(DerObjectHeader,MyStruct)
         i,
         a: parse_der_integer >>
         b: parse_der_integer >>
-           eof!() >>
+           empty!() >>
         ( MyStruct{ a: a, b: b } )
     )
 }
@@ -67,7 +68,7 @@ fn parse_struct04(i: &[u8], tag:DerTag) -> IResult<&[u8],(DerObjectHeader,MyStru
         TAG tag,
         a: parse_der_integer >>
         b: parse_der_integer >>
-           eof!() >>
+           empty!() >>
         ( MyStruct{ a: a, b: b } )
     )
 }
@@ -92,7 +93,7 @@ fn struct01() {
         }
     );
     let res = parse_struct01(&bytes);
-    assert_eq!(res, IResult::Done(empty, expected));
+    assert_eq!(res, Ok((empty, expected)));
 }
 
 #[test]
@@ -149,21 +150,21 @@ fn struct02() {
             o: map_res!(parse_der_oid,|x: DerObject| x.as_oid().map(|o| o.clone())) >>
             s: parse_directory_string >>
             ( Attr{oid: o, val: s} )
-        ).map(|x| x.1)
+        ).map(|(rem,x)| (rem,x.1))
     };
     fn parse_rdn(i:&[u8]) -> IResult<&[u8],Rdn> {
         parse_der_struct!(i,
             a: parse_attr_type_and_value >>
             ( Rdn{a: a} )
-        ).map(|x| x.1)
+        ).map(|(rem,x)| (rem,x.1))
     }
     fn parse_name(i:&[u8]) -> IResult<&[u8],Name> {
         parse_der_struct!(i,
-            l: many0!(parse_rdn) >>
+            l: many0!(complete!(parse_rdn)) >>
             ( Name{l: l} )
-        ).map(|x| x.1)
+        ).map(|(rem,x)| (rem,x.1))
     }
-    assert_eq!(parse_name(&bytes), IResult::Done(empty, expected));
+    assert_eq!(parse_name(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -186,8 +187,8 @@ fn struct_with_garbage() {
             b: DerObject::from_int_slice(b"\x01\x00\x00"),
         }
     );
-    assert_eq!(parse_struct01(&bytes), IResult::Done(empty, expected));
-    assert_eq!(parse_struct01_complete(&bytes), IResult::Error(error_position!(ErrorKind::Eof,&bytes[12..])));
+    assert_eq!(parse_struct01(&bytes), Ok((empty, expected)));
+    assert_eq!(parse_struct01_complete(&bytes), Err(Err::Error(error_position!(&bytes[12..], ErrorKind::Eof))));
 }
 
 #[test]
@@ -210,9 +211,9 @@ fn struct_verify_tag() {
         }
     );
     let res = parse_struct04(&bytes, DerTag::Sequence);
-    assert_eq!(res, IResult::Done(empty, expected));
+    assert_eq!(res, Ok((empty, expected)));
     let res = parse_struct04(&bytes, DerTag::Set);
-    assert_eq!(res, IResult::Error(error_position!(ErrorKind::Verify,&bytes[..])));
+    assert_eq!(res, Err(Err::Error(error_position!(&bytes[..], ErrorKind::Verify))));
 }
 
 #[test]
@@ -235,7 +236,7 @@ fn tagged_explicit() {
     // EXPLICIT tagged value parsing
     let res = parse_int_explicit(bytes);
     match res {
-        IResult::Done(rem,val) => {
+        Ok((rem,val)) => {
             assert!(rem.is_empty());
             assert_eq!(val, 0x10001);
         },
@@ -248,12 +249,12 @@ fn tagged_explicit() {
     // wrong tag
     assert_eq!(
         parse_der_tagged!(bytes as &[u8],3,parse_der_integer),
-        IResult::Error(error_position!(ErrorKind::Verify,bytes as &[u8]))
+        Err(Err::Error(error_position!(bytes as &[u8], ErrorKind::Verify)))
     );
     // wrong type
     assert_eq!(
         parse_der_tagged!(bytes as &[u8],2,parse_der_bool),
-        IResult::Error(error_position!(ErrorKind::Custom(DER_TAG_ERROR),&bytes[4..]))
+        Err(Err::Error(error_position!(&bytes[4..],ErrorKind::Custom(DER_TAG_ERROR))))
     );
 }
 
@@ -270,7 +271,7 @@ fn tagged_implicit() {
     // IMPLICIT tagged value parsing
     let res = parse_int_implicit(bytes);
     match res {
-        IResult::Done(rem,val) => {
+        Ok((rem,val)) => {
             assert!(rem.is_empty());
             assert_eq!(val, 0x10001);
         },
@@ -279,7 +280,7 @@ fn tagged_implicit() {
     // wrong tag
     assert_eq!(
         parse_der_tagged!(bytes as &[u8],IMPLICIT 3,parse_der_integer),
-        IResult::Error(error_position!(ErrorKind::Verify,bytes as &[u8]))
+        Err(Err::Error(error_position!(bytes as &[u8], ErrorKind::Verify)))
     );
 }
 
@@ -300,7 +301,7 @@ fn application() {
     let bytes = &[0x62, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
     let res = parse_app01(bytes);
     match res {
-        IResult::Done(rem,(hdr,app)) => {
+        Ok((rem,(hdr,app))) => {
             assert!(rem.is_empty());
             assert_eq!(hdr.tag, 2);
             assert!(hdr.is_application());
@@ -315,12 +316,12 @@ fn application() {
 fn test_flat_take() {
     let input = &[0x00, 0x01, 0xff];
     // read first 2 bytes and use correct combinator: OK
-    assert_eq!(flat_take!(input,2,be_u16), IResult::Done(&input[2..], 0x0001));
+    assert_eq!(flat_take!(input,2,be_u16), Ok((&input[2..], 0x0001)));
     // read 3 bytes and use 2: OK (some input is just lost)
-    assert_eq!(flat_take!(input,3,be_u16), IResult::Done(&b""[..], 0x0001));
+    assert_eq!(flat_take!(input,3,be_u16), Ok((&b""[..], 0x0001)));
     // read 2 bytes and a combinator requiring more bytes
-    assert_eq!(flat_take!(input,2,be_u32), IResult::Incomplete(Needed::Size(4)));
+    assert_eq!(flat_take!(input,2,be_u32), Err(Err::Incomplete(Needed::Size(4))));
     // test with macro as sub-combinator
-    assert_eq!(flat_take!(input,2,call!(be_u16)), IResult::Done(&input[2..], 0x0001));
+    assert_eq!(flat_take!(input,2,call!(be_u16)), Ok((&input[2..], 0x0001)));
 }
 

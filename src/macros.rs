@@ -2,28 +2,24 @@
 #[macro_export]
 macro_rules! flat_take (
     ($i:expr, $len:expr, $f:ident) => ({
-        use nom::Needed;
-        if $i.len() < $len { IResult::Incomplete(Needed::Size($len)) }
+        if $i.len() < $len { Err(::nom::Err::Incomplete(::nom::Needed::Size($len))) }
         else {
             let taken = &$i[0..$len];
             let rem = &$i[$len..];
             match $f(taken) {
-                IResult::Done(_,res)   => IResult::Done(rem,res),
-                IResult::Incomplete(i) => IResult::Incomplete(i),
-                IResult::Error(e)      => IResult::Error(e),
+                Ok((_,res)) => Ok((rem,res)),
+                Err(e)      => Err(e)
             }
         }
     });
     ($i:expr, $len:expr, $submac:ident!( $($args:tt)*)) => ({
-        use nom::Needed;
-        if $i.len() < $len { IResult::Incomplete(Needed::Size($len)) }
+        if $i.len() < $len { Err(::nom::Err::Incomplete(::nom::Needed::Size($len))) }
         else {
             let taken = &$i[0..$len];
             let rem = &$i[$len..];
             match $submac!(taken, $($args)*) {
-                IResult::Done(_,res)   => IResult::Done(rem,res),
-                IResult::Incomplete(i) => IResult::Incomplete(i),
-                IResult::Error(e)      => IResult::Error(e),
+                Ok((_,res)) => Ok((rem,res)),
+                Err(e)      => Err(e)
             }
         }
     });
@@ -35,39 +31,35 @@ macro_rules! flat_take (
 macro_rules! fold_der_defined_m(
     (__impl $i:expr, $acc:ident, $f:ident) => ( {
         match $f($i) {
-            IResult::Done(rem,res) => { $acc.push(res); IResult::Done(rem,$acc) },
-            IResult::Incomplete(i) => IResult::Incomplete(i),
-            IResult::Error(e)      => IResult::Error(e),
+            Ok((rem,res)) => { $acc.push(res); Ok((rem,$acc)) },
+            Err(e)        => Err(e)
         }
     });
     (__impl $i:expr, $acc:ident, $submac:ident!( $($args:tt)* ) ) => ( {
         match $submac!($i, $($args)*) {
-            IResult::Done(rem,res) => { $acc.push(res); IResult::Done(rem,$acc) },
-            IResult::Incomplete(i) => IResult::Incomplete(i),
-            IResult::Error(e)      => IResult::Error(e),
+            Ok((rem,res)) => { $acc.push(res); Ok((rem,$acc)) },
+            Err(e)        => Err(e)
         }
     });
     (__impl $i:expr, $acc:ident, $f:ident >> $($rest:tt)*) => (
         {
             match $f($i) {
-                IResult::Done(rem,res) => {
+                Ok((rem,res)) => {
                     $acc.push(res);
                     fold_der_defined_m!(__impl rem, $acc, $($rest)* )
                 },
-                IResult::Incomplete(i) => IResult::Incomplete(i),
-                IResult::Error(e)      => IResult::Error(e),
+                Err(e)        => Err(e)
             }
         }
     );
     (__impl $i:expr, $acc:ident, $submac:ident!( $($args:tt)* ) >> $($rest:tt)*) => (
         {
             match $submac!($i, $($args)*) {
-                IResult::Done(rem,res) => {
+                Ok((rem,res)) => {
                     $acc.push(res);
                     fold_der_defined_m!(__impl rem, $acc, $($rest)* )
                 },
-                IResult::Incomplete(i) => IResult::Incomplete(i),
-                IResult::Error(e)      => IResult::Error(e),
+                Err(e)        => Err(e)
             }
         }
     );
@@ -131,7 +123,7 @@ macro_rules! parse_der_defined_m(
 ///     DerObject::from_int_slice(b"\x01\x00\x01"),
 ///     DerObject::from_int_slice(b"\x01\x00\x00"),
 /// ]));
-/// assert_eq!(localparse_seq(&bytes), IResult::Done(empty, expected));
+/// assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
 /// # }
 /// ```
 #[macro_export]
@@ -176,7 +168,7 @@ macro_rules! parse_der_sequence_defined_m(
 ///     DerObject::from_int_slice(b"\x01\x00\x01"),
 ///     DerObject::from_int_slice(b"\x01\x00\x00"),
 /// ]));
-/// assert_eq!(localparse_set(&bytes), IResult::Done(empty, expected));
+/// assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
 /// # }
 /// ```
 #[macro_export]
@@ -199,14 +191,13 @@ macro_rules! fold_parsers(
         {
             let parsers = [ $($args)* ];
             parsers.iter().fold(
-                (IResult::Done($i,vec![])),
+                (Ok(($i,vec![]))),
                 |r, f| {
                     match r {
-                        IResult::Done(rem,mut v) => {
+                        Ok((rem,mut v)) => {
                             map!(rem, f, |x| { v.push(x); v })
                         }
-                        IResult::Incomplete(e) => IResult::Incomplete(e),
-                        IResult::Error(e)      => IResult::Error(e),
+                        Err(e)          => Err(e)
                     }
                 }
                 )
@@ -221,6 +212,7 @@ macro_rules! parse_der_defined(
     ($i:expr, $ty:expr, $($args:tt)*) => (
         {
             use $crate::der_read_element_header;
+            use nom::ErrorKind;
             let res =
             do_parse!(
                 $i,
@@ -232,18 +224,16 @@ macro_rules! parse_der_defined(
                 (hdr,content)
             );
             match res {
-                IResult::Done(_rem,o)   => {
+                Ok((_rem,o)) => {
                     match fold_parsers!(o.1, $($args)* ) {
-                        IResult::Done(rem,v)   => {
-                            if rem.len() != 0 { IResult::Error(error_position!(ErrorKind::Custom(DER_OBJ_TOOSHORT), $i)) }
-                            else { IResult::Done(_rem,(o.0,v)) }
+                        Ok((rem,v)) => {
+                            if rem.len() != 0 { Err(::nom::Err::Error(error_position!($i, ErrorKind::Custom(DER_OBJ_TOOSHORT)))) }
+                            else { Ok((_rem,(o.0,v))) }
                         },
-                        IResult::Incomplete(e) => IResult::Incomplete(e),
-                        IResult::Error(e)      => IResult::Error(e),
+                        Err(e)      => Err(e)
                     }
                 },
-                IResult::Incomplete(e) => IResult::Incomplete(e),
-                IResult::Error(e)      => IResult::Error(e),
+                Err(e)       => Err(e)
             }
         }
     );
@@ -281,7 +271,7 @@ macro_rules! parse_der_defined(
 ///     DerObject::from_int_slice(b"\x01\x00\x01"),
 ///     DerObject::from_int_slice(b"\x01\x00\x00"),
 /// ]));
-/// assert_eq!(localparse_seq(&bytes), IResult::Done(empty, expected));
+/// assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
 /// # }
 /// ```
 #[macro_export]
@@ -327,7 +317,7 @@ macro_rules! parse_der_sequence_defined(
 ///     DerObject::from_int_slice(b"\x01\x00\x01"),
 ///     DerObject::from_int_slice(b"\x01\x00\x00"),
 /// ]));
-/// assert_eq!(localparse_set(&bytes), IResult::Done(empty, expected));
+/// assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
 /// # }
 /// ```
 #[macro_export]
@@ -365,7 +355,7 @@ macro_rules! parse_der_set_defined(
 ///     DerObject::from_int_slice(b"\x01\x00\x01"),
 ///     DerObject::from_int_slice(b"\x01\x00\x00"),
 /// ]));
-/// assert_eq!(parser(&bytes), IResult::Done(empty, expected));
+/// assert_eq!(parser(&bytes), Ok((empty, expected)));
 /// # }
 /// ```
 #[macro_export]
@@ -378,8 +368,8 @@ macro_rules! parse_der_sequence_of(
                      error_if!(hdr.tag != DerTag::Sequence as u8, ErrorKind::Custom($crate::DER_TAG_ERROR)) >>
             content: flat_take!(hdr.len as usize,
                 do_parse!(
-                    r: many0!($f) >>
-                       eof!() >>
+                    r: many0!(complete!($f)) >>
+                       empty!() >>
                     ( r )
                 )
             ) >>
@@ -412,7 +402,7 @@ macro_rules! parse_der_sequence_of(
 ///     DerObject::from_int_slice(b"\x01\x00\x01"),
 ///     DerObject::from_int_slice(b"\x01\x00\x00"),
 /// ]));
-/// assert_eq!(parser(&bytes), IResult::Done(empty, expected));
+/// assert_eq!(parser(&bytes), Ok((empty, expected)));
 /// # }
 /// ```
 #[macro_export]
@@ -425,8 +415,8 @@ macro_rules! parse_der_set_of(
                      error_if!(hdr.tag != DerTag::Set as u8, ErrorKind::Custom($crate::DER_TAG_ERROR)) >>
             content: flat_take!(hdr.len as usize,
                 do_parse!(
-                    r: many0!($f) >>
-                       eof!() >>
+                    r: many0!(complete!($f)) >>
+                       empty!() >>
                     ( r )
                 )
             ) >>
@@ -478,8 +468,8 @@ macro_rules! parse_der_set_of(
 ///     )
 /// };
 ///
-/// assert_eq!(parser(&bytes1), IResult::Done(empty, expected1));
-/// assert_eq!(parser(&bytes2), IResult::Done(empty, expected2));
+/// assert_eq!(parser(&bytes1), Ok((empty, expected1)));
+/// assert_eq!(parser(&bytes2), Ok((empty, expected2)));
 /// # }
 /// ```
 #[macro_export]
@@ -508,7 +498,7 @@ macro_rules! parse_der_optional(
 /// The returned object is a tuple containing a [`DerObjectHeader`](struct.DerObjectHeader.html)
 /// and the object returned by the subparser.
 ///
-/// To ensure the subparser consumes all bytes from the constructed object, add the `eof!()`
+/// To ensure the subparser consumes all bytes from the constructed object, add the `empty!()`
 /// subparser as the last parsing item.
 ///
 /// To verify the tag of the constructed element, use the `TAG` version, for ex
@@ -541,7 +531,7 @@ macro_rules! parse_der_optional(
 ///         i,
 ///         a: parse_der_integer >>
 ///         b: parse_der_integer >>
-///            eof!() >>
+///            empty!() >>
 ///         ( MyStruct{ a: a, b: b } )
 ///     )
 /// }
@@ -564,7 +554,7 @@ macro_rules! parse_der_optional(
 ///     }
 /// );
 /// let res = parse_struct01(&bytes);
-/// assert_eq!(res, IResult::Done(empty, expected));
+/// assert_eq!(res, Ok((empty, expected)));
 /// # }
 /// ```
 ///
@@ -572,6 +562,7 @@ macro_rules! parse_der_optional(
 ///
 /// ```rust,no_run
 /// # #[macro_use] extern crate nom;
+/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// # use der_parser::*;
 /// # use nom::{IResult,Err,ErrorKind};
@@ -587,7 +578,7 @@ macro_rules! parse_der_optional(
 ///         TAG DerTag::Sequence,
 ///         a: parse_der_integer >>
 ///         b: parse_der_integer >>
-///            eof!() >>
+///            empty!() >>
 ///         ( MyStruct{ a: a, b: b } )
 ///     )
 /// }
@@ -653,7 +644,7 @@ macro_rules! parse_der_struct(
 /// let bytes = &[0xa2, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
 /// let res = parse_int_explicit(bytes);
 /// match res {
-///     IResult::Done(rem,val) => {
+///     Ok((rem,val)) => {
 ///         assert!(rem.is_empty());
 ///         assert_eq!(val, 0x10001);
 ///     },
@@ -682,7 +673,7 @@ macro_rules! parse_der_struct(
 /// let bytes = &[0xa2, 0x03, 0x01, 0x00, 0x01];
 /// let res = parse_int_implicit(bytes);
 /// match res {
-///     IResult::Done(rem,val) => {
+///     Ok((rem,val)) => {
 ///         assert!(rem.is_empty());
 ///         assert_eq!(val, 0x10001);
 ///     },
@@ -730,7 +721,7 @@ macro_rules! parse_der_tagged(
 /// The returned object is a tuple containing a [`DerObjectHeader`](struct.DerObjectHeader.html)
 /// and the object returned by the subparser.
 ///
-/// To ensure the subparser consumes all bytes from the constructed object, add the `eof!()`
+/// To ensure the subparser consumes all bytes from the constructed object, add the `empty!()`
 /// subparser as the last parsing item.
 ///
 /// # Examples
@@ -754,14 +745,14 @@ macro_rules! parse_der_tagged(
 ///         i,
 ///         APPLICATION 2,
 ///         a: map_res!(parse_der_integer,|x: DerObject| x.as_u32()) >>
-///            eof!() >>
+///            empty!() >>
 ///         ( SimpleStruct{ a:a } )
 ///     )
 /// }
 /// let bytes = &[0x62, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
 /// let res = parse_app01(bytes);
 /// match res {
-///     IResult::Done(rem,(hdr,app)) => {
+///     Ok((rem,(hdr,app))) => {
 ///         assert!(rem.is_empty());
 ///         assert_eq!(hdr.tag, 2);
 ///         assert!(hdr.is_application());

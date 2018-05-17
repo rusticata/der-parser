@@ -5,7 +5,7 @@ keywords = ["BER","DER","ASN1","parser","nom"]
 homepage = "https://github.com/rusticata/der-parser"
 repository = "https://github.com/rusticata/der-parser.git"
 name = "der-parser"
-version = "0.5.5"
+version = "0.6.0"
 authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
 categories = ["parsing"]
 
@@ -19,8 +19,8 @@ include = [
 ]
 
 [dependencies]
-nom = {version = "^3.1", features = ["verbose-errors"]}
-rusticata-macros = "0.4.0"
+nom = {version = "4.0", features = ["verbose-errors"]}
+rusticata-macros = {version="0.5.0", git='https://github.com/rusticata/rusticata-macros.git', branch='nom4'}
 num = { version = "0.1", optional = true }
 
 [features]
