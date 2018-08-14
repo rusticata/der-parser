@@ -15,6 +15,10 @@ der-parser is a parser for the DER protocol.
 
 ## Changes
 
+### 1.0.0
+
+- Upgrade to nom 4
+
 ### 0.5.5
 
 - Add functions `parse_der_u32` and `parse_der_u64` to quickly parse integers
