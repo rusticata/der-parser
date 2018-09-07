@@ -107,4 +107,4 @@ pub use error::*;
 pub mod oid;
 
 #[cfg(feature="bigint")]
-extern crate num;
+extern crate num_bigint;

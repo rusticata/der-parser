@@ -21,11 +21,11 @@ include = [
 [dependencies]
 nom = {version = "4.0", features = ["verbose-errors"]}
 rusticata-macros = "1.0"
-num = { version = "0.1", optional = true }
+num-bigint = { version = "0.2", optional = true }
 
 [features]
 default = []
-bigint = ["num"]
+bigint = ["num-bigint"]
 
 [dev-dependencies]
 pretty_assertions = "0.5.0"
