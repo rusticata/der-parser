@@ -395,7 +395,7 @@ impl<'a> DerObjectContent<'a> {
 #[cfg(feature="bigint")]
 mod bigint {
     use super::{DerObject,DerObjectContent};
-    use num::bigint::{Sign,BigInt,BigUint};
+    use num_bigint::{Sign,BigInt,BigUint};
 
     impl<'a> DerObject<'a> {
         pub fn as_bigint(&self) -> Option<BigInt> {
@@ -590,7 +590,7 @@ fn test_der_bistringobject_asref() {
 #[test]
 fn test_der_to_bigint() {
     let obj  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
-    let expected = ::num::bigint::BigInt::from(0x10001);
+    let expected = ::num_bigint::BigInt::from(0x10001);
 
     assert_eq!(obj.as_bigint(), Some(expected));
 }
@@ -599,7 +599,7 @@ fn test_der_to_bigint() {
 #[test]
 fn test_der_to_biguint() {
     let obj  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
-    let expected = ::num::bigint::BigUint::from(0x10001 as u32);
+    let expected = ::num_bigint::BigUint::from(0x10001 as u32);
 
     assert_eq!(obj.as_biguint(), Some(expected));
 }
