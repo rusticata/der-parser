@@ -15,6 +15,10 @@ der-parser is a parser for the DER protocol.
 
 ## Changes
 
+### 1.1.0
+
+- Use num-bigint over num and upgrade to 0.2
+
 ### 1.0.0
 
 - Upgrade to nom 4
