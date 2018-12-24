@@ -15,6 +15,10 @@ der-parser is a parser for the DER protocol.
 
 ## Changes
 
+### 1.1.1
+
+- Fix OID parsing, and add support for relative OIDs
+
 ### 1.1.0
 
 - Use num-bigint over num and upgrade to 0.2
