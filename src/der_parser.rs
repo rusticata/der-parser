@@ -66,19 +66,14 @@ pub fn parse_der_u64(i:&[u8]) -> IResult<&[u8],u64> {
     }
 }
 
-fn der_read_oid(i: &[u8]) -> Result<Vec<u64>,u64> {
+fn der_read_relative_oid(i: &[u8]) -> Result<Vec<u64>,u64> {
     let mut oid = Vec::new();
     let mut acc : u64;
 
-    if i.is_empty() { return Err(0); };
-
-    /* first element = X*40 + Y (See 8.19.4) */
-    acc = i[0] as u64;
-    oid.push( acc / 40);
-    oid.push( acc % 40);
+    if i.is_empty() { return Ok(oid); };
 
     acc = 0;
-    for &c in &i[1..] {
+    for &c in &i[0..] {
         acc = (acc << 7) | (c & 0b0111_1111) as u64;
         if (c & (1<<7)) == 0 {
             oid.push(acc);
@@ -90,6 +85,25 @@ fn der_read_oid(i: &[u8]) -> Result<Vec<u64>,u64> {
         0 => Ok(oid),
         _ => Err(acc),
     }
+}
+
+fn der_read_oid(i: &[u8]) -> Result<Vec<u64>,u64> {
+    let mut oid = Vec::new();
+    let mut index = 0;
+
+    if i.is_empty() { return Err(0); };
+
+    /* first element = X*40 + Y (See 8.19.4) */
+    let acc = i[0] as u64;
+    if acc < 128 {
+        oid.push( acc / 40);
+        oid.push( acc % 40);
+        index = 1;
+    }
+
+    let rel_oid = der_read_relative_oid(&i[index..])?;
+    oid.extend(&rel_oid);
+    Ok(oid)
 }
 
 
@@ -187,6 +201,14 @@ pub fn der_read_element_content_as(i:&[u8], tag:u8, len:usize) -> IResult<&[u8],
                     map!(i,
                         take!(len), // XXX we must check if constructed or not (8.7)
                         |s| { DerObjectContent::UTF8String(s) }
+                    )
+                },
+        // 0x0d: relative object identified
+        0x0d => {
+                    do_parse!(i,
+                             error_if!(len == 0, ErrorKind::LengthValue) >>
+                        oid: map_res!(take!(len),der_read_relative_oid) >>
+                        ( DerObjectContent::RelativeOID(Oid::from(&oid)) )
                     )
                 },
         // 0x10: sequence
@@ -414,6 +436,16 @@ pub fn parse_der_utf8string(i:&[u8]) -> IResult<&[u8],DerObject> {
                 error_if!(hdr.tag != DerTag::Utf8String as u8, ErrorKind::Custom(DER_TAG_ERROR)) >>
        content: take!(hdr.len) >> // XXX we must check if constructed or not (8.7)
        ( DerObject::from_header_and_content(hdr, DerObjectContent::UTF8String(content)) )
+   )
+}
+
+pub fn parse_der_relative_oid(i:&[u8]) -> IResult<&[u8],DerObject> {
+   do_parse!(
+       i,
+       hdr:     der_read_element_header >>
+                error_if!(hdr.tag != DerTag::RelativeOid as u8, ErrorKind::Custom(DER_TAG_ERROR)) >>
+       content: map_res!(take!(hdr.len),der_read_relative_oid) >>
+       ( DerObject::from_header_and_content(hdr, DerObjectContent::RelativeOID(Oid::from(&content))) )
    )
 }
 

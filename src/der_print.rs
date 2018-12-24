@@ -65,6 +65,7 @@ impl<'a> fmt::Debug for PrettyDer<'a> {
             DerObjectContent::Integer(i)             => writeln!(f, "Integer({:?})", debug::HexSlice{d:i}),
             DerObjectContent::Enum(i)                => writeln!(f, "Enum({})", i),
             DerObjectContent::OID(ref v)             => writeln!(f, "OID({:?})", v),
+            DerObjectContent::RelativeOID(ref v)     => writeln!(f, "RelativeOID({:?})", v),
             DerObjectContent::Null                   => writeln!(f, "Null"),
             DerObjectContent::OctetString(v)         => writeln!(f, "OctetString({:?})", debug::HexSlice{d:v}),
             DerObjectContent::BitString(u,BitStringObject{data:v})

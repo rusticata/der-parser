@@ -25,7 +25,7 @@ pub enum DerTag {
     Enumerated = 0xa,
     EmbeddedPdv = 0xb,
     Utf8String = 0xc,
-    RdvOid = 0xd,
+    RelativeOid = 0xd,
 
     Sequence = 0x10,
     Set = 0x11,
@@ -72,6 +72,7 @@ pub enum DerObjectContent<'a> {
     Null,
     Enum(u64),
     OID(Oid),
+    RelativeOID(Oid),
     NumericString(&'a[u8]),
     PrintableString(&'a[u8]),
     IA5String(&'a[u8]),
@@ -303,6 +304,7 @@ impl<'a> DerObjectContent<'a> {
     pub fn as_oid(&self) -> Result<&Oid,DerError> {
         match *self {
             DerObjectContent::OID(ref o) => Ok(o),
+            DerObjectContent::RelativeOID(ref o) => Ok(o),
             _ => Err(DerError::DerTypeError),
         }
     }
@@ -310,6 +312,7 @@ impl<'a> DerObjectContent<'a> {
     pub fn as_oid_val(&self) -> Result<Oid,DerError> {
         match *self {
             DerObjectContent::OID(ref o) => Ok(o.to_owned()),
+            DerObjectContent::RelativeOID(ref o) => Ok(o.to_owned()),
             _ => Err(DerError::DerTypeError),
         }
     }
@@ -379,6 +382,7 @@ impl<'a> DerObjectContent<'a> {
             DerObjectContent::PrintableString(_)   => DerTag::PrintableString,
             DerObjectContent::IA5String(_)         => DerTag::Ia5String,
             DerObjectContent::UTF8String(_)        => DerTag::Utf8String,
+            DerObjectContent::RelativeOID(_)       => DerTag::RelativeOid,
             DerObjectContent::T61String(_)         => DerTag::T61String,
             DerObjectContent::BmpString(_)         => DerTag::BmpString,
             DerObjectContent::Sequence(_)          => DerTag::Sequence,

@@ -57,6 +57,7 @@ mod tests {
 fn test_oid_fmt() {
     let oid = Oid::from(&[1, 2, 840, 113549, 1, 1, 5]);
     assert_eq!(format!("{}",oid), "1.2.840.113549.1.1.5".to_owned());
+    assert_eq!(format!("{:?}",oid), "OID(1.2.840.113549.1.1.5)".to_owned());
 }
 
 }
