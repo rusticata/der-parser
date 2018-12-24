@@ -18,6 +18,7 @@ der-parser is a parser for the DER protocol.
 ### 1.1.1
 
 - Fix OID parsing, and add support for relative OIDs
+- Add FromStr trait for Oid
 
 ### 1.1.0
 

@@ -3,6 +3,9 @@
 use std::fmt;
 use std::slice;
 
+use std::str::FromStr;
+use std::num::ParseIntError;
+
 /// Object ID (OID) representation
 #[derive(PartialEq,Eq,Clone)]
 pub struct Oid (Vec<u64>);
@@ -46,18 +49,37 @@ impl fmt::Debug for Oid {
     }
 }
 
+impl FromStr for Oid {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let v : Result<Vec<_>,ParseIntError> =s.split(".").map(|c| {
+                          c.parse::<u64>()
+        }).collect();
+        v.map(|v| Oid(v))
+    }
+}
+
 
 
 
 #[cfg(test)]
 mod tests {
     use oid::Oid;
+    use std::str::FromStr;
 
 #[test]
 fn test_oid_fmt() {
     let oid = Oid::from(&[1, 2, 840, 113549, 1, 1, 5]);
     assert_eq!(format!("{}",oid), "1.2.840.113549.1.1.5".to_owned());
     assert_eq!(format!("{:?}",oid), "OID(1.2.840.113549.1.1.5)".to_owned());
+}
+
+#[test]
+fn test_oid_from_str() {
+    let oid_ref = Oid::from(&[1, 2, 840, 113549, 1, 1, 5]);
+    let oid = Oid::from_str("1.2.840.113549.1.1.5").unwrap();
+    assert_eq!(oid_ref, oid);
 }
 
 }
