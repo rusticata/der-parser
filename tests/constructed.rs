@@ -8,7 +8,7 @@ extern crate der_parser;
 extern crate nom;
 
 use der_parser::*;
-use oid::Oid;
+use crate::oid::Oid;
 use nom::{IResult,Err,ErrorKind,Needed,be_u16,be_u32};
 
 #[derive(Debug, PartialEq)]

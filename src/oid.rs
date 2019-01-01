@@ -65,7 +65,7 @@ impl FromStr for Oid {
 
 #[cfg(test)]
 mod tests {
-    use oid::Oid;
+    use crate::oid::Oid;
     use std::str::FromStr;
 
 #[test]

@@ -5,8 +5,8 @@ use std::convert::AsRef;
 //use nom::{IResult, space, alpha, alphanumeric, digit};
 
 use rusticata_macros::bytes_to_u64;
-use oid::Oid;
-use error::DerError;
+use crate::oid::Oid;
+use crate::error::DerError;
 
 /// Defined in X.680 section 8.4
 #[derive(Debug,PartialEq)]
@@ -531,7 +531,7 @@ impl<'a> AsRef<[u8]> for BitStringObject<'a> {
 
 #[cfg(test)]
 mod tests {
-    use der::*;
+    use crate::der::*;
 
 #[test]
 fn test_der_as_u64() {

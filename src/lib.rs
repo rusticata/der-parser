@@ -93,16 +93,16 @@ extern crate rusticata_macros;
 #[macro_use] mod macros;
 
 mod der;
-pub use der::*;
+pub use crate::der::*;
 
 mod der_parser;
-pub use der_parser::*;
+pub use crate::der_parser::*;
 
 mod der_print;
-pub use der_print::*;
+pub use crate::der_print::*;
 
 mod error;
-pub use error::*;
+pub use crate::error::*;
 
 pub mod oid;
 

@@ -1,9 +1,9 @@
 use nom::{be_u8,IResult,Context,Err,ErrorKind,Needed};
 use rusticata_macros::bytes_to_u64;
 
-use der::*;
-use error::*;
-use oid::Oid;
+use crate::der::*;
+use crate::error::*;
+use crate::oid::Oid;
 
 
 
@@ -630,7 +630,7 @@ named!(pub parse_der<&[u8],DerObject>,
 
 #[cfg(test)]
 mod tests {
-    use der_parser::*;
+    use crate::der_parser::*;
     use nom::{IResult,Err,ErrorKind};
 
 #[test]
