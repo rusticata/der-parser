@@ -90,7 +90,8 @@ extern crate nom;
 #[macro_use]
 extern crate rusticata_macros;
 
-#[macro_use] mod macros;
+#[macro_use]
+mod macros;
 
 mod der;
 pub use crate::der::*;
@@ -106,5 +107,5 @@ pub use crate::error::*;
 
 pub mod oid;
 
-#[cfg(feature="bigint")]
+#[cfg(feature = "bigint")]
 extern crate num_bigint;
