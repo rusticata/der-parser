@@ -3,7 +3,6 @@ extern crate pretty_assertions;
 #[macro_use]
 extern crate rusticata_macros;
 
-#[macro_use]
 extern crate der_parser;
 
 #[macro_use]
