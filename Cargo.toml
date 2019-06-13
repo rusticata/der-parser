@@ -5,7 +5,7 @@ keywords = ["BER","DER","ASN1","parser","nom"]
 homepage = "https://github.com/rusticata/der-parser"
 repository = "https://github.com/rusticata/der-parser.git"
 name = "der-parser"
-version = "1.1.1"
+version = "2.0.0-alpha1"
 authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
 categories = ["parsing"]
 
@@ -15,6 +15,8 @@ include = [
   ".travis.yml",
   "Cargo.toml",
   "src/*.rs",
+  "src/ber/*.rs",
+  "src/der/*.rs",
   "tests/*.rs"
 ]
 

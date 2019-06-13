@@ -16,7 +16,7 @@
 //! However, it cannot fully parse all objects, especially those containing IMPLICIT, OPTIONAL, or
 //! DEFINED BY items.
 //!
-//! ```rust,no_run
+//! ```rust
 //! # #[macro_use] extern crate der_parser;
 //! use der_parser::parse_der;
 //!
@@ -37,18 +37,18 @@
 //!
 //! For example, to read a sequence containing two integers:
 //!
-//! ```rust,no_run
+//! ```rust
 //! # #[macro_use] extern crate nom;
 //! # #[macro_use] extern crate rusticata_macros;
 //! # #[macro_use] extern crate der_parser;
-//! use der_parser::*;
+//! use der_parser::ber::*;
 //! use nom::{IResult,Err,ErrorKind};
 //!
 //! # fn main() {
-//! fn localparse_seq(i:&[u8]) -> IResult<&[u8],DerObject> {
+//! fn localparse_seq(i:&[u8]) -> IResult<&[u8],BerObject> {
 //!     parse_der_sequence_defined!(i,
-//!         parse_der_integer,
-//!         parse_der_integer
+//!         parse_ber_integer,
+//!         parse_ber_integer
 //!     )
 //! }
 //! let bytes = [ 0x30, 0x0a,
@@ -60,7 +60,7 @@
 //! ```
 //!
 //! All functions return an `IResult` object from `nom`: the parsed
-//! [`DerObject`](struct.DerObject.html), an `Incomplete` value, or an error.
+//! [`BerObject`](ber/struct.BerObject.html), an `Incomplete` value, or an error.
 //!
 //! # Notes
 //!
@@ -68,9 +68,10 @@
 //! compatible with BER.
 //! - DER integers can be of any size, so it is not possible to store them as simple integers (they
 //! are stored as raw bytes). To get a simple value, use
-//! [`DerObject::as_u32`](struct.DerObject.html#method.as_u32) (knowning that this method will
-//! return an error if the integer is too large), or use the `bigint` feature of this crate and use
-//! [`DerObject::as_bigint`](struct.DerObject.html#method.as_bigint).
+//! [`BerObject::as_u32`](ber/struct.BerObject.html#method.as_u32) (knowning that this method will
+//! return an error if the integer is too large), [`BerObject::as_u64`](ber/struct.BerObject.html#method.as_u64),
+//! or use the `bigint` feature of this crate and use
+//! [`BerObject::as_bigint`](ber/struct.BerObject.html#method.as_bigint).
 //!
 //! # References
 //!
@@ -90,21 +91,17 @@ extern crate nom;
 #[macro_use]
 extern crate rusticata_macros;
 
-#[macro_use] mod macros;
+#[macro_use]
+mod macros;
 
-mod der;
-pub use der::*;
-
-mod der_parser;
-pub use der_parser::*;
-
-mod der_print;
-pub use der_print::*;
-
-mod error;
-pub use error::*;
-
+pub mod ber;
+pub mod der;
+pub mod error;
 pub mod oid;
 
-#[cfg(feature="bigint")]
+// compatibility: re-export at crate root
+pub use ber::parse_ber;
+pub use der::parse_der;
+
+#[cfg(feature = "bigint")]
 extern crate num_bigint;
