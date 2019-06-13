@@ -7,7 +7,8 @@ extern crate der_parser;
 #[macro_use]
 extern crate nom;
 
-use der_parser::{DerObject,DerObjectHeader,der_read_element_header,parse_der_integer,parse_der_u32};
+use der_parser::ber::{BerObjectHeader, BerTag};
+use der_parser::der::{DerObject,der_read_element_header,parse_der_integer,parse_der_u32};
 
 
 #[bench]
@@ -19,7 +20,7 @@ fn bench_der_read_element_header(b: &mut Bencher) {
         let res = der_read_element_header(bytes);
         match res {
             Ok((_rem,hdr)) => {
-                assert_eq!(hdr, DerObjectHeader { class: 0, structured: 0, tag: 12, len: 10 });
+                assert_eq!(hdr, BerObjectHeader { class: 0, structured: 0, tag: BerTag(12), len: 10 });
             },
             _ => assert!(false),
         }

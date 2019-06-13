@@ -311,48 +311,106 @@ pub(crate) fn ber_read_content_bmpstring(i:&[u8], len:usize) -> IResult<&[u8], B
 /// Parse the next bytes as the content of a BER object.
 ///
 /// Content type is *not* checked, caller is reponsible of providing the correct tag
-pub fn ber_read_element_content_as(i:&[u8], tag:BerTag, len:usize) -> IResult<&[u8], BerObjectContent> {
+pub fn ber_read_element_content_as(i:&[u8], tag:BerTag, len:usize, constructed:bool) -> IResult<&[u8], BerObjectContent> {
+    if i.len() < len {
+        return Err(Err::Incomplete(Needed::Size(len)));
+    }
     match tag {
         // 0x00 end-of-content
-        BerTag::EndOfContent => ber_read_content_eoc(i),
+        BerTag::EndOfContent => {
+            error_if!(i, len != 0, ErrorKind::Custom(BER_INVALID_LENGTH))?;
+            ber_read_content_eoc(i)
+        },
         // 0x01 bool
-        BerTag::Boolean => ber_read_content_bool(i),
+        BerTag::Boolean => {
+            error_if!(i, len != 1, ErrorKind::Custom(BER_INVALID_LENGTH))?;
+            ber_read_content_bool(i)
+        },
         // 0x02
-        BerTag::Integer => ber_read_content_integer(i, len),
+        BerTag::Integer => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_STRUCT_ERROR))?;
+            ber_read_content_integer(i, len)
+        },
         // 0x03: bitstring
-        BerTag::BitString => ber_read_content_bitstring(i, len),
+        BerTag::BitString => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_UNSUPPORTED))?; // XXX valid in BER
+            ber_read_content_bitstring(i, len)
+        },
         // 0x04: octetstring
-        BerTag::OctetString => ber_read_content_octetstring(i, len),
+        BerTag::OctetString => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_UNSUPPORTED))?; // XXX valid in BER
+            ber_read_content_octetstring(i, len)
+        },
         // 0x05: null
-        BerTag::Null => ber_read_content_null(i),
+        BerTag::Null => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_STRUCT_ERROR))?;
+            error_if!(i, len != 0, ErrorKind::Custom(BER_INVALID_LENGTH))?;
+            ber_read_content_null(i)
+        },
         // 0x06: object identified
-        BerTag::Oid => ber_read_content_oid(i, len),
+        BerTag::Oid => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_STRUCT_ERROR))?;
+            ber_read_content_oid(i, len)
+        },
         // 0x0a: enumerated
-        BerTag::Enumerated => ber_read_content_enum(i, len),
+        BerTag::Enumerated => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_STRUCT_ERROR))?;
+            ber_read_content_enum(i, len)
+        },
         // 0x0c: UTF8String
-        BerTag::Utf8String => ber_read_content_utf8string(i, len),
+        BerTag::Utf8String => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_UNSUPPORTED))?; // XXX valid in BER
+            ber_read_content_utf8string(i, len)
+        },
         // 0x0d: relative object identified
-        BerTag::RelativeOid => ber_read_content_relativeoid(i, len),
+        BerTag::RelativeOid => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_STRUCT_ERROR))?;
+            ber_read_content_relativeoid(i, len)
+        },
         // 0x10: sequence
-        BerTag::Sequence => ber_read_content_sequence(i, len),
+        BerTag::Sequence => {
+            error_if!(i, !constructed, ErrorKind::Custom(BER_STRUCT_ERROR))?;
+            ber_read_content_sequence(i, len)
+        },
         // 0x11: set
-        BerTag::Set => ber_read_content_set(i, len),
+        BerTag::Set => {
+            error_if!(i, !constructed, ErrorKind::Custom(BER_STRUCT_ERROR))?;
+            ber_read_content_set(i, len)
+        },
         // 0x12: numericstring
-        BerTag::NumericString => ber_read_content_numericstring(i, len),
+        BerTag::NumericString => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_UNSUPPORTED))?; // XXX valid in BER
+            ber_read_content_numericstring(i, len)
+        },
         // 0x13: printablestring
-        BerTag::PrintableString => ber_read_content_printablestring(i, len),
+        BerTag::PrintableString => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_UNSUPPORTED))?; // XXX valid in BER
+            ber_read_content_printablestring(i, len)
+        },
         // 0x14: t61string
-        BerTag::T61String => ber_read_content_t61string(i, len),
+        BerTag::T61String => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_UNSUPPORTED))?; // XXX valid in BER
+            ber_read_content_t61string(i, len)
+        },
         // 0x16: ia5string
-        BerTag::Ia5String => ber_read_content_ia5string(i, len),
+        BerTag::Ia5String => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_UNSUPPORTED))?; // XXX valid in BER
+            ber_read_content_ia5string(i, len)
+        },
         // 0x17: utctime
         BerTag::UtcTime => ber_read_content_utctime(i, len),
         // 0x18: generalizedtime
         BerTag::GeneralizedTime => ber_read_content_generalizedtime(i, len),
         // 0x1b: generalstring
-        BerTag::GeneralString => ber_read_content_generalstring(i, len),
+        BerTag::GeneralString => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_UNSUPPORTED))?; // XXX valid in BER
+            ber_read_content_generalstring(i, len)
+        },
         // 0x1e: bmpstring
-        BerTag::BmpString => ber_read_content_bmpstring(i, len),
+        BerTag::BmpString => {
+            error_if!(i, constructed, ErrorKind::Custom(BER_UNSUPPORTED))?; // XXX valid in BER
+            ber_read_content_bmpstring(i, len)
+        },
         // all unknown values
         _    => { Err(Err::Error(error_position!(i, ErrorKind::Custom(BER_TAG_UNKNOWN)))) },
     }
@@ -375,7 +433,7 @@ pub fn ber_read_element_content(i: &[u8], hdr: BerObjectHeader) -> IResult<&[u8]
         ),
         _    => { return Err(Err::Error(error_position!(i, ErrorKind::Custom(BER_CLASS_ERROR)))); },
     }
-    match ber_read_element_content_as(i, hdr.tag, hdr.len as usize) {
+    match ber_read_element_content_as(i, hdr.tag, hdr.len as usize, hdr.is_constructed()) {
         Ok((rem,content)) => {
             Ok((rem, BerObject::from_header_and_content(hdr,content)))
         },
@@ -389,16 +447,21 @@ pub fn ber_read_element_content(i: &[u8], hdr: BerObjectHeader) -> IResult<&[u8]
     }
 }
 
-/// Read end of content marker
-pub fn parse_ber_endofcontent(i: &[u8]) -> IResult<&[u8], BerObject> {
+/// Parse a BER object, expecting a value with specificed tag
+pub fn parse_ber_with_tag(i: &[u8], tag:BerTag) -> IResult<&[u8], BerObject> {
     do_parse! {
         i,
-        hdr:     ber_read_element_header >>
-                 error_if!(hdr.tag != BerTag::EndOfContent, ErrorKind::Custom(BER_TAG_ERROR)) >>
-                 error_if!(hdr.len != 0, ErrorKind::Custom(BER_INVALID_LENGTH)) >>
-        b:       ber_read_content_eoc >>
-        ( BerObject::from_header_and_content(hdr, b) )
+        hdr: ber_read_element_header >>
+             error_if!(hdr.tag != tag, ErrorKind::Custom(BER_TAG_ERROR)) >>
+        o:   apply!(ber_read_element_content_as, hdr.tag, hdr.len as usize, hdr.is_constructed()) >>
+        ( BerObject::from_header_and_content(hdr, o) )
     }
+}
+
+/// Read end of content marker
+#[inline]
+pub fn parse_ber_endofcontent(i: &[u8]) -> IResult<&[u8], BerObject> {
+    parse_ber_with_tag(i, BerTag::EndOfContent)
 }
 
 /// Read a boolean value
@@ -408,15 +471,9 @@ pub fn parse_ber_endofcontent(i: &[u8]) -> IResult<&[u8], BerObject> {
 ///
 /// If the boolean value is FALSE, the octet shall be zero.
 /// If the boolean value is TRUE, the octet shall be one byte, and have all bits set to one (0xff).
+#[inline]
 pub fn parse_ber_bool(i: &[u8]) -> IResult<&[u8], BerObject> {
-    do_parse! {
-        i,
-        hdr:     ber_read_element_header >>
-                 error_if!(hdr.tag != BerTag::Boolean, ErrorKind::Custom(BER_TAG_ERROR)) >>
-                 error_if!(hdr.len != 1, ErrorKind::Custom(BER_INVALID_LENGTH)) >>
-        b:       ber_read_content_bool >>
-        ( BerObject::from_header_and_content(hdr, b) )
-    }
+    parse_ber_with_tag(i, BerTag::Boolean)
 }
 
 /// Read an integer value
@@ -449,90 +506,51 @@ pub fn parse_ber_bool(i: &[u8]) -> IResult<&[u8], BerObject> {
 /// );
 /// # }
 /// ```
+#[inline]
 pub fn parse_ber_integer(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::Integer, ErrorKind::Custom(BER_TAG_ERROR)) >>
-       b:   apply!(ber_read_content_integer, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::Integer)
 }
 
+/// Read an bitstring value
+#[inline]
 pub fn parse_ber_bitstring(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::BitString, ErrorKind::Custom(BER_TAG_ERROR)) >>
-            error_if!(hdr.is_constructed(), ErrorKind::Custom(BER_UNSUPPORTED)) >> // XXX valid in BER
-       b:   apply!(ber_read_content_bitstring, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::BitString)
 }
 
+/// Read an octetstring value
+#[inline]
 pub fn parse_ber_octetstring(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::OctetString, ErrorKind::Custom(BER_TAG_ERROR)) >>
-            error_if!(hdr.is_constructed(), ErrorKind::Custom(BER_UNSUPPORTED)) >> // XXX valid in BER
-       b:   apply!(ber_read_content_octetstring, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::OctetString)
 }
 
+/// Read a null value
+#[inline]
 pub fn parse_ber_null(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::Null, ErrorKind::Custom(BER_TAG_ERROR)) >>
-        b:  ber_read_content_null >>
-        ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::Null)
 }
 
+/// Read an object identifier value
+#[inline]
 pub fn parse_ber_oid(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::Oid, ErrorKind::Custom(BER_TAG_ERROR)) >>
-            error_if!(hdr.is_constructed(), ErrorKind::Custom(BER_STRUCT_ERROR)) >>
-       b:   apply!(ber_read_content_oid, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::Oid)
 }
 
+/// Read an enumerated value
+#[inline]
 pub fn parse_ber_enum(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::Enumerated, ErrorKind::Custom(BER_TAG_ERROR)) >>
-       b:   apply!(ber_read_content_enum, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::Enumerated)
 }
 
+/// Read a UTF-8 string value
+#[inline]
 pub fn parse_ber_utf8string(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse!(
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::Utf8String, ErrorKind::Custom(BER_TAG_ERROR)) >>
-            error_if!(hdr.len == 0, ErrorKind::Custom(BER_UNSUPPORTED)) >> // XXX valid in BER
-            error_if!(hdr.is_constructed(), ErrorKind::Custom(BER_UNSUPPORTED)) >> // XXX valid in BER
-       b:   apply!(ber_read_content_utf8string, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   )
+    parse_ber_with_tag(i, BerTag::Utf8String)
 }
 
+/// Read a relative object identifier value
+#[inline]
 pub fn parse_ber_relative_oid(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::RelativeOid, ErrorKind::Custom(BER_TAG_ERROR)) >>
-            error_if!(hdr.is_constructed(), ErrorKind::Custom(BER_STRUCT_ERROR)) >>
-       b:   apply!(ber_read_content_relativeoid, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::RelativeOid)
 }
 
 /// Parse a sequence of BER elements
@@ -543,118 +561,70 @@ pub fn parse_ber_relative_oid(i:&[u8]) -> IResult<&[u8], BerObject> {
 ///
 /// To read a specific sequence of objects (giving the expected types), use the
 /// [`parse_ber_sequence_defined`](macro.parse_ber_sequence_defined.html) macro.
+#[inline]
 pub fn parse_ber_sequence(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::Sequence, ErrorKind::Custom(BER_TAG_ERROR)) >>
-            error_if!(!hdr.is_constructed(), ErrorKind::Custom(BER_STRUCT_ERROR)) >>
-       b:   apply!(ber_read_content_sequence, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::Sequence)
 }
 
 /// Parse a set of BER elements
 ///
 /// Read a set of BER objects, without any constraint on the types.
-/// Sequence is parsed recursively, so if structured elements are found, they are parsed using the
+/// Set is parsed recursively, so if structured elements are found, they are parsed using the
 /// same function.
 ///
 /// To read a specific set of objects (giving the expected types), use the
 /// [`parse_ber_set_defined`](macro.parse_ber_set_defined.html) macro.
+#[inline]
 pub fn parse_ber_set(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::Set, ErrorKind::Custom(BER_TAG_ERROR)) >>
-            error_if!(!hdr.is_constructed(), ErrorKind::Custom(BER_STRUCT_ERROR)) >>
-       b:   apply!(ber_read_content_set, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::Set)
 }
 
+/// Read a numeric string value
+#[inline]
 pub fn parse_ber_numericstring(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::NumericString, ErrorKind::Custom(BER_TAG_ERROR)) >>
-            error_if!(hdr.is_constructed(), ErrorKind::Custom(BER_UNSUPPORTED)) >> // XXX valid in BER
-       b:   apply!(ber_read_content_numericstring, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::NumericString)
 }
 
+/// Read a printable string value
+#[inline]
 pub fn parse_ber_printablestring(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::PrintableString, ErrorKind::Custom(BER_TAG_ERROR)) >>
-            error_if!(hdr.is_constructed(), ErrorKind::Custom(BER_UNSUPPORTED)) >> // XXX valid in BER
-       b:   apply!(ber_read_content_printablestring, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::PrintableString)
 }
 
+/// Read a T61 string value
+#[inline]
 pub fn parse_ber_t61string(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::T61String, ErrorKind::Custom(BER_TAG_ERROR)) >>
-            error_if!(hdr.is_constructed(), ErrorKind::Custom(BER_UNSUPPORTED)) >> // XXX valid in BER
-       b:   apply!(ber_read_content_t61string, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::T61String)
 }
 
+/// Read an IA5 string value
+#[inline]
 pub fn parse_ber_ia5string(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::Ia5String, ErrorKind::Custom(BER_TAG_ERROR)) >>
-            error_if!(hdr.is_constructed(), ErrorKind::Custom(BER_UNSUPPORTED)) >> // XXX valid in BER
-       b:   apply!(ber_read_content_ia5string, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::Ia5String)
 }
 
+/// Read an UTC time value
+#[inline]
 pub fn parse_ber_utctime(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::UtcTime, ErrorKind::Custom(BER_TAG_ERROR)) >>
-       b:   apply!(ber_read_content_utctime, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::UtcTime)
 }
 
+/// Read a Generalized time value
+#[inline]
 pub fn parse_ber_generalizedtime(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::GeneralizedTime, ErrorKind::Custom(BER_TAG_ERROR)) >>
-       b:   apply!(ber_read_content_generalizedtime, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::GeneralizedTime)
 }
 
+/// Read a GeneralString value
+#[inline]
 pub fn parse_ber_generalstring(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::GeneralString, ErrorKind::Custom(BER_TAG_ERROR)) >>
-       b:   apply!(ber_read_content_generalstring, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::GeneralString)
 }
 
+/// Read a BmpString value
+#[inline]
 pub fn parse_ber_bmpstring(i:&[u8]) -> IResult<&[u8], BerObject> {
-   do_parse! {
-       i,
-       hdr: ber_read_element_header >>
-            error_if!(hdr.tag != BerTag::BmpString, ErrorKind::Custom(BER_TAG_ERROR)) >>
-       b:   apply!(ber_read_content_bmpstring, hdr.len as usize) >>
-       ( BerObject::from_header_and_content(hdr, b) )
-   }
+    parse_ber_with_tag(i, BerTag::BmpString)
 }
 
 pub fn parse_ber_explicit_failed(i:&[u8], tag: BerTag) -> IResult<&[u8],BerObject,u32> {

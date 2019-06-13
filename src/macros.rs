@@ -670,7 +670,7 @@ macro_rules! parse_der_struct(
 ///         |x: BerObject| x.as_u32()
 ///     )
 /// }
-/// let bytes = &[0xa2, 0x03, 0x01, 0x00, 0x01];
+/// let bytes = &[0x82, 0x03, 0x01, 0x00, 0x01];
 /// let res = parse_int_implicit(bytes);
 /// match res {
 ///     Ok((rem,val)) => {
@@ -706,7 +706,7 @@ macro_rules! parse_der_tagged(
         do_parse!(
             $i,
             hdr: verify!(ber_read_element_header, |ref hdr: BerObjectHeader| hdr.tag.0 == $tag) >>
-            res: call!(ber_read_element_content_as, $type, hdr.len as usize) >>
+            res: call!(ber_read_element_content_as, $type, hdr.len as usize, hdr.is_constructed()) >>
             (BerObject::from_obj(res))
         )
     });

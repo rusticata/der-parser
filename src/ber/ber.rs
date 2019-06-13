@@ -97,17 +97,23 @@ pub enum BerObjectContent<'a> {
 
 impl BerObjectHeader {
     /// Test if object class is Universal
+    #[inline]
     pub fn is_universal(&self) -> bool { self.class == 0 }
     /// Test if object class is Application
+    #[inline]
     pub fn is_application(&self) -> bool { self.class == 0b01 }
     /// Test if object class is Context-specific
+    #[inline]
     pub fn is_contextspecific(&self) -> bool { self.class == 0b10 }
     /// Test if object class is Private
+    #[inline]
     pub fn is_private(&self) -> bool { self.class == 0b11 }
 
     /// Test if object is primitive
+    #[inline]
     pub fn is_primitive(&self) -> bool { self.structured == 0 }
     /// Test if object is constructed
+    #[inline]
     pub fn is_constructed(&self) -> bool { self.structured == 1 }
 }
 
