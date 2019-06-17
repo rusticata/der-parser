@@ -2,6 +2,8 @@
 extern crate pretty_assertions;
 
 #[macro_use]
+extern crate hex_literal;
+#[macro_use]
 extern crate nom;
 extern crate der_parser;
 
@@ -162,7 +164,15 @@ fn test_ber_utf8string() {
 #[test]
 fn test_ber_relativeoid() {
     let empty = &b""[..];
-    let bytes = [0x0d, 0x04, 0xc2, 0x7b, 0x03, 0x02];
+    let bytes = hex!("0d 04 c2 7b 03 02");
     let expected = BerObject::from_obj(BerObjectContent::RelativeOID(Oid::from(&[8571, 3, 2])));
     assert_eq!(parse_ber_relative_oid(&bytes), Ok((empty, expected)));
+}
+
+#[test]
+fn test_ber_bmpstring() {
+    let empty = &b""[..];
+    let bytes = hex!("1e 08 00 55 00 73 00 65 00 72");
+    let expected = BerObject::from_obj(BerObjectContent::BmpString(b"\x00U\x00s\x00e\x00r"));
+    assert_eq!(parse_ber_bmpstring(&bytes), Ok((empty, expected)));
 }

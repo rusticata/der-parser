@@ -325,4 +325,3 @@ fn test_flat_take() {
     // test with macro as sub-combinator
     assert_eq!(flat_take!(input,2,call!(be_u16)), Ok((&input[2..], 0x0001)));
 }
-

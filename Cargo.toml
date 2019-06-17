@@ -30,6 +30,7 @@ default = []
 bigint = ["num-bigint"]
 
 [dev-dependencies]
+hex-literal = "0.2"
 pretty_assertions = "0.5.0"
 
 
