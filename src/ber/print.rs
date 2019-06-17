@@ -107,7 +107,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
                 writeln!(f, "]")?;
                 Ok(())
             },
-            BerObjectContent::Unknown(o)             => writeln!(f, "Unknown({:?})", o),
+            BerObjectContent::Unknown(tag,o)         => writeln!(f, "Unknown({:?},{:x?})", tag, o),
         }
     }
 }

@@ -18,10 +18,10 @@ pub fn parse_der(i: &[u8]) -> IResult<&[u8], DerObject, u32> {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! der_constraint_fail_if(
-    ($cond:expr, $slice:expr, $error:expr) => (
+    ($slice:expr, $cond:expr) => (
         {
             if $cond {
-                return Err(::nom::Err::Error(error_position!($slice, ErrorKind::Custom($error))));
+                return Err(::nom::Err::Error(error_position!($slice, ErrorKind::Custom(DER_CONSTRAINT_FAIL))));
             }
         }
     );
@@ -296,14 +296,10 @@ pub fn der_read_element_content_as(
     match tag {
         BerTag::Boolean => {
             error_if!(i, len != 1, ErrorKind::Custom(BER_INVALID_LENGTH))?;
-            error_if!(
-                i,
-                i[0] != 0 && i[0] != 0xff,
-                ErrorKind::Custom(DER_CONSTRAINT_FAIL)
-            )?;
+            der_constraint_fail_if!(i, i[0] != 0 && i[0] != 0xff);
         }
         BerTag::BitString => {
-            error_if!(i, constructed, ErrorKind::Custom(DER_CONSTRAINT_FAIL))?;
+            der_constraint_fail_if!(i, constructed);
             // exception: read and verify padding bits
             return der_read_content_bitstring(i, len);
         }
@@ -314,7 +310,7 @@ pub fn der_read_element_content_as(
         | BerTag::T61String
         | BerTag::BmpString
         | BerTag::GeneralString => {
-            error_if!(i, constructed, ErrorKind::Custom(DER_CONSTRAINT_FAIL))?;
+            der_constraint_fail_if!(i, constructed);
         }
         BerTag::UtcTime | BerTag::GeneralizedTime => match i.last() {
             Some(b'Z') => (),
@@ -342,16 +338,15 @@ pub fn der_read_element_content(i: &[u8], hdr: BerObjectHeader) -> IResult<&[u8]
         0b10 => return map!(
             i,
             take!(hdr.len),
-            |b| { DerObject::from_header_and_content(hdr,BerObjectContent::Unknown(b)) }
+            |b| { DerObject::from_header_and_content(hdr,BerObjectContent::Unknown(hdr.tag, b)) }
         ),
         _    => { return Err(Err::Error(error_position!(i, ErrorKind::Custom(BER_CLASS_ERROR)))); },
     }
     match der_read_element_content_as(i, hdr.tag, hdr.len as usize, hdr.is_constructed(), 0) {
-        // match der_read_element_content_as(i, hdr.tag, hdr.len as usize, hdr.is_constructed()) {
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(Context::Code(_, ErrorKind::Custom(BER_TAG_UNKNOWN)))) => {
             map!(i, take!(hdr.len), |b| {
-                DerObject::from_header_and_content(hdr, BerObjectContent::Unknown(b))
+                DerObject::from_header_and_content(hdr, BerObjectContent::Unknown(hdr.tag, b))
             })
         }
         Err(e) => Err(e),
@@ -370,7 +365,7 @@ fn der_read_content_bitstring(i: &[u8], len: usize) -> IResult<&[u8], BerObjectC
                           if len > 1 {
                               let mut last_byte = s[len-2];
                               for _ in 0..ignored_bits as usize {
-                                  der_constraint_fail_if!(last_byte & 1 != 0, i, DER_CONSTRAINT_FAIL);
+                                  der_constraint_fail_if!(i, last_byte & 1 != 0);
                                   last_byte >>= 1;
                               }
                           }
@@ -392,12 +387,12 @@ pub fn der_read_element_header(i: &[u8]) -> IResult<&[u8], BerObjectHeader> {
                 0 => len.1 as u64,
                 _ => {
                     // if len is 0xff -> error (8.1.3.5)
-                    der_constraint_fail_if!(len.1 == 0b0111_1111, &i[1..], BER_INVALID_LENGTH);
+                    error_if!(&i[1..], len.1 == 0b0111_1111, ErrorKind::Custom(BER_INVALID_LENGTH))?;
                     // if len.1 == 0b0111_1111 {
                     //     return Err(::nom::Err::Error(error_position!(&i[1..], ErrorKind::Custom(BER_INVALID_LENGTH))));
                     // }
                     // DER(9.1) if len is 0 (indefinite form), obj must be constructed
-                    der_constraint_fail_if!(len.1 == 0 && el.1 != 1, &i[1..], DER_CONSTRAINT_FAIL);
+                    der_constraint_fail_if!(&i[1..], len.1 == 0 && el.1 != 1);
                     // if len.1 == 0 && el.1 != 1 {
                     //     return Err(::nom::Err::Error(error_position!(&i[1..], ErrorKind::Custom(BER_INVALID_LENGTH))));
                     // }
@@ -405,7 +400,7 @@ pub fn der_read_element_header(i: &[u8]) -> IResult<&[u8], BerObjectHeader> {
                     match bytes_to_u64(llen) {
                         Ok(l)  => {
                             // DER: should have been encoded in short form (< 127)
-                            der_constraint_fail_if!(l < 127, i, DER_CONSTRAINT_FAIL);
+                            der_constraint_fail_if!(i, l < 127);
                             l
                         },
                         Err(_) => { return Err(::nom::Err::Error(error_position!(llen, ErrorKind::Custom(BER_TAG_ERROR)))); },

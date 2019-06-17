@@ -680,17 +680,17 @@ fn parse_ber_recursive(i: &[u8], depth: usize) -> IResult<&[u8], BerObject, u32>
         0b01 |
         // context-specific
         0b10 => return map!(
-            i,
+            rem,
             take!(hdr.len),
-            |b| { BerObject::from_header_and_content(hdr,BerObjectContent::Unknown(b)) }
+            |b| { BerObject::from_header_and_content(hdr,BerObjectContent::Unknown(hdr.tag, b)) }
         ),
         _    => { return Err(Err::Error(error_position!(i, ErrorKind::Custom(BER_CLASS_ERROR)))); },
     }
     match ber_read_element_content_as(rem, hdr.tag, hdr.len as usize, hdr.is_constructed(), depth) {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(Context::Code(_, ErrorKind::Custom(BER_TAG_UNKNOWN)))) => {
-            map!(i, take!(hdr.len), |b| {
-                BerObject::from_header_and_content(hdr, BerObjectContent::Unknown(b))
+            map!(rem, take!(hdr.len), |b| {
+                BerObject::from_header_and_content(hdr, BerObjectContent::Unknown(hdr.tag, b))
             })
         }
         Err(e) => Err(e),

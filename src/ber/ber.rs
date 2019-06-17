@@ -92,7 +92,7 @@ pub enum BerObjectContent<'a> {
     GeneralString(&'a [u8]),
 
     ContextSpecific(BerTag, Option<Box<BerObject<'a>>>),
-    Unknown(&'a[u8]),
+    Unknown(BerTag, &'a[u8]),
 }
 
 impl BerObjectHeader {
@@ -381,7 +381,7 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::T61String(s) |
             BerObjectContent::BmpString(s) |
             BerObjectContent::GeneralString(s) |
-            BerObjectContent::Unknown(s)         => Ok(s),
+            BerObjectContent::Unknown(_,s) => Ok(s),
             _ => Err(BerError::BerTypeError),
         }
     }
@@ -408,8 +408,8 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::UTCTime(_)           => BerTag::UtcTime,
             BerObjectContent::GeneralizedTime(_)   => BerTag::GeneralizedTime,
             BerObjectContent::GeneralString(_)     => BerTag::GeneralString,
-            BerObjectContent::ContextSpecific(_,_) |
-            BerObjectContent::Unknown(_)           => BerTag::Invalid,
+            BerObjectContent::ContextSpecific(x,_) |
+            BerObjectContent::Unknown(x,_)         => x,
         }
     }
 }

@@ -1,5 +1,6 @@
 #[macro_use] extern crate pretty_assertions;
 
+#[macro_use] extern crate hex_literal;
 extern crate der_parser;
 
 use der_parser::*;
@@ -27,4 +28,28 @@ fn test_oid() {
 fn test_rel_oid() {
     let empty = &b""[..];
     assert_eq!(parse_der(&[0x0d, 0x04, 0xc2, 0x7b, 0x03, 0x02]), Ok((empty, BerObject::from_obj(BerObjectContent::RelativeOID(Oid::from(&[8571,3,2]))))));
+}
+
+#[test]
+fn test_unknown_tag() {
+    let bytes = hex!("1f 01 00");
+    let res = parse_ber(&bytes).expect("parsing failed");
+    assert!(res.0.is_empty());
+    assert_eq!(res.1, BerObject::from_obj(BerObjectContent::Unknown(BerTag(0x1f), &bytes[2..])));
+    let res = parse_der(&bytes).expect("parsing failed");
+    assert!(res.0.is_empty());
+    assert_eq!(res.1, BerObject::from_obj(BerObjectContent::Unknown(BerTag(0x1f), &bytes[2..])));
+}
+
+#[test]
+fn test_unknown_context_specific() {
+    let bytes = hex!("80 01 00");
+    let res = parse_ber(&bytes).expect("parsing failed");
+    assert!(res.0.is_empty());
+    assert_eq!(res.1, BerObject{
+        class: 2,
+        structured: 0,
+        tag: BerTag(0),
+        content: BerObjectContent::Unknown(BerTag(0x0), &bytes[2..])
+    });
 }

@@ -269,7 +269,7 @@ fn test_der_contextspecific() {
         class: 2,
         structured: 1,
         tag: BerTag(0),
-        content: BerObjectContent::Unknown(&bytes[2..]),
+        content: BerObjectContent::Unknown(BerTag(0), &bytes[2..]),
     };
     assert_eq!(parse_der(&bytes), Ok((empty, expected)));
 }
