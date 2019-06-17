@@ -430,33 +430,6 @@ pub fn ber_read_element_content_as(
     }
 }
 
-pub fn ber_read_element_content(i: &[u8], hdr: BerObjectHeader) -> IResult<&[u8], BerObject> {
-    match hdr.class {
-        // universal
-        0b00 |
-        // private
-        0b11 => (),
-        // application
-        0b01 |
-        // context-specific
-        0b10 => return map!(
-            i,
-            take!(hdr.len),
-            |b| { BerObject::from_header_and_content(hdr,BerObjectContent::Unknown(b)) }
-        ),
-        _    => { return Err(Err::Error(error_position!(i, ErrorKind::Custom(BER_CLASS_ERROR)))); },
-    }
-    match ber_read_element_content_as(i, hdr.tag, hdr.len as usize, hdr.is_constructed(), 0) {
-        Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
-        Err(Err::Error(Context::Code(_, ErrorKind::Custom(BER_TAG_UNKNOWN)))) => {
-            map!(i, take!(hdr.len), |b| {
-                BerObject::from_header_and_content(hdr, BerObjectContent::Unknown(b))
-            })
-        }
-        Err(e) => Err(e),
-    }
-}
-
 /// Parse a BER object, expecting a value with specificed tag
 pub fn parse_ber_with_tag(i: &[u8], tag: BerTag) -> IResult<&[u8], BerObject> {
     do_parse! {
