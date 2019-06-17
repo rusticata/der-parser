@@ -3,25 +3,38 @@
 extern crate test;
 use test::Bencher;
 
+#[macro_use]
 extern crate der_parser;
 #[macro_use]
+extern crate hex_literal;
+#[macro_use]
 extern crate nom;
+#[macro_use]
+extern crate rusticata_macros;
 
 use der_parser::ber::{BerObjectHeader, BerTag};
-use der_parser::der::{DerObject,der_read_element_header,parse_der_integer,parse_der_u32};
-
+use der_parser::der::{
+    der_read_element_header, parse_der, parse_der_integer, parse_der_u32, DerObject,
+};
+use nom::{ErrorKind, IResult};
 
 #[bench]
 fn bench_der_read_element_header(b: &mut Bencher) {
-    let bytes = &[ 0x0c, 0x0a,
-                   0x53, 0x6f, 0x6d, 0x65, 0x2d, 0x53, 0x74, 0x61, 0x74, 0x65
-    ];
+    let bytes = hex!("0c 0a 53 6f 6d 65 2d 53 74 61 74 65");
     b.iter(|| {
-        let res = der_read_element_header(bytes);
+        let res = der_read_element_header(&bytes);
         match res {
-            Ok((_rem,hdr)) => {
-                assert_eq!(hdr, BerObjectHeader { class: 0, structured: 0, tag: BerTag(12), len: 10 });
-            },
+            Ok((_rem, hdr)) => {
+                assert_eq!(
+                    hdr,
+                    BerObjectHeader {
+                        class: 0,
+                        structured: 0,
+                        tag: BerTag(12),
+                        len: 10
+                    }
+                );
+            }
             _ => assert!(false),
         }
     });
@@ -29,13 +42,14 @@ fn bench_der_read_element_header(b: &mut Bencher) {
 
 #[bench]
 fn bench_der_map_res_integer_u32(b: &mut Bencher) {
-    let bytes : &[u8] = &[ 0x02, 0x04, 0x01, 0x23, 0x45, 0x67];
+    let bytes = hex!("02 04 01 23 45 67");
     b.iter(|| {
-        let res = map_res!(bytes, parse_der_integer, |x:DerObject| x.as_u32());
+        let res = map_res!(&bytes as &[u8], parse_der_integer, |x: DerObject| x
+            .as_u32());
         match res {
-            Ok((_rem,i)) => {
+            Ok((_rem, i)) => {
                 assert_eq!(i, 0x1234567);
-            },
+            }
             _ => assert!(false),
         }
     });
@@ -43,13 +57,52 @@ fn bench_der_map_res_integer_u32(b: &mut Bencher) {
 
 #[bench]
 fn bench_parse_der_u32(b: &mut Bencher) {
-    let bytes : &[u8] = &[ 0x02, 0x04, 0x01, 0x23, 0x45, 0x67];
+    let bytes = hex!("02 04 01 23 45 67");
     b.iter(|| {
-        let res = parse_der_u32(bytes);
+        let res = parse_der_u32(&bytes);
         match res {
-            Ok((_rem,i)) => {
+            Ok((_rem, i)) => {
                 assert_eq!(i, 0x1234567);
-            },
+            }
+            _ => assert!(false),
+        }
+    });
+}
+
+#[bench]
+fn bench_parse_der_seq(b: &mut Bencher) {
+    let bytes = hex!("30 0a 02 03 01 00 01 02 03 01 00 00");
+    b.iter(|| {
+        let res = parse_der(&bytes);
+        let expected = DerObject::from_seq(vec![
+            DerObject::from_int_slice(b"\x01\x00\x01"),
+            DerObject::from_int_slice(b"\x01\x00\x00"),
+        ]);
+        match res {
+            Ok((_rem, i)) => {
+                assert_eq!(i, expected);
+            }
+            _ => assert!(false),
+        }
+    });
+}
+
+#[bench]
+fn bench_parse_der_seq_macros(b: &mut Bencher) {
+    fn localparse_seq(i: &[u8]) -> IResult<&[u8], DerObject> {
+        parse_der_sequence_defined_m!(i, parse_der_integer >> parse_der_integer)
+    }
+    let bytes = hex!("30 0a 02 03 01 00 01 02 03 01 00 00");
+    b.iter(|| {
+        let res = localparse_seq(&bytes);
+        let expected = DerObject::from_seq(vec![
+            DerObject::from_int_slice(b"\x01\x00\x01"),
+            DerObject::from_int_slice(b"\x01\x00\x00"),
+        ]);
+        match res {
+            Ok((_rem, i)) => {
+                assert_eq!(i, expected);
+            }
             _ => assert!(false),
         }
     });
