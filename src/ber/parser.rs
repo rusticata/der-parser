@@ -3,6 +3,9 @@ use crate::error::*;
 use crate::oid::*;
 use nom::{be_u8, Context, Err, ErrorKind, IResult, Needed};
 
+/// Maximum recursion limit
+pub const MAX_RECURSION: usize = 50;
+
 /// Try to parse input bytes as u64
 pub(crate) fn bytes_to_u64(s: &[u8]) -> Result<u64, BerError> {
     let mut u: u64 = 0;
@@ -195,36 +198,60 @@ pub(crate) fn ber_read_content_relativeoid(
 }
 
 #[inline]
-pub(crate) fn ber_read_content_sequence(i: &[u8], len: usize) -> IResult<&[u8], BerObjectContent> {
+pub(crate) fn ber_read_content_sequence(
+    i: &[u8],
+    len: usize,
+    depth: usize,
+) -> IResult<&[u8], BerObjectContent> {
     if len == 0 {
         // indefinite form
         // read until end-of-content
         map!(
             i,
-            many_till!(parse_ber, parse_ber_endofcontent),
+            many_till!(
+                apply!(parse_ber_recursive, depth + 1),
+                parse_ber_endofcontent
+            ),
             |(l, _)| { BerObjectContent::Sequence(l) }
         )
     } else {
-        map!(i, flat_take!(len, many0!(complete!(parse_ber))), |l| {
-            BerObjectContent::Sequence(l)
-        })
+        map!(
+            i,
+            flat_take!(
+                len,
+                many0!(complete!(apply!(parse_ber_recursive, depth + 1)))
+            ),
+            |l| { BerObjectContent::Sequence(l) }
+        )
     }
 }
 
 #[inline]
-pub(crate) fn ber_read_content_set(i: &[u8], len: usize) -> IResult<&[u8], BerObjectContent> {
+pub(crate) fn ber_read_content_set(
+    i: &[u8],
+    len: usize,
+    depth: usize,
+) -> IResult<&[u8], BerObjectContent> {
     if len == 0 {
         // indefinite form
         // read until end-of-content
         map!(
             i,
-            many_till!(parse_ber, parse_ber_endofcontent),
+            many_till!(
+                apply!(parse_ber_recursive, depth + 1),
+                parse_ber_endofcontent
+            ),
             |(l, _)| { BerObjectContent::Set(l) }
         )
     } else {
-        map!(i, flat_take!(len, many0!(complete!(parse_ber))), |l| {
-            BerObjectContent::Set(l)
-        })
+        map!(
+            i,
+            flat_take!(
+                len,
+                many0!(complete!(apply!(parse_ber_recursive, depth + 1)))
+            ),
+            |l| { BerObjectContent::Set(l) }
+        )
     }
 }
 
@@ -294,6 +321,7 @@ pub fn ber_read_element_content_as(
     tag: BerTag,
     len: usize,
     constructed: bool,
+    depth: usize,
 ) -> IResult<&[u8], BerObjectContent> {
     if i.len() < len {
         return Err(Err::Incomplete(Needed::Size(len)));
@@ -353,12 +381,12 @@ pub fn ber_read_element_content_as(
         // 0x10: sequence
         BerTag::Sequence => {
             error_if!(i, !constructed, ErrorKind::Custom(BER_STRUCT_ERROR))?;
-            ber_read_content_sequence(i, len)
+            ber_read_content_sequence(i, len, depth)
         }
         // 0x11: set
         BerTag::Set => {
             error_if!(i, !constructed, ErrorKind::Custom(BER_STRUCT_ERROR))?;
-            ber_read_content_set(i, len)
+            ber_read_content_set(i, len, depth)
         }
         // 0x12: numericstring
         BerTag::NumericString => {
@@ -418,7 +446,7 @@ pub fn ber_read_element_content(i: &[u8], hdr: BerObjectHeader) -> IResult<&[u8]
         ),
         _    => { return Err(Err::Error(error_position!(i, ErrorKind::Custom(BER_CLASS_ERROR)))); },
     }
-    match ber_read_element_content_as(i, hdr.tag, hdr.len as usize, hdr.is_constructed()) {
+    match ber_read_element_content_as(i, hdr.tag, hdr.len as usize, hdr.is_constructed(), 0) {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(Context::Code(_, ErrorKind::Custom(BER_TAG_UNKNOWN)))) => {
             map!(i, take!(hdr.len), |b| {
@@ -435,7 +463,7 @@ pub fn parse_ber_with_tag(i: &[u8], tag: BerTag) -> IResult<&[u8], BerObject> {
         i,
         hdr: ber_read_element_header >>
              error_if!(hdr.tag != tag, ErrorKind::Custom(BER_TAG_ERROR)) >>
-        o:   apply!(ber_read_element_content_as, hdr.tag, hdr.len as usize, hdr.is_constructed()) >>
+        o:   apply!(ber_read_element_content_as, hdr.tag, hdr.len as usize, hdr.is_constructed(), 0) >>
         ( BerObject::from_header_and_content(hdr, o) )
     }
 }
@@ -662,14 +690,42 @@ where
     }
 }
 
-/// Parse BER object
-pub fn parse_ber(i: &[u8]) -> IResult<&[u8], BerObject, u32> {
-    do_parse! {
+fn parse_ber_recursive(i: &[u8], depth: usize) -> IResult<&[u8], BerObject, u32> {
+    error_if!(i, depth > MAX_RECURSION, ErrorKind::Custom(BER_MAX_DEPTH))?;
+    let (rem, hdr) = ber_read_element_header(i)?;
+    error_if!(
         i,
-        hdr:     ber_read_element_header >>
-                 // XXX safety check: length cannot be more than 2^32 bytes
-                 error_if!(hdr.len > ::std::u32::MAX as u64, ErrorKind::Custom(BER_INVALID_LENGTH)) >>
-        content: apply!(ber_read_element_content,hdr) >>
-        ( content )
+        hdr.len > ::std::u32::MAX as u64,
+        ErrorKind::Custom(BER_INVALID_LENGTH)
+    )?;
+    match hdr.class {
+        // universal
+        0b00 |
+        // private
+        0b11 => (),
+        // application
+        0b01 |
+        // context-specific
+        0b10 => return map!(
+            i,
+            take!(hdr.len),
+            |b| { BerObject::from_header_and_content(hdr,BerObjectContent::Unknown(b)) }
+        ),
+        _    => { return Err(Err::Error(error_position!(i, ErrorKind::Custom(BER_CLASS_ERROR)))); },
     }
+    match ber_read_element_content_as(rem, hdr.tag, hdr.len as usize, hdr.is_constructed(), depth) {
+        Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
+        Err(Err::Error(Context::Code(_, ErrorKind::Custom(BER_TAG_UNKNOWN)))) => {
+            map!(i, take!(hdr.len), |b| {
+                BerObject::from_header_and_content(hdr, BerObjectContent::Unknown(b))
+            })
+        }
+        Err(e) => Err(e),
+    }
+}
+
+/// Parse BER object
+#[inline]
+pub fn parse_ber(i: &[u8]) -> IResult<&[u8], BerObject, u32> {
+    parse_ber_recursive(i, 0)
 }

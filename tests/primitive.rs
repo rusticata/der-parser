@@ -11,8 +11,8 @@ fn test_flat_take() {
     let empty = &b""[..];
     assert_eq!(parse_ber_bool(&[0x01, 0x01, 0xff]), Ok((empty, BerObject::from_obj(BerObjectContent::Boolean(true)))));
     assert_eq!(parse_ber_bool(&[0x01, 0x01, 0x00]), Ok((empty, BerObject::from_obj(BerObjectContent::Boolean(false)))));
-    assert_eq!(ber_read_element_content_as(&[0xff], BerTag::Boolean, 0x01, false), Ok((empty, BerObjectContent::Boolean(true))));
-    assert_eq!(ber_read_element_content_as(&[0x00], BerTag::Boolean, 0x01, false), Ok((empty, BerObjectContent::Boolean(false))));
+    assert_eq!(ber_read_element_content_as(&[0xff], BerTag::Boolean, 0x01, false, 0), Ok((empty, BerObjectContent::Boolean(true))));
+    assert_eq!(ber_read_element_content_as(&[0x00], BerTag::Boolean, 0x01, false, 0), Ok((empty, BerObjectContent::Boolean(false))));
 }
 
 #[test]

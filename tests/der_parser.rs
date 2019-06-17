@@ -314,7 +314,7 @@ fn test_der_implicit() {
         _tag: BerTag,
         len: usize,
     ) -> IResult<&[u8], BerObjectContent, u32> {
-        ber_read_element_content_as(i, DerTag::Ia5String, len, false)
+        ber_read_element_content_as(i, DerTag::Ia5String, len, false, 0)
     }
     assert_eq!(
         parse_der_implicit(&bytes, BerTag(1), der_read_ia5string_content),

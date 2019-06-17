@@ -706,7 +706,7 @@ macro_rules! parse_der_tagged(
         do_parse!(
             $i,
             hdr: verify!(ber_read_element_header, |ref hdr: BerObjectHeader| hdr.tag.0 == $tag) >>
-            res: call!(ber_read_element_content_as, $type, hdr.len as usize, hdr.is_constructed()) >>
+            res: call!(ber_read_element_content_as, $type, hdr.len as usize, hdr.is_constructed(), 0) >>
             (BerObject::from_obj(res))
         )
     });
