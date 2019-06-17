@@ -2,10 +2,14 @@
 
 #[macro_use] extern crate hex_literal;
 extern crate der_parser;
+extern crate nom;
 
 use der_parser::*;
 use der_parser::ber::*;
+use der_parser::der::*;
+use der_parser::error::*;
 use der_parser::oid::Oid;
+use nom::{Context, Err, ErrorKind, Needed};
 
 #[test]
 fn test_flat_take() {
@@ -52,4 +56,55 @@ fn test_unknown_context_specific() {
         tag: BerTag(0),
         content: BerObjectContent::Unknown(BerTag(0x0), &bytes[2..])
     });
+}
+
+#[test]
+fn test_incomplete_length() {
+    let bytes = hex!("30");
+    let res = parse_ber(&bytes).err().expect("expected error");
+    assert_eq!(res, Err::Incomplete(Needed::Size(1)));
+    let res = parse_der(&bytes).err().expect("expected error");
+    assert_eq!(res, Err::Incomplete(Needed::Size(1)));
+    let bytes = hex!("02");
+    let res = parse_ber(&bytes).err().expect("expected error");
+    assert_eq!(res, Err::Incomplete(Needed::Size(1)));
+    let bytes = hex!("02 05");
+    let _ = parse_ber(&bytes).err().expect("expected error");
+    let bytes = hex!("02 85");
+    let res = parse_ber(&bytes).err().expect("expected error");
+    assert_eq!(res, Err::Incomplete(Needed::Size(5)));
+    let bytes = hex!("02 85 ff");
+    let res = parse_ber(&bytes).err().expect("expected error");
+    assert_eq!(res, Err::Incomplete(Needed::Size(5)));
+}
+
+#[test]
+fn test_invalid_length() {
+    let bytes = hex!("02 ff 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10");
+    let _ = parse_ber(&bytes).err().expect("expected error");
+    let _ = ber_read_element_header(&bytes).err().expect("expected error");
+    let bytes = hex!("02 85 ff ff ff ff ff 00");
+    let res = parse_ber(&bytes).err().expect("parsing should have returned error");
+    // get errorkind
+    match res {
+        Err::Error(Context::Code(_,code)) => {
+            assert_eq!(code, ErrorKind::Custom(BER_INVALID_LENGTH));
+        },
+        _ => assert!(false),
+    }
+    let bytes = hex!("02 02 00");
+    let res = parse_der(&bytes).err().expect("expected error");
+    assert_eq!(res, Err::Incomplete(Needed::Size(2)));
+}
+
+#[test]
+fn test_invalid_param() {
+    let bytes = hex!("00");
+    let hdr = BerObjectHeader {
+        class: 8,
+        structured: 0,
+        tag: BerTag(2),
+        len: 1,
+    };
+    der_read_element_content(&bytes, hdr).err().expect("expected erreur");
 }

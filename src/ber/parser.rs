@@ -671,7 +671,7 @@ fn parse_ber_recursive(i: &[u8], depth: usize) -> IResult<&[u8], BerObject, u32>
     let (rem, hdr) = ber_read_element_header(i)?;
     error_if!(
         i,
-        hdr.len > ::std::u32::MAX as u64,
+        hdr.len as usize > i.len() || hdr.len > ::std::u32::MAX as u64,
         ErrorKind::Custom(BER_INVALID_LENGTH)
     )?;
     match hdr.class {

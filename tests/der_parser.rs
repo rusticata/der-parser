@@ -6,6 +6,8 @@ extern crate nom;
 #[macro_use]
 extern crate der_parser;
 #[macro_use]
+extern crate hex_literal;
+#[macro_use]
 extern crate rusticata_macros;
 
 use der_parser::ber::{ber_read_element_content_as, BerObjectContent, BerTag, BitStringObject};
@@ -33,9 +35,23 @@ fn test_der_bool() {
 #[test]
 fn test_der_int() {
     let empty = &b""[..];
-    let bytes = [0x02, 0x03, 0x01, 0x00, 0x01];
+    let bytes = hex!("02 03 01 00 01");
     let expected = DerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
     assert_eq!(parse_der_integer(&bytes), Ok((empty, expected)));
+    let res = parse_der_u64(&bytes);
+    assert_eq!(res.expect("integer").1, 0x10001);
+    // wrong tag
+    let bytes = hex!("04 03 41 41 41");
+    let res = parse_der_integer(&bytes);
+    assert!(res.is_err());
+    let res = parse_der_u64(&bytes);
+    assert!(res.is_err());
+    // very long integer
+    let bytes = hex!("02 0b 40 41 02 03 04 05 06 07 08 09 0a");
+    let res = parse_der_integer(&bytes);
+    assert!(res.is_ok());
+    let res = parse_der_u64(&bytes);
+    assert!(res.is_err());
 }
 
 #[test]
@@ -236,11 +252,11 @@ fn test_der_set_of() {
 #[test]
 fn test_der_utctime() {
     let empty = &b""[..];
-    let bytes = [
-        0x17, 0x0D, 0x30, 0x32, 0x31, 0x32, 0x31, 0x33, 0x31, 0x34, 0x32, 0x39, 0x32, 0x33, 0x5A,
-    ];
+    let bytes = hex!("17 0D 30 32 31 32 31 33 31 34 32 39 32 33 5A");
     let expected = DerObject::from_obj(BerObjectContent::UTCTime(&bytes[2..]));
     assert_eq!(parse_der_utctime(&bytes), Ok((empty, expected)));
+    let bytes = hex!("17 0c 30 32 31 32 31 33 31 34 32 39 32 33");
+    parse_der_utctime(&bytes).err().expect("expected error");
 }
 
 #[test]

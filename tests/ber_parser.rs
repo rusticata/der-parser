@@ -32,17 +32,10 @@ fn test_ber_bool() {
     );
 }
 
-// const SEQ_LENGTH_INDEFINITE: &[u8] = &[0x30, 0x80, 0x04, 0x03, 0x56, 0x78, 0x90, 0x00, 0x00];
-const SEQ_LENGTH_INDEFINITE_WITH_INTEGER: &[u8] = &[
-    0x30, 0x80, 0x04, 0x03, 0x56, 0x78, 0x90, 0x00, 0x00, 0x02, 0x01, 0x01,
-];
-
 #[test]
 fn test_seq_indefinite_length() {
-    let data = SEQ_LENGTH_INDEFINITE_WITH_INTEGER;
-    // eprintln!("test_seq_indefinite_length header: {:?}", res);
-    let res = parse_ber(data);
-    // eprintln!("test_seq_indefinite_length: {:?}", res);
+    let data = hex!("30 80 04 03 56 78 90 00 00 02 01 01");
+    let res = parse_ber(&data);
     assert_eq!(
         res,
         Ok((
@@ -52,13 +45,37 @@ fn test_seq_indefinite_length() {
             )),])
         ))
     );
-    let res = parse_ber_sequence(data);
-    // eprintln!("test_seq_indefinite_length: {:?}", res);
+    let res = parse_ber_sequence(&data);
     assert_eq!(
         res,
         Ok((
             &data[9..],
             BerObject::from_seq(vec![BerObject::from_obj(BerObjectContent::OctetString(
+                &data[4..=6]
+            )),])
+        ))
+    );
+}
+
+#[test]
+fn test_set_indefinite_length() {
+    let data = hex!("31 80 04 03 56 78 90 00 00");
+    let res = parse_ber(&data);
+    assert_eq!(
+        res,
+        Ok((
+            &data[9..],
+            BerObject::from_set(vec![BerObject::from_obj(BerObjectContent::OctetString(
+                &data[4..=6]
+            )),])
+        ))
+    );
+    let res = parse_ber_set(&data);
+    assert_eq!(
+        res,
+        Ok((
+            &data[9..],
+            BerObject::from_set(vec![BerObject::from_obj(BerObjectContent::OctetString(
                 &data[4..=6]
             )),])
         ))
