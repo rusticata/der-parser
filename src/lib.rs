@@ -1,7 +1,8 @@
-//! # DER Parser
+//! # BER/DER Parser
 //!
-//! A DER (X.690) parser, implemented with the [nom](https://github.com/Geal/nom)
-//! parser combinator framework.
+//! A parser for Basic Encoding Rules (BER [[X.690]]) and Distinguished Encoding Rules(DER
+//! [[X.690]]), implemented with the [nom](https://github.com/Geal/nom) parser combinator
+//! framework.
 //!
 //! The code is available on [Github](https://github.com/rusticata/der-parser)
 //! and is part of the [Rusticata](https://github.com/rusticata) project.
@@ -10,9 +11,10 @@
 //!
 //! There are two different approaches for parsing DER objects: reading the objects recursively as
 //! long as the tags are known, or specifying a description of the expected objects (generally from
-//! the ASN.1 description).
+//! the [ASN.1][X.680] description).
 //!
-//! The first parsing method can be done using the [`parse_der`](fn.parse_der.html) method.
+//! The first parsing method can be done using the [`parse_ber`](ber/fn.parse_ber.html) and
+//! [`parse_der`](der/fn.parse_der.html) methods.
 //! However, it cannot fully parse all objects, especially those containing IMPLICIT, OPTIONAL, or
 //! DEFINED BY items.
 //!
@@ -64,8 +66,9 @@
 //!
 //! # Notes
 //!
-//! - The DER constraints are not enforced or verified. Because of that, this parser is mostly
-//! compatible with BER.
+//! - The DER constraints are verified if using `parse_der`.
+//! - `BerObject` and `DerObject` are the same objects (type alias). The only difference is the
+//!   verification of constraints *during parsing*.
 //! - DER integers can be of any size, so it is not possible to store them as simple integers (they
 //! are stored as raw bytes). To get a simple value, use
 //! [`BerObject::as_u32`](ber/struct.BerObject.html#method.as_u32) (knowning that this method will
@@ -75,11 +78,15 @@
 //!
 //! # References
 //!
-//! - [[X.680]](http://www.itu.int/rec/T-REC-X.680/en) Abstract Syntax Notation One (ASN.1):
-//!   Specification of basic notation.
-//! - [[X.690]](https://www.itu.int/rec/T-REC-X.690/en) ASN.1 encoding rules: Specification of
+//! - [[X.680]] Abstract Syntax Notation One (ASN.1): Specification of basic notation.
+//! - [[X.690]] ASN.1 encoding rules: Specification of Basic Encoding Rules (BER), Canonical
+//!   Encoding Rules (CER) and Distinguished Encoding Rules (DER).
+//!
+//! [X.680]: http://www.itu.int/rec/T-REC-X.680/en "Abstract Syntax Notation One (ASN.1):
+//!   Specification of basic notation."
+//! [X.690]: https://www.itu.int/rec/T-REC-X.690/en "ASN.1 encoding rules: Specification of
 //!   Basic Encoding Rules (BER), Canonical Encoding Rules (CER) and Distinguished Encoding Rules
-//!   (DER).
+//!   (DER)."
 
 #![deny(/*missing_docs,*/unsafe_code,
         unstable_features,
