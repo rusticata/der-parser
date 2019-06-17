@@ -10,7 +10,10 @@ pub const MAX_RECURSION: usize = 50;
 pub(crate) fn bytes_to_u64(s: &[u8]) -> Result<u64, BerError> {
     let mut u: u64 = 0;
     for &c in s {
-        u = u.checked_shl(8).ok_or(BerError::IntegerTooLarge)?;
+        if u & 0xff00_0000_0000_0000 != 0 {
+            return Err(BerError::IntegerTooLarge);
+        }
+        u = u << 8;
         u |= c as u64;
     }
     Ok(u)
