@@ -93,6 +93,14 @@ or use the `bigint` feature of this crate and use
 
 ## Changes
 
+### 2.0.0
+
+- Refactor code, split BER and DER, check DER constraints
+- Add recursion limit for sequences and sets
+- Rustfmt
+- Documentation
+- Remove unused function `ber_read_element_content`
+
 ### 1.1.1
 
 - Fix OID parsing, and add support for relative OIDs
