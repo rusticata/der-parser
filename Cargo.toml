@@ -8,9 +8,11 @@ name = "der-parser"
 version = "2.0.0-alpha1"
 authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
 categories = ["parser-implementations"]
+readme = "README.md"
 
 include = [
   "LICENSE-*",
+  "README.md",
   ".gitignore",
   ".travis.yml",
   "Cargo.toml",
@@ -22,7 +24,7 @@ include = [
 ]
 
 [dependencies]
-nom = {version = "4.0", features = ["verbose-errors"]}
+nom = {version = "4.2", features = ["verbose-errors"]}
 rusticata-macros = "1.0"
 num-bigint = { version = "0.2", optional = true }
 
