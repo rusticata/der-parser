@@ -7,7 +7,7 @@ use nom::{be_u8, Context, Err, ErrorKind, IResult, Needed};
 pub fn parse_der(i: &[u8]) -> IResult<&[u8], DerObject, u32> {
     do_parse! {
         i,
-        hdr:     ber_read_element_header >>
+        hdr:     der_read_element_header >>
                  // XXX safety check: length cannot be more than 2^32 bytes
                  error_if!(hdr.len > ::std::u32::MAX as u64, ErrorKind::Custom(BER_INVALID_LENGTH)) >>
         content: apply!(der_read_element_content,hdr) >>
