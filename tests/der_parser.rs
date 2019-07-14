@@ -344,6 +344,35 @@ fn test_der_implicit() {
 }
 
 #[test]
+fn test_der_implicit_long_tag() {
+    let empty = &b""[..];
+    let bytes = [0x5f, 0x52, 0x04, 0x70, 0x61, 0x73, 0x73];
+    let pass = DerObject::from_obj(BerObjectContent::IA5String(b"pass"));
+    let expected = DerObject {
+        class: 1,
+        structured: 0,
+        tag: BerTag(0x52),
+        content: BerObjectContent::ContextSpecific(BerTag(0x52), Some(Box::new(pass))),
+    };
+    fn der_read_ia5string_content(
+        i: &[u8],
+        _tag: BerTag,
+        len: usize,
+    ) -> IResult<&[u8], BerObjectContent, u32> {
+        ber_read_element_content_as(i, DerTag::Ia5String, len, false, 0)
+    }
+    assert_eq!(
+        parse_der_implicit(&bytes, BerTag(0x52), der_read_ia5string_content),
+        Ok((empty, expected))
+    );
+    let expected2 = DerObject::from_obj(BerObjectContent::ContextSpecific(BerTag(2), None));
+    assert_eq!(
+        parse_der_implicit(&bytes, BerTag(2), der_read_ia5string_content),
+        Ok((&bytes[..], expected2))
+    );
+}
+
+#[test]
 fn test_der_optional() {
     let empty = &b""[..];
     let bytes1 = [
