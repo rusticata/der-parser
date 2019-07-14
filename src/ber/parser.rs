@@ -19,14 +19,29 @@ pub(crate) fn bytes_to_u64(s: &[u8]) -> Result<u64, BerError> {
     Ok(u)
 }
 
-pub(crate) fn parse_identifier(i: &[u8]) -> IResult<&[u8], (u8, u8, u8)> {
+pub(crate) fn parse_identifier(i: &[u8]) -> IResult<&[u8], (u8, u8, u32)> {
     if i.is_empty() {
         Err(Err::Incomplete(Needed::Size(1)))
     } else {
         let a = i[0] >> 6;
         let b = if i[0] & 0b0010_0000 != 0 { 1 } else { 0 };
-        let c = i[0] & 0b0001_1111;
-        Ok((&i[1..], (a, b, c)))
+        let mut c = (i[0] & 0b0001_1111) as u32;
+
+        let mut tag_byte_count = 1;
+
+        if c == 0x1f {
+            c = 0;
+            loop {
+                c = (c << 7) | ((i[tag_byte_count] as u32) & 0x7f);
+                let done = i[tag_byte_count] & 0x80 == 0;
+                tag_byte_count += 1;
+                if done {
+                    break;
+                }
+            }
+        }
+
+        Ok((&i[tag_byte_count..], (a, b, c)))
     }
 }
 
