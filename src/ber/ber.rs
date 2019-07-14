@@ -8,7 +8,7 @@ use oid::Oid;
 
 /// Defined in X.680 section 8.4
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct BerTag(pub u8);
+pub struct BerTag(pub u32);
 
 newtype_enum!{
 impl debug BerTag {
