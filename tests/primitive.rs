@@ -86,7 +86,6 @@ fn test_unknown_long_tag() {
 #[test]
 fn test_unknown_longer_tag() {
     let bytes = hex!("9f a2 22 01 00");
-    println!("{:?}", parse_ber(&bytes));
     let res = parse_ber(&bytes).expect("parsing failed");
     assert!(res.0.is_empty());
     assert_eq!(
@@ -98,6 +97,20 @@ fn test_unknown_longer_tag() {
             content: BerObjectContent::Unknown(BerTag(0x1122), &bytes[4..])
         }
     );
+}
+
+#[test]
+fn test_incomplete_tag() {
+    let bytes = hex!("9f a2 a2");
+    let res = parse_ber(&bytes);
+    assert!(res.is_err());
+}
+
+#[test]
+fn test_overflow_tag() {
+    let bytes = hex!("9f a2 a2 a2 a2 a2 22 01 00");
+    let res = parse_ber(&bytes);
+    assert!(res.is_err());
 }
 
 #[test]
