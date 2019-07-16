@@ -1,69 +1,56 @@
-#[macro_use] extern crate pretty_assertions;
-#[macro_use] extern crate rusticata_macros;
+#[macro_use]
+extern crate pretty_assertions;
+#[macro_use]
+extern crate rusticata_macros;
 
 extern crate der_parser;
 
 #[macro_use]
 extern crate nom;
 
-use der_parser::*;
 use der_parser::ber::*;
 use der_parser::error::*;
+use der_parser::*;
+use nom::{be_u16, be_u32, Err, ErrorKind, IResult, Needed};
 use oid::Oid;
-use nom::{IResult,Err,ErrorKind,Needed,be_u16,be_u32};
 
 #[derive(Debug, PartialEq)]
-struct MyStruct<'a>{
+struct MyStruct<'a> {
     a: BerObject<'a>,
     b: BerObject<'a>,
 }
 
-fn parse_struct01(i: &[u8]) -> IResult<&[u8],(BerObjectHeader,MyStruct)> {
+fn parse_struct01(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, MyStruct)> {
     parse_der_struct!(
         i,
-        a: parse_ber_integer >>
-        b: parse_ber_integer >>
-        ( MyStruct{ a: a, b: b } )
+        a: parse_ber_integer >> b: parse_ber_integer >> (MyStruct { a: a, b: b })
     )
 }
 
-fn parse_struct01_complete(i: &[u8]) -> IResult<&[u8],(BerObjectHeader,MyStruct)> {
+fn parse_struct01_complete(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, MyStruct)> {
     parse_der_struct!(
         i,
-        a: parse_ber_integer >>
-        b: parse_ber_integer >>
-           empty!() >>
-        ( MyStruct{ a: a, b: b } )
+        a: parse_ber_integer >> b: parse_ber_integer >> empty!() >> (MyStruct { a: a, b: b })
     )
 }
 
 // calling user function
 #[allow(dead_code)]
-fn parse_struct02(i: &[u8]) -> IResult<&[u8],(BerObjectHeader,())> {
-    parse_der_struct!(
-        i,
-        _a: parse_ber_integer >>
-        _b: parse_struct01 >>
-        ( () )
-    )
+fn parse_struct02(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, ())> {
+    parse_der_struct!(i, _a: parse_ber_integer >> _b: parse_struct01 >> (()))
 }
 
 // embedded DER structs
 #[allow(dead_code)]
-fn parse_struct03(i: &[u8]) -> IResult<&[u8],(BerObjectHeader,())> {
+fn parse_struct03(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, ())> {
     parse_der_struct!(
         i,
-        _a: parse_ber_integer >>
-        _b: parse_der_struct!(
-                parse_ber_integer >>
-                ( () )
-            ) >>
-        ( () )
+        _a: parse_ber_integer >> _b: parse_der_struct!(parse_ber_integer >> (())) >> (())
     )
 }
 
 // verifying tag
-fn parse_struct04(i: &[u8], tag:BerTag) -> IResult<&[u8],(BerObjectHeader,MyStruct)> {
+fn parse_struct04(i: &[u8], tag: BerTag) -> IResult<&[u8], (BerObjectHeader, MyStruct)> {
     parse_der_struct!(
         i,
         TAG tag,
@@ -76,13 +63,12 @@ fn parse_struct04(i: &[u8], tag:BerTag) -> IResult<&[u8],(BerObjectHeader,MyStru
 
 #[test]
 fn struct01() {
-    let bytes = [ 0x30, 0x0a,
-                  0x02, 0x03, 0x01, 0x00, 0x01,
-                  0x02, 0x03, 0x01, 0x00, 0x00,
+    let bytes = [
+        0x30, 0x0a, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00,
     ];
     let empty = &b""[..];
     let expected = (
-        BerObjectHeader{
+        BerObjectHeader {
             class: 0,
             structured: 1,
             tag: BerTag::Sequence,
@@ -91,7 +77,7 @@ fn struct01() {
         MyStruct {
             a: BerObject::from_int_slice(b"\x01\x00\x01"),
             b: BerObject::from_int_slice(b"\x01\x00\x00"),
-        }
+        },
     );
     let res = parse_struct01(&bytes);
     assert_eq!(res, Ok((empty, expected)));
@@ -101,12 +87,11 @@ fn struct01() {
 fn struct02() {
     let empty = &b""[..];
     let bytes = [
-        0x30, 0x45, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03, 0x55, 0x04, 0x06, 0x13,
-        0x02, 0x46, 0x52, 0x31, 0x13, 0x30, 0x11, 0x06, 0x03, 0x55, 0x04, 0x08,
-        0x0c, 0x0a, 0x53, 0x6f, 0x6d, 0x65, 0x2d, 0x53, 0x74, 0x61, 0x74, 0x65,
-        0x31, 0x21, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x04, 0x0a, 0x0c, 0x18, 0x49,
-        0x6e, 0x74, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x20, 0x57, 0x69, 0x64, 0x67,
-        0x69, 0x74, 0x73, 0x20, 0x50, 0x74, 0x79, 0x20, 0x4c, 0x74, 0x64
+        0x30, 0x45, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x46, 0x52,
+        0x31, 0x13, 0x30, 0x11, 0x06, 0x03, 0x55, 0x04, 0x08, 0x0c, 0x0a, 0x53, 0x6f, 0x6d, 0x65,
+        0x2d, 0x53, 0x74, 0x61, 0x74, 0x65, 0x31, 0x21, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x04, 0x0a,
+        0x0c, 0x18, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x20, 0x57, 0x69, 0x64, 0x67,
+        0x69, 0x74, 0x73, 0x20, 0x50, 0x74, 0x79, 0x20, 0x4c, 0x74, 0x64,
     ];
     #[derive(Debug, PartialEq)]
     struct Attr<'a> {
@@ -115,69 +100,70 @@ fn struct02() {
     };
     #[derive(Debug, PartialEq)]
     struct Rdn<'a> {
-        a: Attr<'a>
+        a: Attr<'a>,
     }
     #[derive(Debug, PartialEq)]
     struct Name<'a> {
-        l: Vec<Rdn<'a>>
+        l: Vec<Rdn<'a>>,
     }
     let expected = Name {
         l: vec![
-            Rdn{
-                a: Attr{
+            Rdn {
+                a: Attr {
                     oid: Oid::from(&[2, 5, 4, 6]), // countryName
                     val: BerObject::from_obj(BerObjectContent::PrintableString(b"FR")),
-                }
+                },
             },
-            Rdn{
-                a: Attr{
+            Rdn {
+                a: Attr {
                     oid: Oid::from(&[2, 5, 4, 8]), // stateOrProvinceName
                     val: BerObject::from_obj(BerObjectContent::UTF8String(b"Some-State")),
-                }
+                },
             },
-            Rdn{
-                a: Attr{
+            Rdn {
+                a: Attr {
                     oid: Oid::from(&[2, 5, 4, 10]), // organizationName
-                    val: BerObject::from_obj(BerObjectContent::UTF8String(b"Internet Widgits Pty Ltd")),
-                }
+                    val: BerObject::from_obj(BerObjectContent::UTF8String(
+                        b"Internet Widgits Pty Ltd",
+                    )),
+                },
             },
-        ]
+        ],
     };
-    fn parse_directory_string(i:&[u8]) -> IResult<&[u8],BerObject> {
-        alt!(i, parse_ber_utf8string | parse_ber_printablestring | parse_ber_ia5string)
+    fn parse_directory_string(i: &[u8]) -> IResult<&[u8], BerObject> {
+        alt!(
+            i,
+            parse_ber_utf8string | parse_ber_printablestring | parse_ber_ia5string
+        )
     }
-    fn parse_attr_type_and_value(i:&[u8]) -> IResult<&[u8],Attr> {
-        parse_der_struct!(i,
-            o: map_res!(parse_ber_oid,|x: BerObject| x.as_oid().map(|o| o.clone())) >>
-            s: parse_directory_string >>
-            ( Attr{oid: o, val: s} )
-        ).map(|(rem,x)| (rem,x.1))
+    fn parse_attr_type_and_value(i: &[u8]) -> IResult<&[u8], Attr> {
+        parse_der_struct!(
+            i,
+            o: map_res!(parse_ber_oid, |x: BerObject| x.as_oid().map(|o| o.clone()))
+                >> s: parse_directory_string
+                >> (Attr { oid: o, val: s })
+        )
+        .map(|(rem, x)| (rem, x.1))
     };
-    fn parse_rdn(i:&[u8]) -> IResult<&[u8],Rdn> {
-        parse_der_struct!(i,
-            a: parse_attr_type_and_value >>
-            ( Rdn{a: a} )
-        ).map(|(rem,x)| (rem,x.1))
+    fn parse_rdn(i: &[u8]) -> IResult<&[u8], Rdn> {
+        parse_der_struct!(i, a: parse_attr_type_and_value >> (Rdn { a: a }))
+            .map(|(rem, x)| (rem, x.1))
     }
-    fn parse_name(i:&[u8]) -> IResult<&[u8],Name> {
-        parse_der_struct!(i,
-            l: many0!(complete!(parse_rdn)) >>
-            ( Name{l: l} )
-        ).map(|(rem,x)| (rem,x.1))
+    fn parse_name(i: &[u8]) -> IResult<&[u8], Name> {
+        parse_der_struct!(i, l: many0!(complete!(parse_rdn)) >> (Name { l: l }))
+            .map(|(rem, x)| (rem, x.1))
     }
     assert_eq!(parse_name(&bytes), Ok((empty, expected)));
 }
 
 #[test]
 fn struct_with_garbage() {
-    let bytes = [ 0x30, 0x0c,
-                  0x02, 0x03, 0x01, 0x00, 0x01,
-                  0x02, 0x03, 0x01, 0x00, 0x00,
-                  0xff, 0xff
+    let bytes = [
+        0x30, 0x0c, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00, 0xff, 0xff,
     ];
     let empty = &b""[..];
     let expected = (
-        BerObjectHeader{
+        BerObjectHeader {
             class: 0,
             structured: 1,
             tag: BerTag::Sequence,
@@ -186,21 +172,23 @@ fn struct_with_garbage() {
         MyStruct {
             a: BerObject::from_int_slice(b"\x01\x00\x01"),
             b: BerObject::from_int_slice(b"\x01\x00\x00"),
-        }
+        },
     );
     assert_eq!(parse_struct01(&bytes), Ok((empty, expected)));
-    assert_eq!(parse_struct01_complete(&bytes), Err(Err::Error(error_position!(&bytes[12..], ErrorKind::Eof))));
+    assert_eq!(
+        parse_struct01_complete(&bytes),
+        Err(Err::Error(error_position!(&bytes[12..], ErrorKind::Eof)))
+    );
 }
 
 #[test]
 fn struct_verify_tag() {
-    let bytes = [ 0x30, 0x0a,
-                  0x02, 0x03, 0x01, 0x00, 0x01,
-                  0x02, 0x03, 0x01, 0x00, 0x00,
+    let bytes = [
+        0x30, 0x0a, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00,
     ];
     let empty = &b""[..];
     let expected = (
-        BerObjectHeader{
+        BerObjectHeader {
             class: 0,
             structured: 1,
             tag: BerTag::Sequence,
@@ -209,24 +197,27 @@ fn struct_verify_tag() {
         MyStruct {
             a: BerObject::from_int_slice(b"\x01\x00\x01"),
             b: BerObject::from_int_slice(b"\x01\x00\x00"),
-        }
+        },
     );
     let res = parse_struct04(&bytes, BerTag::Sequence);
     assert_eq!(res, Ok((empty, expected)));
     let res = parse_struct04(&bytes, BerTag::Set);
-    assert_eq!(res, Err(Err::Error(error_position!(&bytes[..], ErrorKind::Verify))));
+    assert_eq!(
+        res,
+        Err(Err::Error(error_position!(&bytes[..], ErrorKind::Verify)))
+    );
 }
 
 #[test]
 fn tagged_explicit() {
-    fn parse_int_explicit(i:&[u8]) -> IResult<&[u8],u32> {
+    fn parse_int_explicit(i: &[u8]) -> IResult<&[u8], u32> {
         map_res!(
             i,
             parse_der_tagged!(EXPLICIT 2, parse_ber_integer),
             |x: BerObject| x.as_u32()
         )
     }
-    fn parse_int_noexplicit(i:&[u8]) -> IResult<&[u8],u32> {
+    fn parse_int_noexplicit(i: &[u8]) -> IResult<&[u8], u32> {
         map_res!(
             i,
             parse_der_tagged!(2, parse_ber_integer),
@@ -237,31 +228,37 @@ fn tagged_explicit() {
     // EXPLICIT tagged value parsing
     let res = parse_int_explicit(bytes);
     match res {
-        Ok((rem,val)) => {
+        Ok((rem, val)) => {
             assert!(rem.is_empty());
             assert_eq!(val, 0x10001);
-        },
-        _ => assert!(false)
+        }
+        _ => assert!(false),
     }
     // omitting EXPLICIT keyword
     let a = parse_int_explicit(bytes);
     let b = parse_int_noexplicit(bytes);
-    assert_eq!(a,b);
+    assert_eq!(a, b);
     // wrong tag
     assert_eq!(
-        parse_der_tagged!(bytes as &[u8],3,parse_ber_integer),
-        Err(Err::Error(error_position!(bytes as &[u8], ErrorKind::Verify)))
+        parse_der_tagged!(bytes as &[u8], 3, parse_ber_integer),
+        Err(Err::Error(error_position!(
+            bytes as &[u8],
+            ErrorKind::Verify
+        )))
     );
     // wrong type
     assert_eq!(
-        parse_der_tagged!(bytes as &[u8],2,parse_ber_bool),
-        Err(Err::Error(error_position!(&bytes[4..],ErrorKind::Custom(BER_TAG_ERROR))))
+        parse_der_tagged!(bytes as &[u8], 2, parse_ber_bool),
+        Err(Err::Error(error_position!(
+            &bytes[4..],
+            ErrorKind::Custom(BER_TAG_ERROR)
+        )))
     );
 }
 
 #[test]
 fn tagged_implicit() {
-    fn parse_int_implicit(i:&[u8]) -> IResult<&[u8],u32> {
+    fn parse_int_implicit(i: &[u8]) -> IResult<&[u8], u32> {
         map_res!(
             i,
             parse_der_tagged!(IMPLICIT 2, BerTag::Integer),
@@ -272,16 +269,19 @@ fn tagged_implicit() {
     // IMPLICIT tagged value parsing
     let res = parse_int_implicit(bytes);
     match res {
-        Ok((rem,val)) => {
+        Ok((rem, val)) => {
             assert!(rem.is_empty());
             assert_eq!(val, 0x10001);
-        },
-        _ => assert!(false)
+        }
+        _ => assert!(false),
     }
     // wrong tag
     assert_eq!(
         parse_der_tagged!(bytes as &[u8],IMPLICIT 3,BerTag::Integer),
-        Err(Err::Error(error_position!(bytes as &[u8], ErrorKind::Verify)))
+        Err(Err::Error(error_position!(
+            bytes as &[u8],
+            ErrorKind::Verify
+        )))
     );
 }
 
@@ -291,7 +291,7 @@ fn application() {
     struct SimpleStruct {
         a: u32,
     };
-    fn parse_app01(i:&[u8]) -> IResult<&[u8],(BerObjectHeader,SimpleStruct)> {
+    fn parse_app01(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, SimpleStruct)> {
         parse_der_application!(
             i,
             APPLICATION 2,
@@ -302,14 +302,14 @@ fn application() {
     let bytes = &[0x62, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
     let res = parse_app01(bytes);
     match res {
-        Ok((rem,(hdr,app))) => {
+        Ok((rem, (hdr, app))) => {
             assert!(rem.is_empty());
             assert_eq!(hdr.tag, BerTag::Integer);
             assert!(hdr.is_application());
             assert_eq!(hdr.structured, 1);
-            assert_eq!(app, SimpleStruct{ a:0x10001 });
-        },
-        _ => assert!(false)
+            assert_eq!(app, SimpleStruct { a: 0x10001 });
+        }
+        _ => assert!(false),
     }
 }
 
@@ -317,11 +317,17 @@ fn application() {
 fn test_flat_take() {
     let input = &[0x00, 0x01, 0xff];
     // read first 2 bytes and use correct combinator: OK
-    assert_eq!(flat_take!(input,2,be_u16), Ok((&input[2..], 0x0001)));
+    assert_eq!(flat_take!(input, 2, be_u16), Ok((&input[2..], 0x0001)));
     // read 3 bytes and use 2: OK (some input is just lost)
-    assert_eq!(flat_take!(input,3,be_u16), Ok((&b""[..], 0x0001)));
+    assert_eq!(flat_take!(input, 3, be_u16), Ok((&b""[..], 0x0001)));
     // read 2 bytes and a combinator requiring more bytes
-    assert_eq!(flat_take!(input,2,be_u32), Err(Err::Incomplete(Needed::Size(4))));
+    assert_eq!(
+        flat_take!(input, 2, be_u32),
+        Err(Err::Incomplete(Needed::Size(4)))
+    );
     // test with macro as sub-combinator
-    assert_eq!(flat_take!(input,2,call!(be_u16)), Ok((&input[2..], 0x0001)));
+    assert_eq!(
+        flat_take!(input, 2, call!(be_u16)),
+        Ok((&input[2..], 0x0001))
+    );
 }

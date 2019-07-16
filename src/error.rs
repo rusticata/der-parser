@@ -42,7 +42,7 @@ pub const BER_INTEGER_TOO_LARGE: u32 = 134;
 pub const BER_UNSUPPORTED: u32 = 150;
 
 /// Max recursion depth exceeded
-pub const BER_MAX_DEPTH : u32 = 151;
+pub const BER_MAX_DEPTH: u32 = 151;
 
 /// DER constraint violation
 pub const DER_CONSTRAINT_FAIL: u32 = 160;
