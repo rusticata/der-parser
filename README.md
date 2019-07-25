@@ -93,6 +93,11 @@ or use the `bigint` feature of this crate and use
 
 ## Changes
 
+### 2.1.0
+
+- Handle BER/DER tags that are longer than one byte.
+- Set edition to 2018
+
 ### 2.0.2
 
 - Revert 2.0.1 release, breaks API

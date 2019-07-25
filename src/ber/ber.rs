@@ -4,7 +4,7 @@ use std::vec::Vec;
 use std::ops::Index;
 use std::convert::From;
 use std::convert::AsRef;
-use oid::Oid;
+use crate::oid::Oid;
 
 /// Defined in X.680 section 8.4
 /// X.690 doesn't specify the maxmimum tag size so we're assuming that people
@@ -551,8 +551,8 @@ impl<'a> AsRef<[u8]> for BitStringObject<'a> {
 
 #[cfg(test)]
 mod tests {
-    use ber::*;
-    use oid::*;
+    use crate::ber::*;
+    use crate::oid::*;
 
 #[test]
 fn test_der_as_u64() {

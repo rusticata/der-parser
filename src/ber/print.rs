@@ -1,7 +1,7 @@
 use std::fmt;
 use std::str;
-use ber::{BerObject, BerObjectContent, BerTag};
-use ber::BitStringObject;
+use crate::ber::{BerObject, BerObjectContent, BerTag};
+use crate::ber::BitStringObject;
 
 use rusticata_macros::debug;
 
@@ -50,10 +50,10 @@ impl<'a> PrettyBer<'a> {
 impl<'a> fmt::Debug for PrettyBer<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.indent > 0 {
-            try!(write!(f, "{:1$}", " ", self.indent));
+            write!(f, "{:1$}", " ", self.indent)?;
         };
         if self.flags.contains(&PrettyPrinterFlag::ShowHeader) {
-            try!(write!(f, "[c:{}, s:{}, t:{}] ", self.obj.class, self.obj.structured, self.obj.tag));
+            write!(f, "[c:{}, s:{}, t:{}] ", self.obj.class, self.obj.structured, self.obj.tag)?;
         };
         fn print_utf8_string_with_type(f: &mut fmt::Formatter, s: &[u8], ty: &str) -> fmt::Result {
             match str::from_utf8(s) {
@@ -114,7 +114,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use ber::*;
+    use crate::ber::*;
     use super::PrettyPrinterFlag;
 
 #[test]

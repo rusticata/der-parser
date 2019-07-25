@@ -3,7 +3,7 @@
 use crate::ber::{BerObject, BerTag};
 
 mod parser;
-pub use der::parser::*;
+pub use crate::der::parser::*;
 
 /// DER tag (same as BER tag)
 pub type DerTag = BerTag;

@@ -1,6 +1,6 @@
 use crate::ber::*;
 use crate::error::*;
-use der::DerObject;
+use crate::der::DerObject;
 use nom::{be_u8, Context, Err, ErrorKind, IResult, Needed};
 
 /// Parse DER object
