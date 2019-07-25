@@ -93,6 +93,10 @@ or use the `bigint` feature of this crate and use
 
 ## Changes
 
+### 2.0.1
+
+- Handle BER/DER tags that are longer than one byte.
+
 ### 2.0.0
 
 - Refactor code, split BER and DER, check DER constraints
