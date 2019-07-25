@@ -1,53 +1,54 @@
+use crate::ber::BitStringObject;
+use crate::ber::{BerObject, BerObjectContent, BerTag};
 use std::fmt;
 use std::str;
-use crate::ber::{BerObject, BerObjectContent, BerTag};
-use crate::ber::BitStringObject;
 
 use rusticata_macros::debug;
 
-#[derive(Clone,PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum PrettyPrinterFlag {
     ShowHeader,
 }
 
 pub struct PrettyBer<'a> {
-    obj:     &'a BerObject<'a>,
-    indent:  usize,
-    inc:     usize,
+    obj: &'a BerObject<'a>,
+    indent: usize,
+    inc: usize,
 
-    flags:   Vec<PrettyPrinterFlag>,
+    flags: Vec<PrettyPrinterFlag>,
 }
 
 impl<'a> BerObject<'a> {
-    pub fn as_pretty(&'a self, indent:usize, increment:usize) -> PrettyBer<'a> {
-        PrettyBer{
-            obj:     self,
-            indent:  indent,
-            inc:     increment,
+    pub fn as_pretty(&'a self, indent: usize, increment: usize) -> PrettyBer<'a> {
+        PrettyBer {
+            obj: self,
+            indent: indent,
+            inc: increment,
 
-            flags:   Vec::new(),
+            flags: Vec::new(),
         }
     }
 }
 
 impl<'a> PrettyBer<'a> {
     pub fn set_flag(&mut self, flag: PrettyPrinterFlag) {
-        if ! self.flags.contains(&flag) {
+        if !self.flags.contains(&flag) {
             self.flags.push(flag);
         }
     }
 
     pub fn next_indent<'b>(&self, obj: &'b BerObject) -> PrettyBer<'b> {
-        PrettyBer{
-            obj:     obj,
-            indent:  self.indent + self.inc,
-            inc:     self.inc,
-            flags:   self.flags.to_vec(),
+        PrettyBer {
+            obj: obj,
+            indent: self.indent + self.inc,
+            inc: self.inc,
+            flags: self.flags.to_vec(),
         }
     }
 }
 
 impl<'a> fmt::Debug for PrettyBer<'a> {
+    #[rustfmt::skip]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.indent > 0 {
             write!(f, "{:1$}", " ", self.indent)?;
@@ -114,26 +115,25 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::ber::*;
     use super::PrettyPrinterFlag;
+    use crate::ber::*;
 
-#[test]
-fn test_pretty_print() {
-    let d = BerObject::from_obj(BerObjectContent::Sequence(vec![
-        BerObject::from_int_slice(b"\x01\x00\x01"),
-        BerObject::from_int_slice(b"\x01\x00\x01"),
-        BerObject::from_obj(BerObjectContent::Set(vec![
-            BerObject::from_int_slice(b"\x01"),
-            BerObject::from_int_slice(b"\x02"),
-        ]))
-    ]));
+    #[test]
+    fn test_pretty_print() {
+        let d = BerObject::from_obj(BerObjectContent::Sequence(vec![
+            BerObject::from_int_slice(b"\x01\x00\x01"),
+            BerObject::from_int_slice(b"\x01\x00\x01"),
+            BerObject::from_obj(BerObjectContent::Set(vec![
+                BerObject::from_int_slice(b"\x01"),
+                BerObject::from_int_slice(b"\x02"),
+            ])),
+        ]));
 
-    println!("{:?}", d.as_pretty(0,2));
+        println!("{:?}", d.as_pretty(0, 2));
 
-    let mut pp = d.as_pretty(0,4);
-    pp.set_flag(PrettyPrinterFlag::ShowHeader);
-    println!("{:?}", pp);
+        let mut pp = d.as_pretty(0, 4);
+        pp.set_flag(PrettyPrinterFlag::ShowHeader);
+        println!("{:?}", pp);
+    }
+
 }
-
-}
-

@@ -182,7 +182,6 @@ macro_rules! parse_der_set_defined_m(
     });
 );
 
-
 /// Internal parser, do not use directly
 #[doc(hidden)]
 #[macro_export]

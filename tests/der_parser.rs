@@ -516,32 +516,83 @@ fn test_der_defined_set_macros() {
 #[test]
 fn test_parse_u32() {
     let empty = &b""[..];
-    assert_eq!(parse_der_u32(&[0x02, 0x01, 0x01]),Ok((empty,1)));
-    assert_eq!(parse_der_u32(&[0x02, 0x01, 0xff]),Ok((empty,255)));
-    assert_eq!(parse_der_u32(&[0x02, 0x02, 0x01, 0x23]),Ok((empty,0x123)));
-    assert_eq!(parse_der_u32(&[0x02, 0x02, 0xff, 0xff]),Ok((empty,0xffff)));
-    assert_eq!(parse_der_u32(&[0x02, 0x03, 0x01, 0x23, 0x45]),Ok((empty,0x12345)));
-    assert_eq!(parse_der_u32(&[0x02, 0x03, 0xff, 0xff, 0xff]),Ok((empty,0xffffff)));
-    assert_eq!(parse_der_u32(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),Ok((empty,0x1234567)));
-    assert_eq!(parse_der_u32(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),Ok((empty,0xffffffff)));
+    assert_eq!(parse_der_u32(&[0x02, 0x01, 0x01]), Ok((empty, 1)));
+    assert_eq!(parse_der_u32(&[0x02, 0x01, 0xff]), Ok((empty, 255)));
+    assert_eq!(parse_der_u32(&[0x02, 0x02, 0x01, 0x23]), Ok((empty, 0x123)));
+    assert_eq!(
+        parse_der_u32(&[0x02, 0x02, 0xff, 0xff]),
+        Ok((empty, 0xffff))
+    );
+    assert_eq!(
+        parse_der_u32(&[0x02, 0x03, 0x01, 0x23, 0x45]),
+        Ok((empty, 0x12345))
+    );
+    assert_eq!(
+        parse_der_u32(&[0x02, 0x03, 0xff, 0xff, 0xff]),
+        Ok((empty, 0xffffff))
+    );
+    assert_eq!(
+        parse_der_u32(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),
+        Ok((empty, 0x1234567))
+    );
+    assert_eq!(
+        parse_der_u32(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),
+        Ok((empty, 0xffffffff))
+    );
     let s = &[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89];
-    assert_eq!(parse_der_u32(s),Err(Err::Error(error_position!(&s[2..],ErrorKind::Custom(BER_INTEGER_TOO_LARGE)))));
+    assert_eq!(
+        parse_der_u32(s),
+        Err(Err::Error(error_position!(
+            &s[2..],
+            ErrorKind::Custom(BER_INTEGER_TOO_LARGE)
+        )))
+    );
     let s = &[0x01, 0x01, 0xff];
-    assert_eq!(parse_der_u32(s),Err(Err::Error(error_position!(&s[2..], ErrorKind::Custom(BER_TAG_ERROR)))));
+    assert_eq!(
+        parse_der_u32(s),
+        Err(Err::Error(error_position!(
+            &s[2..],
+            ErrorKind::Custom(BER_TAG_ERROR)
+        )))
+    );
 }
 
 #[test]
 fn test_parse_u64() {
     let empty = &b""[..];
-    assert_eq!(parse_der_u64(&[0x02, 0x01, 0x01]),Ok((empty,1)));
-    assert_eq!(parse_der_u64(&[0x02, 0x01, 0xff]),Ok((empty,255)));
-    assert_eq!(parse_der_u64(&[0x02, 0x02, 0x01, 0x23]),Ok((empty,0x123)));
-    assert_eq!(parse_der_u64(&[0x02, 0x02, 0xff, 0xff]),Ok((empty,0xffff)));
-    assert_eq!(parse_der_u64(&[0x02, 0x03, 0x01, 0x23, 0x45]),Ok((empty,0x12345)));
-    assert_eq!(parse_der_u64(&[0x02, 0x03, 0xff, 0xff, 0xff]),Ok((empty,0xffffff)));
-    assert_eq!(parse_der_u64(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),Ok((empty,0x1234567)));
-    assert_eq!(parse_der_u64(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),Ok((empty,0xffffffff)));
-    assert_eq!(parse_der_u64(&[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89]),Ok((empty,0x123456789)));
+    assert_eq!(parse_der_u64(&[0x02, 0x01, 0x01]), Ok((empty, 1)));
+    assert_eq!(parse_der_u64(&[0x02, 0x01, 0xff]), Ok((empty, 255)));
+    assert_eq!(parse_der_u64(&[0x02, 0x02, 0x01, 0x23]), Ok((empty, 0x123)));
+    assert_eq!(
+        parse_der_u64(&[0x02, 0x02, 0xff, 0xff]),
+        Ok((empty, 0xffff))
+    );
+    assert_eq!(
+        parse_der_u64(&[0x02, 0x03, 0x01, 0x23, 0x45]),
+        Ok((empty, 0x12345))
+    );
+    assert_eq!(
+        parse_der_u64(&[0x02, 0x03, 0xff, 0xff, 0xff]),
+        Ok((empty, 0xffffff))
+    );
+    assert_eq!(
+        parse_der_u64(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),
+        Ok((empty, 0x1234567))
+    );
+    assert_eq!(
+        parse_der_u64(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),
+        Ok((empty, 0xffffffff))
+    );
+    assert_eq!(
+        parse_der_u64(&[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89]),
+        Ok((empty, 0x123456789))
+    );
     let s = &[0x01, 0x01, 0xff];
-    assert_eq!(parse_der_u64(s),Err(Err::Error(error_position!(&s[2..], ErrorKind::Custom(BER_TAG_ERROR)))));
+    assert_eq!(
+        parse_der_u64(s),
+        Err(Err::Error(error_position!(
+            &s[2..],
+            ErrorKind::Custom(BER_TAG_ERROR)
+        )))
+    );
 }
