@@ -7,8 +7,6 @@ use std::convert::AsRef;
 use oid::Oid;
 
 /// Defined in X.680 section 8.4
-/// X.690 doesn't specify the maxmimum tag size so we're assuming that people
-/// aren't going to need anything more than a u32.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct BerTag(pub u32);
 

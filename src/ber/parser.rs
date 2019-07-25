@@ -32,17 +32,6 @@ pub(crate) fn parse_identifier(i: &[u8]) -> IResult<&[u8], (u8, u8, u32)> {
         if c == 0x1f {
             c = 0;
             loop {
-                // Make sure we don't read past the end of our data.
-                error_if!(
-                    i,
-                    tag_byte_count >= i.len(),
-                    ErrorKind::Custom(BER_TAG_ERROR)
-                )?;
-
-                // With tag defined as u32 the most we can fit in is four tag bytes.
-                // (X.690 doesn't actually specify maximum tag width.)
-                error_if!(i, tag_byte_count > 5, ErrorKind::Custom(BER_TAG_ERROR))?;
-
                 c = (c << 7) | ((i[tag_byte_count] as u32) & 0x7f);
                 let done = i[tag_byte_count] & 0x80 == 0;
                 tag_byte_count += 1;
