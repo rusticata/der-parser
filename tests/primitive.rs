@@ -36,19 +36,13 @@ fn test_rel_oid() {
 
 #[test]
 fn test_unknown_tag() {
-    let bytes = hex!("1d 01 00");
+    let bytes = hex!("1f 01 00");
     let res = parse_ber(&bytes).expect("parsing failed");
     assert!(res.0.is_empty());
-    assert_eq!(
-        res.1,
-        BerObject::from_obj(BerObjectContent::Unknown(BerTag(0x1d), &bytes[2..]))
-    );
+    assert_eq!(res.1, BerObject::from_obj(BerObjectContent::Unknown(BerTag(0x1f), &bytes[2..])));
     let res = parse_der(&bytes).expect("parsing failed");
     assert!(res.0.is_empty());
-    assert_eq!(
-        res.1,
-        BerObject::from_obj(BerObjectContent::Unknown(BerTag(0x1d), &bytes[2..]))
-    );
+    assert_eq!(res.1, BerObject::from_obj(BerObjectContent::Unknown(BerTag(0x1f), &bytes[2..])));
 }
 
 #[test]
@@ -56,48 +50,12 @@ fn test_unknown_context_specific() {
     let bytes = hex!("80 01 00");
     let res = parse_ber(&bytes).expect("parsing failed");
     assert!(res.0.is_empty());
-    assert_eq!(
-        res.1,
-        BerObject {
-            class: 2,
-            structured: 0,
-            tag: BerTag(0),
-            content: BerObjectContent::Unknown(BerTag(0x0), &bytes[2..])
-        }
-    );
-}
-
-#[test]
-fn test_unknown_long_tag() {
-    let bytes = hex!("9f 22 01 00");
-    let res = parse_ber(&bytes).expect("parsing failed");
-    assert!(res.0.is_empty());
-    assert_eq!(
-        res.1,
-        BerObject {
-            class: 2,
-            structured: 0,
-            tag: BerTag(0x22),
-            content: BerObjectContent::Unknown(BerTag(0x22), &bytes[3..])
-        }
-    );
-}
-
-#[test]
-fn test_unknown_longer_tag() {
-    let bytes = hex!("9f a2 22 01 00");
-    println!("{:?}", parse_ber(&bytes));
-    let res = parse_ber(&bytes).expect("parsing failed");
-    assert!(res.0.is_empty());
-    assert_eq!(
-        res.1,
-        BerObject {
-            class: 2,
-            structured: 0,
-            tag: BerTag(0x1122),
-            content: BerObjectContent::Unknown(BerTag(0x1122), &bytes[4..])
-        }
-    );
+    assert_eq!(res.1, BerObject{
+        class: 2,
+        structured: 0,
+        tag: BerTag(0),
+        content: BerObjectContent::Unknown(BerTag(0x0), &bytes[2..])
+    });
 }
 
 #[test]
