@@ -16,7 +16,8 @@ use der_parser::ber::{BerObjectHeader, BerTag};
 use der_parser::der::{
     der_read_element_header, parse_der, parse_der_integer, parse_der_u32, DerObject,
 };
-use nom::{ErrorKind, IResult};
+use der_parser::error::BerError;
+use nom::IResult;
 
 #[bench]
 fn bench_der_read_element_header(b: &mut Bencher) {
@@ -89,8 +90,8 @@ fn bench_parse_der_seq(b: &mut Bencher) {
 
 #[bench]
 fn bench_parse_der_seq_macros(b: &mut Bencher) {
-    fn localparse_seq(i: &[u8]) -> IResult<&[u8], DerObject> {
-        parse_der_sequence_defined_m!(i, parse_der_integer >> parse_der_integer)
+    fn localparse_seq(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+        parse_der_sequence_defined!(i, parse_der_integer >> parse_der_integer)
     }
     let bytes = hex!("30 0a 02 03 01 00 01 02 03 01 00 00");
     b.iter(|| {
