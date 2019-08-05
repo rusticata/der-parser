@@ -24,6 +24,10 @@ include = [
   "tests/*.rs"
 ]
 
+[package.metadata.docs.rs]
+features = [ "bigint" ]
+all-features = true
+
 [dependencies]
 nom = "5.0"
 rusticata-macros = "2.0.2"
