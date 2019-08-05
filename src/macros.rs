@@ -66,13 +66,9 @@ macro_rules! parse_ber_defined_m(
     );
 );
 
-/// Parse a sequence of DER elements (macro version)
+/// Parse a defined sequence of DER elements (macro version)
 ///
-/// Unlike [`parse_der_sequence`](fn.parse_der_sequence.html), this function allows to specify the
-/// list of expected types in the DER sequence.
-///
-/// Similar to [`parse_der_sequence_defined`](macro.parse_der_sequence_defined.html), but not using `fold`.
-/// This allow using macros.
+/// Given a list of expected parsers, apply them to build a DER sequence.
 ///
 /// ```rust
 /// # #[macro_use] extern crate nom;
@@ -102,6 +98,7 @@ macro_rules! parse_ber_defined_m(
 /// # }
 /// ```
 #[macro_export]
+#[deprecated(since = "3.0.0", note = "Use parse_der_sequence_defined")]
 macro_rules! parse_der_sequence_defined_m(
     ($i:expr, $($args:tt)*) => ({
         map!(
@@ -112,13 +109,9 @@ macro_rules! parse_der_sequence_defined_m(
     });
 );
 
-/// Parse a set of DER elements (macro version)
+/// Parse a defined set of DER elements
 ///
-/// Unlike [`parse_der_set`](fn.parse_der_set.html), this function allows to specify the
-/// list of expected types in the DER set.
-///
-/// Similar to [`parse_der_set_defined`](macro.parse_der_set_defined.html), but not using `fold`.
-/// This allow using macros.
+/// Given a list of expected parsers, apply them to build a DER set.
 ///
 /// ```rust
 /// # #[macro_use] extern crate nom;
@@ -148,6 +141,7 @@ macro_rules! parse_der_sequence_defined_m(
 /// # }
 /// ```
 #[macro_export]
+#[deprecated(since = "3.0.0", note = "Use parse_der_set_defined")]
 macro_rules! parse_der_set_defined_m(
     ($i:expr, $($args:tt)*) => ({
         map!(
@@ -213,14 +207,9 @@ macro_rules! parse_der_defined(
     );
 );
 
-/// Parse a sequence of DER elements (folding version)
+/// Parse a defined sequence of DER elements
 ///
-/// Unlike [`parse_der_sequence`](fn.parse_der_sequence.html), this function allows to specify the
-/// list of expected types in the DER sequence.
-///
-/// Similar to [`parse_der_sequence_defined_m`](macro.parse_der_sequence_defined_m.html), but uses
-/// `fold` internally.
-/// Because of that, macros cannot be used as subparsers.
+/// Given a list of expected parsers, apply them to build a DER sequence.
 ///
 /// ```rust
 /// # #[macro_use] extern crate nom;
@@ -269,14 +258,9 @@ macro_rules! parse_der_sequence_defined(
 //     });
 // );
 
-/// Parse a set of DER elements (folding version)
+/// Parse a defined set of DER elements
 ///
-/// Unlike [`parse_der_set`](fn.parse_der_set.html), this function allows to specify the
-/// list of expected types in the DER sequence.
-///
-/// Similar to [`parse_der_set_defined_m`](macro.parse_der_set_defined_m.html), but uses
-/// `fold` internally.
-/// Because of that, macros cannot be used as subparsers.
+/// Given a list of expected parsers, apply them to build a DER set.
 ///
 /// ```rust
 /// # #[macro_use] extern crate nom;
