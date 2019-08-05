@@ -25,8 +25,8 @@ include = [
 ]
 
 [dependencies]
-nom = {version = "4.2", features = ["verbose-errors"]}
-rusticata-macros = "1.0"
+nom = "5.0"
+rusticata-macros = "2.0.2"
 num-bigint = { version = "0.2", optional = true }
 
 [features]
@@ -36,7 +36,6 @@ bigint = ["num-bigint"]
 [dev-dependencies]
 hex-literal = "0.2"
 pretty_assertions = "0.6"
-
 
 [badges]
 travis-ci = { repository = "rusticata/der-parser" }

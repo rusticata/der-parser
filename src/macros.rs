@@ -1,30 +1,3 @@
-/// Combination and flat_map! and take! as first combinator
-#[macro_export]
-macro_rules! flat_take (
-    ($i:expr, $len:expr, $f:ident) => ({
-        if $i.len() < $len { Err(::nom::Err::Incomplete(::nom::Needed::Size($len))) }
-        else {
-            let taken = &$i[0..$len];
-            let rem = &$i[$len..];
-            match $f(taken) {
-                Ok((_,res)) => Ok((rem,res)),
-                Err(e)      => Err(e)
-            }
-        }
-    });
-    ($i:expr, $len:expr, $submac:ident!( $($args:tt)*)) => ({
-        if $i.len() < $len { Err(::nom::Err::Incomplete(::nom::Needed::Size($len))) }
-        else {
-            let taken = &$i[0..$len];
-            let rem = &$i[$len..];
-            match $submac!(taken, $($args)*) {
-                Ok((_,res)) => Ok((rem,res)),
-                Err(e)      => Err(e)
-            }
-        }
-    });
-);
-
 /// Internal parser, do not use directly
 #[doc(hidden)]
 #[macro_export]
@@ -79,12 +52,13 @@ macro_rules! parse_ber_defined_m(
     ($i:expr, $tag:expr, $($args:tt)*) => (
         {
             use $crate::ber::ber_read_element_header;
+            use $crate::fold_der_defined_m;
             do_parse!(
                 $i,
                 hdr:     ber_read_element_header >>
-                         error_if!(hdr.class != 0b00, ErrorKind::Custom($crate::error::BER_CLASS_ERROR)) >>
-                         error_if!(hdr.structured != 0b1, ErrorKind::Custom($crate::error::BER_STRUCT_ERROR)) >>
-                         error_if!(hdr.tag != $tag, ErrorKind::Custom($crate::error::BER_TAG_ERROR)) >>
+                         custom_check!(hdr.class != 0b00, $crate::error::BerError::InvalidClass) >>
+                         custom_check!(hdr.structured != 0b1, $crate::error::BerError::ConstructExpected) >>
+                         custom_check!(hdr.tag != $tag, $crate::error::BerError::InvalidTag) >>
                 content: flat_take!(hdr.len as usize, fold_der_defined_m!( $($args)* )) >>
                 (hdr,content)
             )
@@ -105,10 +79,11 @@ macro_rules! parse_ber_defined_m(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// use der_parser::ber::*;
-/// use nom::{IResult,Err,ErrorKind};
+/// use der_parser::error::BerError;
+/// use nom::{IResult,Err};
 ///
 /// # fn main() {
-/// fn localparse_seq(i:&[u8]) -> IResult<&[u8],BerObject> {
+/// fn localparse_seq(i:&[u8]) -> IResult<&[u8], BerObject, BerError> {
 ///     parse_der_sequence_defined_m!(i,
 ///         parse_ber_integer >>
 ///         call!(parse_ber_integer)
@@ -150,10 +125,11 @@ macro_rules! parse_der_sequence_defined_m(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// use der_parser::ber::*;
-/// use nom::{IResult,Err,ErrorKind};
+/// use der_parser::error::BerError;
+/// use nom::{IResult,Err};
 ///
 /// # fn main() {
-/// fn localparse_set(i:&[u8]) -> IResult<&[u8],BerObject> {
+/// fn localparse_set(i:&[u8]) -> IResult<&[u8],BerObject,BerError> {
 ///     parse_der_set_defined_m!(i,
 ///         parse_ber_integer >>
 ///         call!(parse_ber_integer)
@@ -208,17 +184,16 @@ macro_rules! fold_parsers(
 #[doc(hidden)]
 #[macro_export]
 macro_rules! parse_der_defined(
-    ($i:expr, $ty:expr, $($args:tt)*) => (
+    ($i:expr, $tag:expr, $($args:tt)*) => (
         {
             use $crate::ber::ber_read_element_header;
-            use nom::ErrorKind;
             let res =
             do_parse!(
                 $i,
                 hdr:     ber_read_element_header >>
-                         error_if!(hdr.class != 0b00, ErrorKind::Custom($crate::error::BER_CLASS_ERROR)) >>
-                         error_if!(hdr.structured != 0b1, ErrorKind::Custom($crate::error::BER_STRUCT_ERROR)) >>
-                         error_if!(hdr.tag != $ty, ErrorKind::Custom($crate::error::BER_TAG_ERROR)) >>
+                         custom_check!(hdr.class != 0b00, $crate::error::BerError::InvalidClass) >>
+                         custom_check!(hdr.structured != 0b1, $crate::error::BerError::ConstructExpected) >>
+                         custom_check!(hdr.tag != $tag, $crate::error::BerError::InvalidTag) >>
                 content: take!(hdr.len) >>
                 (hdr,content)
             );
@@ -226,7 +201,7 @@ macro_rules! parse_der_defined(
                 Ok((_rem,o)) => {
                     match fold_parsers!(o.1, $($args)* ) {
                         Ok((rem,v)) => {
-                            if rem.len() != 0 { Err(::nom::Err::Error(error_position!($i, ErrorKind::Custom($crate::error::BER_OBJ_TOOSHORT)))) }
+                            if rem.len() != 0 { Err(::nom::Err::Error($crate::error::BerError::ObjectTooShort)) }
                             else { Ok((_rem,(o.0,v))) }
                         },
                         Err(e)      => Err(e)
@@ -252,12 +227,13 @@ macro_rules! parse_der_defined(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// use der_parser::ber::*;
-/// use nom::{IResult,Err,ErrorKind};
+/// use der_parser::error::BerError;
+/// use nom::{IResult,Err};
 ///
 /// # fn main() {
-/// fn localparse_seq(i:&[u8]) -> IResult<&[u8],BerObject> {
+/// fn localparse_seq(i:&[u8]) -> IResult<&[u8],BerObject,BerError> {
 ///     parse_der_sequence_defined!(i,
-///         parse_ber_integer,
+///         parse_ber_integer >>
 ///         parse_ber_integer
 ///     )
 /// }
@@ -275,14 +251,23 @@ macro_rules! parse_der_defined(
 /// ```
 #[macro_export]
 macro_rules! parse_der_sequence_defined(
-    ($i:expr, $($args:tt)*) => (
+    ($i:expr, $($args:tt)*) => ({
         map!(
             $i,
-            parse_der_defined!($crate::ber::BerTag::Sequence, $($args)*),
+            parse_ber_defined_m!($crate::ber::BerTag::Sequence, $($args)*),
             |(hdr,o)| $crate::ber::BerObject::from_header_and_content(hdr,$crate::ber::BerObjectContent::Sequence(o))
         )
-    );
+    });
 );
+// macro_rules! parse_der_sequence_defined(
+//     ($i:expr, $($args:tt)*) => ({
+//         map!(
+//             $i,
+//             parse_der_defined!($crate::ber::BerTag::Sequence, $($args)*),
+//             |(hdr,o)| $crate::ber::BerObject::from_header_and_content(hdr,$crate::ber::BerObjectContent::Sequence(o))
+//         )
+//     });
+// );
 
 /// Parse a set of DER elements (folding version)
 ///
@@ -298,12 +283,13 @@ macro_rules! parse_der_sequence_defined(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// use der_parser::ber::*;
-/// use nom::{IResult,Err,ErrorKind};
+/// use der_parser::error::BerError;
+/// use nom::{IResult,Err};
 ///
 /// # fn main() {
-/// fn localparse_set(i:&[u8]) -> IResult<&[u8],BerObject> {
+/// fn localparse_set(i:&[u8]) -> IResult<&[u8],BerObject,BerError> {
 ///     parse_der_set_defined!(i,
-///         parse_ber_integer,
+///         parse_ber_integer >>
 ///         parse_ber_integer
 ///     )
 /// }
@@ -321,14 +307,24 @@ macro_rules! parse_der_sequence_defined(
 /// ```
 #[macro_export]
 macro_rules! parse_der_set_defined(
-    ($i:expr, $($args:tt)*) => (
+    ($i:expr, $($args:tt)*) => ({
         map!(
             $i,
-            parse_der_defined!($crate::ber::BerTag::Set, $($args)*),
+            parse_ber_defined_m!($crate::ber::BerTag::Set, $($args)*),
             |(hdr,o)| $crate::ber::BerObject::from_header_and_content(hdr,$crate::ber::BerObjectContent::Set(o))
         )
-    );
+    });
 );
+// #[macro_export]
+// macro_rules! parse_der_set_defined(
+//     ($i:expr, $($args:tt)*) => (
+//         map!(
+//             $i,
+//             parse_der_defined!($crate::ber::BerTag::Set, $($args)*),
+//             |(hdr,o)| $crate::ber::BerObject::from_header_and_content(hdr,$crate::ber::BerObjectContent::Set(o))
+//         )
+//     );
+// );
 
 /// Parse a sequence of identical DER elements
 ///
@@ -339,10 +335,11 @@ macro_rules! parse_der_set_defined(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// use der_parser::ber::*;
-/// use nom::{IResult,Err,ErrorKind};
+/// use der_parser::error::BerError;
+/// use nom::{IResult,Err};
 ///
 /// # fn main() {
-/// fn parser(i:&[u8]) -> IResult<&[u8],BerObject> {
+/// fn parser(i:&[u8]) -> IResult<&[u8],BerObject,BerError> {
 ///     parse_der_sequence_of!(i, parse_ber_integer)
 /// };
 /// let empty = &b""[..];
@@ -364,7 +361,7 @@ macro_rules! parse_der_sequence_of(
         do_parse!(
             $i,
             hdr:     ber_read_element_header >>
-                     error_if!(hdr.tag != $crate::ber::BerTag::Sequence, ErrorKind::Custom($crate::error::BER_TAG_ERROR)) >>
+                     custom_check!(hdr.tag != $crate::ber::BerTag::Sequence, $crate::error::BerError::InvalidTag) >>
             content: flat_take!(hdr.len as usize,
                 do_parse!(
                     r: many0!(complete!($f)) >>
@@ -386,10 +383,11 @@ macro_rules! parse_der_sequence_of(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// use der_parser::ber::*;
-/// use nom::{IResult,Err,ErrorKind};
+/// use der_parser::error::BerError;
+/// use nom::{IResult,Err};
 ///
 /// # fn main() {
-/// fn parser(i:&[u8]) -> IResult<&[u8],BerObject> {
+/// fn parser(i:&[u8]) -> IResult<&[u8],BerObject,BerError> {
 ///     parse_der_set_of!(i, parse_ber_integer)
 /// };
 /// let empty = &b""[..];
@@ -411,7 +409,7 @@ macro_rules! parse_der_set_of(
         do_parse!(
             $i,
             hdr:     ber_read_element_header >>
-                     error_if!(hdr.tag != $crate::ber::BerTag::Set, ErrorKind::Custom($crate::error::BER_TAG_ERROR)) >>
+                     custom_check!(hdr.tag != $crate::ber::BerTag::Set, $crate::error::BerError::InvalidTag) >>
             content: flat_take!(hdr.len as usize,
                 do_parse!(
                     r: many0!(complete!($f)) >>
@@ -434,7 +432,8 @@ macro_rules! parse_der_set_of(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// use der_parser::ber::*;
-/// use nom::{IResult,Err,ErrorKind};
+/// use der_parser::error::BerError;
+/// use nom::{IResult,Err};
 ///
 /// # fn main() {
 /// let empty = &b""[..];
@@ -457,12 +456,12 @@ macro_rules! parse_der_set_of(
 ///     BerObject::from_int_slice(b"\x01\x00\x01"),
 /// ]);
 ///
-/// fn parse_optional_enum(i:&[u8]) -> IResult<&[u8],BerObject> {
+/// fn parse_optional_enum(i:&[u8]) -> IResult<&[u8],BerObject, BerError> {
 ///     parse_der_optional!(i, parse_ber_enum)
 /// }
-/// fn parser(i:&[u8]) -> IResult<&[u8],BerObject> {
-///     parse_der_sequence_defined!(i,
-///         parse_optional_enum,
+/// fn parser(i:&[u8]) -> IResult<&[u8],BerObject, BerError> {
+///     parse_der_sequence_defined_m!(i,
+///         parse_optional_enum >>
 ///         parse_ber_integer
 ///     )
 /// };
@@ -474,17 +473,17 @@ macro_rules! parse_der_set_of(
 #[macro_export]
 macro_rules! parse_der_optional(
     ($i:expr, $f:ident) => (
-        alt_complete!(
+        alt!(
             $i,
-            do_parse!(
+            complete!(do_parse!(
                 content: call!($f) >>
                 (
                     $crate::ber::BerObject::from_obj(
                         $crate::ber::BerObjectContent::ContextSpecific($crate::ber::BerTag(0) /* XXX */,Some(Box::new(content)))
                     )
                 )
-            ) |
-            apply!($crate::ber::parse_ber_explicit_failed,$crate::ber::BerTag(0) /* XXX */)
+            )) |
+            complete!(call!($crate::ber::parse_ber_explicit_failed,$crate::ber::BerTag(0) /* XXX */))
         )
     )
 );
@@ -516,7 +515,8 @@ macro_rules! parse_der_optional(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// use der_parser::ber::*;
-/// use nom::{IResult,Err,ErrorKind};
+/// # use der_parser::error::BerError;
+/// use nom::{IResult,Err};
 ///
 /// # fn main() {
 /// #[derive(Debug, PartialEq)]
@@ -525,7 +525,7 @@ macro_rules! parse_der_optional(
 ///     b: BerObject<'a>,
 /// }
 ///
-/// fn parse_struct01(i: &[u8]) -> IResult<&[u8],(BerObjectHeader,MyStruct)> {
+/// fn parse_struct01(i: &[u8]) -> IResult<&[u8],(BerObjectHeader,MyStruct), BerError> {
 ///     parse_der_struct!(
 ///         i,
 ///         a: parse_ber_integer >>
@@ -564,14 +564,15 @@ macro_rules! parse_der_optional(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// # use der_parser::ber::*;
-/// # use nom::{IResult,Err,ErrorKind};
+/// # use der_parser::error::BerError;
+/// # use nom::{IResult,Err};
 /// # fn main() {
 /// struct MyStruct<'a>{
 ///     a: BerObject<'a>,
 ///     b: BerObject<'a>,
 /// }
 ///
-/// fn parse_struct_with_tag(i: &[u8]) -> IResult<&[u8],(BerObjectHeader,MyStruct)> {
+/// fn parse_struct_with_tag(i: &[u8]) -> IResult<&[u8],(BerObjectHeader,MyStruct), BerError> {
 ///     parse_der_struct!(
 ///         i,
 ///         TAG BerTag::Sequence,
@@ -589,7 +590,7 @@ macro_rules! parse_der_struct(
         use $crate::ber::{BerObjectHeader,ber_read_element_header};
         do_parse!(
             $i,
-            hdr: verify!(ber_read_element_header, |ref hdr: BerObjectHeader|
+            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader|
                          hdr.structured == 1 && hdr.tag == $tag) >>
             res: flat_take!(hdr.len as usize, do_parse!( $($rest)* )) >>
             (hdr,res)
@@ -599,7 +600,7 @@ macro_rules! parse_der_struct(
         use $crate::ber::{BerObjectHeader,ber_read_element_header};
         do_parse!(
             $i,
-            hdr: verify!(ber_read_element_header, |ref hdr: BerObjectHeader| hdr.structured == 1) >>
+            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader| hdr.structured == 1) >>
             res: flat_take!(hdr.len as usize, do_parse!( $($rest)* )) >>
             (hdr,res)
         )
@@ -630,10 +631,11 @@ macro_rules! parse_der_struct(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// use der_parser::ber::*;
-/// use nom::{IResult,Err,ErrorKind};
+/// use der_parser::error::BerError;
+/// use nom::{IResult,Err};
 ///
 /// # fn main() {
-/// fn parse_int_explicit(i:&[u8]) -> IResult<&[u8],u32> {
+/// fn parse_int_explicit(i:&[u8]) -> IResult<&[u8],u32,BerError> {
 ///     map_res!(
 ///         i,
 ///         parse_der_tagged!(EXPLICIT 2, parse_ber_integer),
@@ -659,10 +661,11 @@ macro_rules! parse_der_struct(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// use der_parser::ber::*;
-/// use nom::{IResult,Err,ErrorKind};
+/// use der_parser::error::BerError;
+/// use nom::{IResult,Err};
 ///
 /// # fn main() {
-/// fn parse_int_implicit(i:&[u8]) -> IResult<&[u8],u32> {
+/// fn parse_int_implicit(i:&[u8]) -> IResult<&[u8],u32,BerError> {
 ///     map_res!(
 ///         i,
 ///         parse_der_tagged!(IMPLICIT 2, BerTag::Integer),
@@ -686,7 +689,7 @@ macro_rules! parse_der_tagged(
         use $crate::ber::{BerObjectHeader,ber_read_element_header};
         do_parse!(
             $i,
-            hdr: verify!(ber_read_element_header, |ref hdr: BerObjectHeader| hdr.tag.0 == $tag) >>
+            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader| hdr.tag.0 == $tag) >>
             res: flat_take!(hdr.len as usize, call!( $f )) >>
             (res)
         )
@@ -695,7 +698,7 @@ macro_rules! parse_der_tagged(
         use $crate::ber::{BerObjectHeader,ber_read_element_header};
         do_parse!(
             $i,
-            hdr: verify!(ber_read_element_header, |ref hdr: BerObjectHeader| hdr.tag.0 == $tag) >>
+            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader| hdr.tag.0 == $tag) >>
             res: flat_take!(hdr.len as usize, $submac!( $($args)* )) >>
             (res)
         )
@@ -704,7 +707,7 @@ macro_rules! parse_der_tagged(
         use $crate::ber::{BerObjectHeader,ber_read_element_header,ber_read_element_content_as};
         do_parse!(
             $i,
-            hdr: verify!(ber_read_element_header, |ref hdr: BerObjectHeader| hdr.tag.0 == $tag) >>
+            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader| hdr.tag.0 == $tag) >>
             res: call!(ber_read_element_content_as, $type, hdr.len as usize, hdr.is_constructed(), 0) >>
             (BerObject::from_obj(res))
         )
@@ -732,14 +735,15 @@ macro_rules! parse_der_tagged(
 /// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// use der_parser::ber::*;
-/// use nom::{IResult,Err,ErrorKind};
+/// use der_parser::error::BerError;
+/// use nom::{IResult,Err};
 ///
 /// # fn main() {
 /// #[derive(Debug, PartialEq)]
 /// struct SimpleStruct {
 ///     a: u32,
 /// };
-/// fn parse_app01(i:&[u8]) -> IResult<&[u8],(BerObjectHeader,SimpleStruct)> {
+/// fn parse_app01(i:&[u8]) -> IResult<&[u8],(BerObjectHeader,SimpleStruct),BerError> {
 ///     parse_der_application!(
 ///         i,
 ///         APPLICATION 2,
@@ -768,7 +772,7 @@ macro_rules! parse_der_application(
         use $crate::ber::{BerObjectHeader,ber_read_element_header};
         do_parse!(
             $i,
-            hdr: verify!(ber_read_element_header, |ref hdr: BerObjectHeader|
+            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader|
                          hdr.class == 0b01 && hdr.tag.0 == $tag) >>
             res: flat_take!(hdr.len as usize, do_parse!( $($rest)* )) >>
             (hdr,res)

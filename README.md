@@ -47,11 +47,12 @@ For example, to read a sequence containing two integers:
 
 ```rust
 use der_parser::ber::*;
-use nom::{IResult,Err,ErrorKind};
+use der_parser::error::BerError;
+use nom::{IResult,Err};
 
-fn localparse_seq(i:&[u8]) -> IResult<&[u8],BerObject> {
+fn localparse_seq(i:&[u8]) -> IResult<&[u8], BerObject, BerError> {
     parse_der_sequence_defined!(i,
-        parse_ber_integer,
+        parse_ber_integer >>
         parse_ber_integer
     )
 }
@@ -92,6 +93,11 @@ or use the `bigint` feature of this crate and use
 <!-- cargo-sync-readme end -->
 
 ## Changes
+
+### 3.0.0
+
+- Upgrade to nom 5 (breaks API)
+- New error types, now all functions use `BerError`
 
 ### 2.1.0
 

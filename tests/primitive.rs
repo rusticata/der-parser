@@ -10,8 +10,7 @@ use der_parser::ber::*;
 use der_parser::der::*;
 use der_parser::error::*;
 use der_parser::oid::Oid;
-use der_parser::*;
-use nom::{Context, Err, ErrorKind, Needed};
+use nom::{Err, Needed};
 
 #[test]
 fn test_flat_take() {
@@ -176,10 +175,10 @@ fn test_invalid_length() {
     let res = parse_ber(&bytes)
         .err()
         .expect("parsing should have returned error");
-    // get errorkind
+    // get error
     match res {
-        Err::Error(Context::Code(_, code)) => {
-            assert_eq!(code, ErrorKind::Custom(BER_INVALID_LENGTH));
+        Err::Error(e) => {
+            assert_eq!(e, BerError::InvalidLength);
         }
         _ => assert!(false),
     }

@@ -11,7 +11,8 @@ extern crate nom;
 use der_parser::ber::*;
 use der_parser::error::*;
 use der_parser::*;
-use nom::{be_u16, be_u32, Err, ErrorKind, IResult, Needed};
+use nom::error::ErrorKind;
+use nom::{Err, IResult};
 use oid::Oid;
 
 #[derive(Debug, PartialEq)]
@@ -20,14 +21,14 @@ struct MyStruct<'a> {
     b: BerObject<'a>,
 }
 
-fn parse_struct01(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, MyStruct)> {
+fn parse_struct01(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, MyStruct), BerError> {
     parse_der_struct!(
         i,
         a: parse_ber_integer >> b: parse_ber_integer >> (MyStruct { a: a, b: b })
     )
 }
 
-fn parse_struct01_complete(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, MyStruct)> {
+fn parse_struct01_complete(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, MyStruct), BerError> {
     parse_der_struct!(
         i,
         a: parse_ber_integer >> b: parse_ber_integer >> empty!() >> (MyStruct { a: a, b: b })
@@ -36,13 +37,13 @@ fn parse_struct01_complete(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, MyStruc
 
 // calling user function
 #[allow(dead_code)]
-fn parse_struct02(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, ())> {
+fn parse_struct02(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, ()), BerError> {
     parse_der_struct!(i, _a: parse_ber_integer >> _b: parse_struct01 >> (()))
 }
 
 // embedded DER structs
 #[allow(dead_code)]
-fn parse_struct03(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, ())> {
+fn parse_struct03(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, ()), BerError> {
     parse_der_struct!(
         i,
         _a: parse_ber_integer >> _b: parse_der_struct!(parse_ber_integer >> (())) >> (())
@@ -50,7 +51,7 @@ fn parse_struct03(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, ())> {
 }
 
 // verifying tag
-fn parse_struct04(i: &[u8], tag: BerTag) -> IResult<&[u8], (BerObjectHeader, MyStruct)> {
+fn parse_struct04(i: &[u8], tag: BerTag) -> IResult<&[u8], (BerObjectHeader, MyStruct), BerError> {
     parse_der_struct!(
         i,
         TAG tag,
@@ -130,13 +131,13 @@ fn struct02() {
             },
         ],
     };
-    fn parse_directory_string(i: &[u8]) -> IResult<&[u8], BerObject> {
+    fn parse_directory_string(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
         alt!(
             i,
             parse_ber_utf8string | parse_ber_printablestring | parse_ber_ia5string
         )
     }
-    fn parse_attr_type_and_value(i: &[u8]) -> IResult<&[u8], Attr> {
+    fn parse_attr_type_and_value(i: &[u8]) -> IResult<&[u8], Attr, BerError> {
         parse_der_struct!(
             i,
             o: map_res!(parse_ber_oid, |x: BerObject| x.as_oid().map(|o| o.clone()))
@@ -145,11 +146,11 @@ fn struct02() {
         )
         .map(|(rem, x)| (rem, x.1))
     };
-    fn parse_rdn(i: &[u8]) -> IResult<&[u8], Rdn> {
+    fn parse_rdn(i: &[u8]) -> IResult<&[u8], Rdn, BerError> {
         parse_der_struct!(i, a: parse_attr_type_and_value >> (Rdn { a: a }))
             .map(|(rem, x)| (rem, x.1))
     }
-    fn parse_name(i: &[u8]) -> IResult<&[u8], Name> {
+    fn parse_name(i: &[u8]) -> IResult<&[u8], Name, BerError> {
         parse_der_struct!(i, l: many0!(complete!(parse_rdn)) >> (Name { l: l }))
             .map(|(rem, x)| (rem, x.1))
     }
@@ -210,14 +211,14 @@ fn struct_verify_tag() {
 
 #[test]
 fn tagged_explicit() {
-    fn parse_int_explicit(i: &[u8]) -> IResult<&[u8], u32> {
+    fn parse_int_explicit(i: &[u8]) -> IResult<&[u8], u32, BerError> {
         map_res!(
             i,
             parse_der_tagged!(EXPLICIT 2, parse_ber_integer),
             |x: BerObject| x.as_u32()
         )
     }
-    fn parse_int_noexplicit(i: &[u8]) -> IResult<&[u8], u32> {
+    fn parse_int_noexplicit(i: &[u8]) -> IResult<&[u8], u32, BerError> {
         map_res!(
             i,
             parse_der_tagged!(2, parse_ber_integer),
@@ -249,16 +250,13 @@ fn tagged_explicit() {
     // wrong type
     assert_eq!(
         parse_der_tagged!(bytes as &[u8], 2, parse_ber_bool),
-        Err(Err::Error(error_position!(
-            &bytes[4..],
-            ErrorKind::Custom(BER_TAG_ERROR)
-        )))
+        Err(Err::Error(BerError::InvalidTag))
     );
 }
 
 #[test]
 fn tagged_implicit() {
-    fn parse_int_implicit(i: &[u8]) -> IResult<&[u8], u32> {
+    fn parse_int_implicit(i: &[u8]) -> IResult<&[u8], u32, BerError> {
         map_res!(
             i,
             parse_der_tagged!(IMPLICIT 2, BerTag::Integer),
@@ -291,7 +289,7 @@ fn application() {
     struct SimpleStruct {
         a: u32,
     };
-    fn parse_app01(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, SimpleStruct)> {
+    fn parse_app01(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, SimpleStruct), BerError> {
         parse_der_application!(
             i,
             APPLICATION 2,
@@ -311,23 +309,4 @@ fn application() {
         }
         _ => assert!(false),
     }
-}
-
-#[test]
-fn test_flat_take() {
-    let input = &[0x00, 0x01, 0xff];
-    // read first 2 bytes and use correct combinator: OK
-    assert_eq!(flat_take!(input, 2, be_u16), Ok((&input[2..], 0x0001)));
-    // read 3 bytes and use 2: OK (some input is just lost)
-    assert_eq!(flat_take!(input, 3, be_u16), Ok((&b""[..], 0x0001)));
-    // read 2 bytes and a combinator requiring more bytes
-    assert_eq!(
-        flat_take!(input, 2, be_u32),
-        Err(Err::Incomplete(Needed::Size(4)))
-    );
-    // test with macro as sub-combinator
-    assert_eq!(
-        flat_take!(input, 2, call!(be_u16)),
-        Ok((&input[2..], 0x0001))
-    );
 }

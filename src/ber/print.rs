@@ -65,14 +65,14 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
         match self.obj.content {
             BerObjectContent::EndOfContent           => writeln!(f, "EndOfContent"),
             BerObjectContent::Boolean(b)             => writeln!(f, "Boolean({:?})", b),
-            BerObjectContent::Integer(i)             => writeln!(f, "Integer({:?})", debug::HexSlice{d:i}),
+            BerObjectContent::Integer(i)             => writeln!(f, "Integer({:?})", debug::HexSlice(i)),
             BerObjectContent::Enum(i)                => writeln!(f, "Enum({})", i),
             BerObjectContent::OID(ref v)             => writeln!(f, "OID({:?})", v),
             BerObjectContent::RelativeOID(ref v)     => writeln!(f, "RelativeOID({:?})", v),
             BerObjectContent::Null                   => writeln!(f, "Null"),
-            BerObjectContent::OctetString(v)         => writeln!(f, "OctetString({:?})", debug::HexSlice{d:v}),
+            BerObjectContent::OctetString(v)         => writeln!(f, "OctetString({:?})", debug::HexSlice(v)),
             BerObjectContent::BitString(u,BitStringObject{data:v})
-                                                     => writeln!(f, "BitString({},{:?})", u, debug::HexSlice{d:v}),
+                                                     => writeln!(f, "BitString({},{:?})", u, debug::HexSlice(v)),
             BerObjectContent::GeneralizedTime(s)     => print_utf8_string_with_type(f, s, "GeneralizedTime"),
             BerObjectContent::UTCTime(s)             => print_utf8_string_with_type(f, s, "UTCTime"),
             BerObjectContent::PrintableString(s)     => print_utf8_string_with_type(f, s, "PrintableString"),

@@ -3,14 +3,13 @@ extern crate pretty_assertions;
 
 #[macro_use]
 extern crate hex_literal;
-#[macro_use]
-extern crate nom;
 extern crate der_parser;
+extern crate nom;
 
 use der_parser::ber::*;
 use der_parser::error::*;
 use der_parser::oid::*;
-use nom::{Err, ErrorKind};
+use nom::Err;
 
 #[test]
 fn test_ber_bool() {
@@ -25,10 +24,7 @@ fn test_ber_bool() {
     assert_eq!(parse_ber_bool(&[0x01, 0x01, 0x7f]), Ok((empty, b_true)));
     assert_eq!(
         parse_ber_bool(&[0x01, 0x02, 0x12, 0x34]),
-        Err(Err::Error(error_position!(
-            &[0x12, 0x34][..],
-            ErrorKind::Custom(BER_INVALID_LENGTH)
-        )))
+        Err(Err::Error(BerError::InvalidLength))
     );
 }
 
@@ -127,10 +123,7 @@ fn test_ber_bitstring_constructed() {
     ];
     assert_eq!(
         parse_ber_bitstring(bytes),
-        Err(Err::Error(error_position!(
-            &bytes[2..],
-            ErrorKind::Custom(BER_UNSUPPORTED)
-        )))
+        Err(Err::Error(BerError::Unsupported))
     ); // XXX valid encoding
 }
 

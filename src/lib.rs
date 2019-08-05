@@ -44,12 +44,13 @@
 //! # #[macro_use] extern crate rusticata_macros;
 //! # #[macro_use] extern crate der_parser;
 //! use der_parser::ber::*;
-//! use nom::{IResult,Err,ErrorKind};
+//! use der_parser::error::BerError;
+//! use nom::{IResult,Err};
 //!
 //! # fn main() {
-//! fn localparse_seq(i:&[u8]) -> IResult<&[u8],BerObject> {
+//! fn localparse_seq(i:&[u8]) -> IResult<&[u8], BerObject, BerError> {
 //!     parse_der_sequence_defined!(i,
-//!         parse_ber_integer,
+//!         parse_ber_integer >>
 //!         parse_ber_integer
 //!     )
 //! }
