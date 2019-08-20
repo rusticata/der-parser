@@ -31,7 +31,7 @@ all-features = true
 [dependencies]
 nom = "5.0"
 rusticata-macros = "2.0.2"
-num-bigint = { version = "0.2", optional = true }
+num-bigint = { version = ">=0.2, <0.5", optional = true }
 
 [features]
 default = []
