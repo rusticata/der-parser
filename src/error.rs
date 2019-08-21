@@ -1,6 +1,22 @@
 //! Error type for BER/DER parsers
 
+use crate::ber::BerObject;
+use crate::der::DerObject;
 use nom::error::{ErrorKind, ParseError};
+
+/// Holds the result of parsing functions
+///
+/// `O` is the output type, and defaults to a `BerObject`.
+///
+/// Note that this type is also a `Result`, so usual functions (`map`, `unwrap` etc.) are available.
+///
+/// This type is a wrapper around nom's IResult type
+pub type BerResult<'a, O = BerObject<'a>> = ::nom::IResult<&'a [u8], O, BerError>;
+
+/// Holds the result of parsing functions (DER)
+///
+/// Note that this type is also a `Result`, so usual functions (`map`, `unwrap` etc.) are available.
+pub type DerResult<'a> = BerResult<'a, DerObject<'a>>;
 
 /// Error for BER/DER parsers
 #[derive(Debug, PartialEq)]
