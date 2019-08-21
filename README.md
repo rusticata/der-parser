@@ -96,6 +96,13 @@ or use the `bigint` feature of this crate and use
 
 ## Changes
 
+### 3.0.1
+
+- Add crate `BerResult` and `DerResult` types
+- Use crate result types, remove uneeded imports
+  - Crates using `der-parser` do not need to import `nom` or `rusticata-macros` anymore
+  - Result types are aliases, so API is unchanged
+
 ### 3.0.0
 
 - Upgrade to nom 5 (breaks API)
