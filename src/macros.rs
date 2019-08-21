@@ -349,7 +349,7 @@ macro_rules! parse_der_sequence_of(
             content: flat_take!(hdr.len as usize,
                 do_parse!(
                     r: many0!(complete!($f)) >>
-                       empty!() >>
+                       eof!() >>
                     ( r )
                 )
             ) >>
@@ -397,7 +397,7 @@ macro_rules! parse_der_set_of(
             content: flat_take!(hdr.len as usize,
                 do_parse!(
                     r: many0!(complete!($f)) >>
-                       empty!() >>
+                       eof!() >>
                     ( r )
                 )
             ) >>
