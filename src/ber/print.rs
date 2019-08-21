@@ -22,7 +22,7 @@ impl<'a> BerObject<'a> {
     pub fn as_pretty(&'a self, indent: usize, increment: usize) -> PrettyBer<'a> {
         PrettyBer {
             obj: self,
-            indent: indent,
+            indent,
             inc: increment,
 
             flags: Vec::new(),
@@ -39,7 +39,7 @@ impl<'a> PrettyBer<'a> {
 
     pub fn next_indent<'b>(&self, obj: &'b BerObject) -> PrettyBer<'b> {
         PrettyBer {
-            obj: obj,
+            obj,
             indent: self.indent + self.inc,
             inc: self.inc,
             flags: self.flags.to_vec(),

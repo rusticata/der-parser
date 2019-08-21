@@ -10,7 +10,7 @@ pub fn parse_der(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
         i,
         hdr:     der_read_element_header >>
                  // XXX safety check: length cannot be more than 2^32 bytes
-                 custom_check!(hdr.len > ::std::u32::MAX as u64, BerError::InvalidLength) >>
+                 custom_check!(hdr.len > u64::from(::std::u32::MAX), BerError::InvalidLength) >>
         content: call!(der_read_element_content,hdr) >>
         ( content )
     }
@@ -235,15 +235,18 @@ pub fn parse_der_u32(i: &[u8]) -> IResult<&[u8], u32, BerError> {
     match parse_ber_integer(i) {
         Ok((rem, ref obj)) => match obj.content {
             BerObjectContent::Integer(i) => match i.len() {
-                1 => Ok((rem, i[0] as u32)),
-                2 => Ok((rem, (i[0] as u32) << 8 | (i[1] as u32))),
+                1 => Ok((rem, u32::from(i[0]))),
+                2 => Ok((rem, u32::from(i[0]) << 8 | u32::from(i[1]))),
                 3 => Ok((
                     rem,
-                    (i[0] as u32) << 16 | (i[1] as u32) << 8 | (i[2] as u32),
+                    u32::from(i[0]) << 16 | u32::from(i[1]) << 8 | u32::from(i[2]),
                 )),
                 4 => Ok((
                     rem,
-                    (i[0] as u32) << 24 | (i[1] as u32) << 16 | (i[2] as u32) << 8 | (i[3] as u32),
+                    u32::from(i[0]) << 24
+                        | u32::from(i[1]) << 16
+                        | u32::from(i[2]) << 8
+                        | u32::from(i[3]),
                 )),
                 _ => Err(Err::Error(BerError::IntegerTooLarge)),
             },
@@ -371,7 +374,7 @@ pub fn der_read_element_header(i: &[u8]) -> IResult<&[u8], BerObjectHeader, BerE
         llen: cond!(len.0 == 1, take!(len.1)) >>
         ( {
             let len : u64 = match len.0 {
-                0 => len.1 as u64,
+                0 => u64::from(len.1),
                 _ => {
                     // if len is 0xff -> error (8.1.3.5)
                     custom_check!(&i[1..], len.1 == 0b0111_1111, BerError::InvalidLength)?;

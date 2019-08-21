@@ -15,8 +15,8 @@ pub(crate) fn bytes_to_u64(s: &[u8]) -> Result<u64, BerError> {
         if u & 0xff00_0000_0000_0000 != 0 {
             return Err(BerError::IntegerTooLarge);
         }
-        u = u << 8;
-        u |= c as u64;
+        u <<= 8;
+        u |= u64::from(c);
     }
     Ok(u)
 }
@@ -27,7 +27,7 @@ pub(crate) fn parse_identifier(i: &[u8]) -> IResult<&[u8], (u8, u8, u32), BerErr
     } else {
         let a = i[0] >> 6;
         let b = if i[0] & 0b0010_0000 != 0 { 1 } else { 0 };
-        let mut c = (i[0] & 0b0001_1111) as u32;
+        let mut c = u32::from(i[0] & 0b0001_1111);
 
         let mut tag_byte_count = 1;
 
@@ -41,7 +41,7 @@ pub(crate) fn parse_identifier(i: &[u8]) -> IResult<&[u8], (u8, u8, u32), BerErr
                 // (X.690 doesn't actually specify maximum tag width.)
                 custom_check!(i, tag_byte_count > 5, BerError::InvalidTag)?;
 
-                c = (c << 7) | ((i[tag_byte_count] as u32) & 0x7f);
+                c = (c << 7) | (u32::from(i[tag_byte_count]) & 0x7f);
                 let done = i[tag_byte_count] & 0x80 == 0;
                 tag_byte_count += 1;
                 if done {
@@ -74,7 +74,7 @@ fn ber_read_relative_oid(i: &[u8]) -> Result<Vec<u64>, u64> {
 
     acc = 0;
     for &c in &i[0..] {
-        acc = (acc << 7) | (c & 0b0111_1111) as u64;
+        acc = (acc << 7) | u64::from(c & 0b0111_1111);
         if (c & (1 << 7)) == 0 {
             oid.push(acc);
             acc = 0;
@@ -96,7 +96,7 @@ fn ber_read_oid(i: &[u8]) -> Result<Vec<u64>, u64> {
     };
 
     /* first element = X*40 + Y (See 8.19.4) */
-    let acc = i[0] as u64;
+    let acc = u64::from(i[0]);
     if acc < 128 {
         oid.push(acc / 40);
         oid.push(acc % 40);
@@ -117,7 +117,7 @@ pub fn ber_read_element_header(i: &[u8]) -> IResult<&[u8], BerObjectHeader, BerE
         llen: cond!(len.0 == 1, take!(len.1)) >>
         ( {
             let len : u64 = match len.0 {
-                0 => len.1 as u64,
+                0 => u64::from(len.1),
                 _ => {
                     // if len is 0xff -> error (8.1.3.5)
                     if len.1 == 0b0111_1111 {
@@ -713,7 +713,7 @@ fn parse_ber_recursive(i: &[u8], depth: usize) -> IResult<&[u8], BerObject, BerE
     let (rem, hdr) = ber_read_element_header(i)?;
     custom_check!(
         i,
-        hdr.len as usize > i.len() || hdr.len > ::std::u32::MAX as u64,
+        hdr.len as usize > i.len() || hdr.len > u64::from(::std::u32::MAX),
         BerError::InvalidLength
     )?;
     match hdr.class {

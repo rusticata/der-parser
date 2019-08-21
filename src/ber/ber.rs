@@ -332,14 +332,14 @@ impl<'a> BerObjectContent<'a> {
     pub fn as_u32(&self) -> Result<u32, BerError> {
         match *self {
             BerObjectContent::Integer(i) => bytes_to_u64(i).and_then(|x| {
-                if x > std::u32::MAX as u64 {
+                if x > u64::from(std::u32::MAX) {
                     Err(BerError::IntegerTooLarge)
                 } else {
                     Ok(x as u32)
                 }
             }),
             BerObjectContent::Enum(i) => {
-                if i > std::u32::MAX as u64 {
+                if i > u64::from(std::u32::MAX) {
                     Err(BerError::IntegerTooLarge)
                 } else {
                     Ok(i as u32)
@@ -614,16 +614,9 @@ mod tests {
             BerObject::from_int_slice(b"\x01\x00\x00"),
         ];
 
-        let mut idx = 0;
-        // for v in res {
-        //     debug!("v: {:?}", v);
-        //     assert_eq!(v,expected_values[idx]);
-        //     idx += 1;
-        // }
-        for v in der_obj.ref_iter() {
+        for (idx, v) in der_obj.ref_iter().enumerate() {
             // println!("v: {:?}", v);
             assert_eq!((*v), expected_values[idx]);
-            idx += 1;
         }
     }
 
