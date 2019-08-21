@@ -102,6 +102,7 @@ extern crate rusticata_macros;
 #[macro_use]
 mod macros;
 
+#[allow(clippy::module_inception)]
 pub mod ber;
 pub mod der;
 pub mod error;
