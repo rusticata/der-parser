@@ -7,15 +7,13 @@ extern crate nom;
 extern crate der_parser;
 #[macro_use]
 extern crate hex_literal;
-#[macro_use]
-extern crate rusticata_macros;
 
 use der_parser::ber::{ber_read_element_content_as, BerObjectContent, BerTag, BitStringObject};
 use der_parser::der::*;
 use der_parser::error::*;
 use der_parser::oid::*;
 use nom::error::ErrorKind;
-use nom::{Err, IResult};
+use nom::Err;
 
 #[test]
 fn test_der_bool() {
@@ -172,7 +170,7 @@ fn test_der_seq_defined() {
         DerObject::from_int_slice(b"\x01\x00\x01"),
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]);
-    fn parser(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn parser(i: &[u8]) -> DerResult {
         parse_der_sequence_defined!(i, parse_der_integer >> parse_der_integer)
     };
     assert_eq!(parser(&bytes), Ok((empty, expected)));
@@ -188,7 +186,7 @@ fn test_der_set_defined() {
         DerObject::from_int_slice(b"\x01\x00\x01"),
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]);
-    fn parser(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn parser(i: &[u8]) -> DerResult {
         parse_der_set_defined!(i, parse_der_integer >> parse_der_integer)
     };
     assert_eq!(parser(&bytes), Ok((empty, expected)));
@@ -204,7 +202,7 @@ fn test_der_seq_of() {
         DerObject::from_int_slice(b"\x01\x00\x01"),
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]);
-    fn parser(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn parser(i: &[u8]) -> DerResult {
         parse_der_sequence_of!(i, parse_der_integer)
     };
     assert_eq!(parser(&bytes), Ok((empty, expected)));
@@ -213,7 +211,7 @@ fn test_der_seq_of() {
 #[test]
 fn test_der_seq_of_incomplete() {
     let bytes = [0x30, 0x07, 0x02, 0x03, 0x01, 0x00, 0x01, 0x00, 0x00];
-    fn parser(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn parser(i: &[u8]) -> DerResult {
         parse_der_sequence_of!(i, parse_der_integer)
     };
     assert_eq!(
@@ -232,7 +230,7 @@ fn test_der_set_of() {
         DerObject::from_int_slice(b"\x01\x00\x01"),
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]);
-    fn parser(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn parser(i: &[u8]) -> DerResult {
         parse_der_set_of!(i, parse_der_integer)
     };
     assert_eq!(parser(&bytes), Ok((empty, expected)));
@@ -318,7 +316,7 @@ fn test_der_implicit() {
         i: &[u8],
         _tag: BerTag,
         len: usize,
-    ) -> IResult<&[u8], BerObjectContent, BerError> {
+    ) -> BerResult<BerObjectContent> {
         ber_read_element_content_as(i, DerTag::Ia5String, len, false, 0)
     }
     assert_eq!(
@@ -347,7 +345,7 @@ fn test_der_implicit_long_tag() {
         i: &[u8],
         _tag: BerTag,
         len: usize,
-    ) -> IResult<&[u8], BerObjectContent, BerError> {
+    ) -> BerResult<BerObjectContent> {
         ber_read_element_content_as(i, DerTag::Ia5String, len, false, 0)
     }
     assert_eq!(
@@ -379,10 +377,10 @@ fn test_der_optional() {
         DerObject::from_obj(BerObjectContent::ContextSpecific(BerTag(0), None)),
         DerObject::from_int_slice(b"\x01\x00\x01"),
     ]);
-    fn parse_optional_enum(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn parse_optional_enum(i: &[u8]) -> DerResult {
         parse_der_optional!(i, parse_der_enum)
     }
-    fn parser(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn parser(i: &[u8]) -> DerResult {
         parse_der_sequence_defined!(i, parse_optional_enum >> parse_der_integer)
     };
     assert_eq!(parser(&bytes1), Ok((empty, expected1)));
@@ -441,22 +439,22 @@ fn test_der_seq_dn_defined() {
         ])]),
     ]);
     #[inline]
-    fn parse_directory_string(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn parse_directory_string(i: &[u8]) -> DerResult {
         alt!(
             i,
             parse_der_utf8string | parse_der_printablestring | parse_der_ia5string
         )
     }
     #[inline]
-    fn parse_attr_type_and_value(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn parse_attr_type_and_value(i: &[u8]) -> DerResult {
         parse_der_sequence_defined!(i, parse_der_oid >> parse_directory_string)
     };
     #[inline]
-    fn parse_rdn(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn parse_rdn(i: &[u8]) -> DerResult {
         parse_der_set_defined!(i, parse_attr_type_and_value)
     }
     #[inline]
-    fn parse_name(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn parse_name(i: &[u8]) -> DerResult {
         parse_der_sequence_defined!(i, parse_rdn >> parse_rdn >> parse_rdn)
     }
     assert_eq!(parse_name(&bytes), Ok((empty, expected)));
@@ -464,7 +462,7 @@ fn test_der_seq_dn_defined() {
 
 #[test]
 fn test_der_defined_seq_macros() {
-    fn localparse_seq(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn localparse_seq(i: &[u8]) -> DerResult {
         parse_der_sequence_defined_m! {
             i,
             parse_der_integer >>
@@ -484,7 +482,7 @@ fn test_der_defined_seq_macros() {
 
 #[test]
 fn test_der_defined_set_macros() {
-    fn localparse_set(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn localparse_set(i: &[u8]) -> DerResult {
         parse_der_set_defined_m! {
             i,
             parse_der_integer >>

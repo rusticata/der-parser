@@ -1,7 +1,5 @@
 #[macro_use]
 extern crate pretty_assertions;
-#[macro_use]
-extern crate rusticata_macros;
 
 extern crate der_parser;
 
@@ -12,7 +10,7 @@ use der_parser::ber::*;
 use der_parser::error::*;
 use der_parser::*;
 use nom::error::ErrorKind;
-use nom::{Err, IResult};
+use nom::Err;
 use oid::Oid;
 
 #[derive(Debug, PartialEq)]
@@ -21,29 +19,29 @@ struct MyStruct<'a> {
     b: BerObject<'a>,
 }
 
-fn parse_struct01(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, MyStruct), BerError> {
+fn parse_struct01(i: &[u8]) -> BerResult<(BerObjectHeader, MyStruct)> {
     parse_der_struct!(
         i,
         a: parse_ber_integer >> b: parse_ber_integer >> (MyStruct { a: a, b: b })
     )
 }
 
-fn parse_struct01_complete(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, MyStruct), BerError> {
+fn parse_struct01_complete(i: &[u8]) -> BerResult<(BerObjectHeader, MyStruct)> {
     parse_der_struct!(
         i,
-        a: parse_ber_integer >> b: parse_ber_integer >> empty!() >> (MyStruct { a: a, b: b })
+        a: parse_ber_integer >> b: parse_ber_integer >> eof!() >> (MyStruct { a: a, b: b })
     )
 }
 
 // calling user function
 #[allow(dead_code)]
-fn parse_struct02(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, ()), BerError> {
+fn parse_struct02(i: &[u8]) -> BerResult<(BerObjectHeader, ())> {
     parse_der_struct!(i, _a: parse_ber_integer >> _b: parse_struct01 >> (()))
 }
 
 // embedded DER structs
 #[allow(dead_code)]
-fn parse_struct03(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, ()), BerError> {
+fn parse_struct03(i: &[u8]) -> BerResult<(BerObjectHeader, ())> {
     parse_der_struct!(
         i,
         _a: parse_ber_integer >> _b: parse_der_struct!(parse_ber_integer >> (())) >> (())
@@ -51,13 +49,13 @@ fn parse_struct03(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, ()), BerError> {
 }
 
 // verifying tag
-fn parse_struct04(i: &[u8], tag: BerTag) -> IResult<&[u8], (BerObjectHeader, MyStruct), BerError> {
+fn parse_struct04(i: &[u8], tag: BerTag) -> BerResult<(BerObjectHeader, MyStruct)> {
     parse_der_struct!(
         i,
         TAG tag,
         a: parse_ber_integer >>
         b: parse_ber_integer >>
-           empty!() >>
+           eof!() >>
         ( MyStruct{ a: a, b: b } )
     )
 }
@@ -131,13 +129,13 @@ fn struct02() {
             },
         ],
     };
-    fn parse_directory_string(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+    fn parse_directory_string(i: &[u8]) -> BerResult {
         alt!(
             i,
             parse_ber_utf8string | parse_ber_printablestring | parse_ber_ia5string
         )
     }
-    fn parse_attr_type_and_value(i: &[u8]) -> IResult<&[u8], Attr, BerError> {
+    fn parse_attr_type_and_value(i: &[u8]) -> BerResult<Attr> {
         parse_der_struct!(
             i,
             o: map_res!(parse_ber_oid, |x: BerObject| x.as_oid().map(|o| o.clone()))
@@ -146,11 +144,11 @@ fn struct02() {
         )
         .map(|(rem, x)| (rem, x.1))
     };
-    fn parse_rdn(i: &[u8]) -> IResult<&[u8], Rdn, BerError> {
+    fn parse_rdn(i: &[u8]) -> BerResult<Rdn> {
         parse_der_struct!(i, a: parse_attr_type_and_value >> (Rdn { a: a }))
             .map(|(rem, x)| (rem, x.1))
     }
-    fn parse_name(i: &[u8]) -> IResult<&[u8], Name, BerError> {
+    fn parse_name(i: &[u8]) -> BerResult<Name> {
         parse_der_struct!(i, l: many0!(complete!(parse_rdn)) >> (Name { l: l }))
             .map(|(rem, x)| (rem, x.1))
     }
@@ -211,14 +209,14 @@ fn struct_verify_tag() {
 
 #[test]
 fn tagged_explicit() {
-    fn parse_int_explicit(i: &[u8]) -> IResult<&[u8], u32, BerError> {
+    fn parse_int_explicit(i: &[u8]) -> BerResult<u32> {
         map_res!(
             i,
             parse_der_tagged!(EXPLICIT 2, parse_ber_integer),
             |x: BerObject| x.as_u32()
         )
     }
-    fn parse_int_noexplicit(i: &[u8]) -> IResult<&[u8], u32, BerError> {
+    fn parse_int_noexplicit(i: &[u8]) -> BerResult<u32> {
         map_res!(
             i,
             parse_der_tagged!(2, parse_ber_integer),
@@ -256,7 +254,7 @@ fn tagged_explicit() {
 
 #[test]
 fn tagged_implicit() {
-    fn parse_int_implicit(i: &[u8]) -> IResult<&[u8], u32, BerError> {
+    fn parse_int_implicit(i: &[u8]) -> BerResult<u32> {
         map_res!(
             i,
             parse_der_tagged!(IMPLICIT 2, BerTag::Integer),
@@ -289,7 +287,7 @@ fn application() {
     struct SimpleStruct {
         a: u32,
     };
-    fn parse_app01(i: &[u8]) -> IResult<&[u8], (BerObjectHeader, SimpleStruct), BerError> {
+    fn parse_app01(i: &[u8]) -> BerResult<(BerObjectHeader, SimpleStruct)> {
         parse_der_application!(
             i,
             APPLICATION 2,

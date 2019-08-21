@@ -7,17 +7,12 @@ use test::Bencher;
 extern crate der_parser;
 #[macro_use]
 extern crate hex_literal;
-#[macro_use]
-extern crate nom;
-#[macro_use]
-extern crate rusticata_macros;
 
 use der_parser::ber::{BerObjectHeader, BerTag};
 use der_parser::der::{
     der_read_element_header, parse_der, parse_der_integer, parse_der_u32, DerObject,
 };
-use der_parser::error::BerError;
-use nom::IResult;
+use der_parser::error::DerResult;
 
 #[bench]
 fn bench_der_read_element_header(b: &mut Bencher) {
@@ -90,7 +85,7 @@ fn bench_parse_der_seq(b: &mut Bencher) {
 
 #[bench]
 fn bench_parse_der_seq_macros(b: &mut Bencher) {
-    fn localparse_seq(i: &[u8]) -> IResult<&[u8], DerObject, BerError> {
+    fn localparse_seq(i: &[u8]) -> DerResult {
         parse_der_sequence_defined!(i, parse_der_integer >> parse_der_integer)
     }
     let bytes = hex!("30 0a 02 03 01 00 01 02 03 01 00 00");

@@ -3,7 +3,7 @@ use crate::error::*;
 use crate::oid::*;
 use nom::error::ErrorKind;
 use nom::number::streaming::be_u8;
-use nom::{Err, IResult, Needed};
+use nom::{Err, Needed};
 
 /// Maximum recursion limit
 pub const MAX_RECURSION: usize = 50;
@@ -21,7 +21,7 @@ pub(crate) fn bytes_to_u64(s: &[u8]) -> Result<u64, BerError> {
     Ok(u)
 }
 
-pub(crate) fn parse_identifier(i: &[u8]) -> IResult<&[u8], (u8, u8, u32), BerError> {
+pub(crate) fn parse_identifier(i: &[u8]) -> BerResult<(u8, u8, u32)> {
     if i.is_empty() {
         Err(Err::Incomplete(Needed::Size(1)))
     } else {
@@ -54,7 +54,7 @@ pub(crate) fn parse_identifier(i: &[u8]) -> IResult<&[u8], (u8, u8, u32), BerErr
     }
 }
 
-pub(crate) fn parse_ber_length_byte(i: &[u8]) -> IResult<&[u8], (u8, u8), BerError> {
+pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
     if i.is_empty() {
         Err(Err::Incomplete(Needed::Size(1)))
     } else {
@@ -109,7 +109,7 @@ fn ber_read_oid(i: &[u8]) -> Result<Vec<u64>, u64> {
 }
 
 /// Read an object header
-pub fn ber_read_element_header(i: &[u8]) -> IResult<&[u8], BerObjectHeader, BerError> {
+pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
     do_parse! {
         i,
         el:   parse_identifier >>
@@ -141,12 +141,12 @@ pub fn ber_read_element_header(i: &[u8]) -> IResult<&[u8], BerObjectHeader, BerE
 }
 
 #[inline]
-pub(crate) fn ber_read_content_eoc(i: &[u8]) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_eoc(i: &[u8]) -> BerResult<BerObjectContent> {
     Ok((i, BerObjectContent::EndOfContent))
 }
 
 #[inline]
-pub(crate) fn ber_read_content_bool(i: &[u8]) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_bool(i: &[u8]) -> BerResult<BerObjectContent> {
     match be_u8(i) {
         Ok((rem, 0)) => Ok((rem, BerObjectContent::Boolean(false))),
         Ok((rem, _)) => Ok((rem, BerObjectContent::Boolean(true))),
@@ -155,19 +155,13 @@ pub(crate) fn ber_read_content_bool(i: &[u8]) -> IResult<&[u8], BerObjectContent
 }
 
 #[inline]
-pub(crate) fn ber_read_content_integer(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_integer(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map!(i, take!(len), |i| { BerObjectContent::Integer(i) })
 }
 
 // XXX check if constructed (8.6.3)
 #[inline]
-pub(crate) fn ber_read_content_bitstring(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     do_parse! {
         i,
         ignored_bits: be_u8 >>
@@ -179,24 +173,18 @@ pub(crate) fn ber_read_content_bitstring(
 
 // XXX check if constructed (8.7)
 #[inline]
-pub(crate) fn ber_read_content_octetstring(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_octetstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map!(i, take!(len), |s| BerObjectContent::OctetString(s))
 }
 
 #[inline]
-pub(crate) fn ber_read_content_null(i: &[u8]) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_null(i: &[u8]) -> BerResult<BerObjectContent> {
     Ok((i, BerObjectContent::Null))
 }
 
 // XXX check if primitive (8.19.1)
 #[inline]
-pub(crate) fn ber_read_content_oid(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_oid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     do_parse! {
         i,
              error_if!(len == 0, ErrorKind::LengthValue) >>
@@ -207,27 +195,18 @@ pub(crate) fn ber_read_content_oid(
 
 // XXX check if primitive (8.4)
 #[inline]
-pub(crate) fn ber_read_content_enum(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_enum(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     parse_hex_to_u64!(i, len).map(|(rem, i)| (rem, BerObjectContent::Enum(i)))
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_utf8string(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map!(i, take!(len), |s| BerObjectContent::UTF8String(s))
 }
 
 #[inline]
-pub(crate) fn ber_read_content_relativeoid(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     do_parse! {
         i,
              custom_check!(len == 0, BerError::InvalidLength) >>
@@ -241,7 +220,7 @@ pub(crate) fn ber_read_content_sequence(
     i: &[u8],
     len: usize,
     depth: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+) -> BerResult<BerObjectContent> {
     if len == 0 {
         // indefinite form
         // read until end-of-content
@@ -270,7 +249,7 @@ pub(crate) fn ber_read_content_set(
     i: &[u8],
     len: usize,
     depth: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+) -> BerResult<BerObjectContent> {
     if len == 0 {
         // indefinite form
         // read until end-of-content
@@ -296,10 +275,7 @@ pub(crate) fn ber_read_content_set(
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_numericstring(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_numericstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map!(i, take!(len), |s| BerObjectContent::NumericString(s))
 }
 
@@ -308,33 +284,24 @@ pub(crate) fn ber_read_content_numericstring(
 pub(crate) fn ber_read_content_printablestring(
     i: &[u8],
     len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+) -> BerResult<BerObjectContent> {
     map!(i, take!(len), |s| BerObjectContent::PrintableString(s))
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_t61string(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_t61string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map!(i, take!(len), |s| BerObjectContent::T61String(s))
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_ia5string(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_ia5string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map!(i, take!(len), |s| BerObjectContent::IA5String(s))
 }
 
 #[inline]
-pub(crate) fn ber_read_content_utctime(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_utctime(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map!(i, take!(len), |s| BerObjectContent::UTCTime(s))
 }
 
@@ -342,25 +309,19 @@ pub(crate) fn ber_read_content_utctime(
 pub(crate) fn ber_read_content_generalizedtime(
     i: &[u8],
     len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+) -> BerResult<BerObjectContent> {
     map!(i, take!(len), |s| BerObjectContent::GeneralizedTime(s))
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_generalstring(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_generalstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map!(i, take!(len), |s| BerObjectContent::GeneralString(s))
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_bmpstring(
-    i: &[u8],
-    len: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+pub(crate) fn ber_read_content_bmpstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map!(i, take!(len), |s| BerObjectContent::BmpString(s))
 }
 
@@ -373,7 +334,7 @@ pub fn ber_read_element_content_as(
     len: usize,
     constructed: bool,
     depth: usize,
-) -> IResult<&[u8], BerObjectContent, BerError> {
+) -> BerResult<BerObjectContent> {
     if i.len() < len {
         return Err(Err::Incomplete(Needed::Size(len)));
     }
@@ -479,7 +440,7 @@ pub fn ber_read_element_content_as(
 }
 //
 /// Parse a BER object, expecting a value with specificed tag
-pub fn parse_ber_with_tag(i: &[u8], tag: BerTag) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_with_tag(i: &[u8], tag: BerTag) -> BerResult {
     do_parse! {
         i,
         hdr: ber_read_element_header >>
@@ -491,7 +452,7 @@ pub fn parse_ber_with_tag(i: &[u8], tag: BerTag) -> IResult<&[u8], BerObject, Be
 
 /// Read end of content marker
 #[inline]
-pub fn parse_ber_endofcontent(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_endofcontent(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::EndOfContent)
 }
 
@@ -503,7 +464,7 @@ pub fn parse_ber_endofcontent(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
 /// If the boolean value is FALSE, the octet shall be zero.
 /// If the boolean value is TRUE, the octet shall be one byte, and have all bits set to one (0xff).
 #[inline]
-pub fn parse_ber_bool(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_bool(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Boolean)
 }
 
@@ -524,7 +485,6 @@ pub fn parse_ber_bool(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
 /// ```rust
 /// # #[macro_use] extern crate der_parser;
 /// # extern crate nom;
-/// # use nom::IResult;
 /// # use der_parser::ber::parse_ber_integer;
 /// # use der_parser::ber::{BerObject,BerObjectContent};
 /// # fn main() {
@@ -538,49 +498,49 @@ pub fn parse_ber_bool(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
 /// # }
 /// ```
 #[inline]
-pub fn parse_ber_integer(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_integer(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Integer)
 }
 
 /// Read an bitstring value
 #[inline]
-pub fn parse_ber_bitstring(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_bitstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::BitString)
 }
 
 /// Read an octetstring value
 #[inline]
-pub fn parse_ber_octetstring(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_octetstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::OctetString)
 }
 
 /// Read a null value
 #[inline]
-pub fn parse_ber_null(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_null(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Null)
 }
 
 /// Read an object identifier value
 #[inline]
-pub fn parse_ber_oid(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_oid(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Oid)
 }
 
 /// Read an enumerated value
 #[inline]
-pub fn parse_ber_enum(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_enum(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Enumerated)
 }
 
 /// Read a UTF-8 string value
 #[inline]
-pub fn parse_ber_utf8string(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_utf8string(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Utf8String)
 }
 
 /// Read a relative object identifier value
 #[inline]
-pub fn parse_ber_relative_oid(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_relative_oid(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::RelativeOid)
 }
 
@@ -593,7 +553,7 @@ pub fn parse_ber_relative_oid(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
 /// To read a specific sequence of objects (giving the expected types), use the
 /// [`parse_ber_sequence_defined`](macro.parse_ber_sequence_defined.html) macro.
 #[inline]
-pub fn parse_ber_sequence(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_sequence(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Sequence)
 }
 
@@ -606,68 +566,68 @@ pub fn parse_ber_sequence(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
 /// To read a specific set of objects (giving the expected types), use the
 /// [`parse_ber_set_defined`](macro.parse_ber_set_defined.html) macro.
 #[inline]
-pub fn parse_ber_set(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_set(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Set)
 }
 
 /// Read a numeric string value
 #[inline]
-pub fn parse_ber_numericstring(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_numericstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::NumericString)
 }
 
 /// Read a printable string value
 #[inline]
-pub fn parse_ber_printablestring(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_printablestring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::PrintableString)
 }
 
 /// Read a T61 string value
 #[inline]
-pub fn parse_ber_t61string(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_t61string(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::T61String)
 }
 
 /// Read an IA5 string value
 #[inline]
-pub fn parse_ber_ia5string(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_ia5string(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Ia5String)
 }
 
 /// Read an UTC time value
 #[inline]
-pub fn parse_ber_utctime(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_utctime(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::UtcTime)
 }
 
 /// Read a Generalized time value
 #[inline]
-pub fn parse_ber_generalizedtime(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_generalizedtime(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::GeneralizedTime)
 }
 
 /// Read a GeneralString value
 #[inline]
-pub fn parse_ber_generalstring(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_generalstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::GeneralString)
 }
 
 /// Read a BmpString value
 #[inline]
-pub fn parse_ber_bmpstring(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_bmpstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::BmpString)
 }
 
-pub fn parse_ber_explicit_failed(i: &[u8], tag: BerTag) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber_explicit_failed(i: &[u8], tag: BerTag) -> BerResult {
     Ok((
         i,
         BerObject::from_obj(BerObjectContent::ContextSpecific(tag, None)),
     ))
 }
 
-pub fn parse_ber_explicit<F>(i: &[u8], tag: BerTag, f: F) -> IResult<&[u8], BerObject, BerError>
+pub fn parse_ber_explicit<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
 where
-    F: Fn(&[u8]) -> IResult<&[u8], BerObject, BerError>,
+    F: Fn(&[u8]) -> BerResult,
 {
     alt! {
         i,
@@ -687,9 +647,9 @@ where
 }
 
 /// call der *content* parsing function
-pub fn parse_ber_implicit<F>(i: &[u8], tag: BerTag, f: F) -> IResult<&[u8], BerObject, BerError>
+pub fn parse_ber_implicit<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
 where
-    F: Fn(&[u8], BerTag, usize) -> IResult<&[u8], BerObjectContent, BerError>,
+    F: Fn(&[u8], BerTag, usize) -> BerResult<BerObjectContent>,
 {
     alt! {
         i,
@@ -708,7 +668,7 @@ where
     }
 }
 
-fn parse_ber_recursive(i: &[u8], depth: usize) -> IResult<&[u8], BerObject, BerError> {
+fn parse_ber_recursive(i: &[u8], depth: usize) -> BerResult {
     custom_check!(i, depth > MAX_RECURSION, BerError::BerMaxDepth)?;
     let (rem, hdr) = ber_read_element_header(i)?;
     custom_check!(
@@ -742,6 +702,6 @@ fn parse_ber_recursive(i: &[u8], depth: usize) -> IResult<&[u8], BerObject, BerE
 
 /// Parse BER object
 #[inline]
-pub fn parse_ber(i: &[u8]) -> IResult<&[u8], BerObject, BerError> {
+pub fn parse_ber(i: &[u8]) -> BerResult {
     parse_ber_recursive(i, 0)
 }

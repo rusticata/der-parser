@@ -40,20 +40,18 @@
 //! For example, to read a sequence containing two integers:
 //!
 //! ```rust
-//! # #[macro_use] extern crate nom;
-//! # #[macro_use] extern crate rusticata_macros;
 //! # #[macro_use] extern crate der_parser;
 //! use der_parser::ber::*;
-//! use der_parser::error::BerError;
-//! use nom::{IResult,Err};
+//! use der_parser::error::BerResult;
 //!
 //! # fn main() {
-//! fn localparse_seq(i:&[u8]) -> IResult<&[u8], BerObject, BerError> {
+//! fn localparse_seq(i:&[u8]) -> BerResult {
 //!     parse_der_sequence_defined!(i,
 //!         parse_ber_integer >>
 //!         parse_ber_integer
 //!     )
 //! }
+//!
 //! let bytes = [ 0x30, 0x0a,
 //!               0x02, 0x03, 0x01, 0x00, 0x01,
 //!               0x02, 0x03, 0x01, 0x00, 0x00,
@@ -62,8 +60,10 @@
 //! # }
 //! ```
 //!
-//! All functions return an `IResult` object from `nom`: the parsed
+//! All functions return a [`BerResult`](error/type.BerResult.html) object: the parsed
 //! [`BerObject`](ber/struct.BerObject.html), an `Incomplete` value, or an error.
+//!
+//! Note that this type is also a `Result`, so usual functions (`map`, `unwrap` etc.) are available.
 //!
 //! # Notes
 //!
