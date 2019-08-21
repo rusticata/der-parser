@@ -71,20 +71,19 @@ macro_rules! parse_ber_defined_m(
 /// Given a list of expected parsers, apply them to build a DER sequence.
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
-/// use der_parser::ber::*;
-/// use der_parser::error::BerError;
-/// use nom::{IResult,Err};
-///
+/// # use der_parser::ber::{parse_ber_integer, BerObject};
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
-/// fn localparse_seq(i:&[u8]) -> IResult<&[u8], BerObject, BerError> {
+/// fn localparse_seq(i:&[u8]) -> BerResult {
 ///     parse_der_sequence_defined_m!(i,
 ///         parse_ber_integer >>
+///         // macros can also be called
 ///         call!(parse_ber_integer)
 ///     )
 /// }
+///
 /// let empty = &b""[..];
 /// let bytes = [ 0x30, 0x0a,
 ///               0x02, 0x03, 0x01, 0x00, 0x01,
@@ -114,20 +113,19 @@ macro_rules! parse_der_sequence_defined_m(
 /// Given a list of expected parsers, apply them to build a DER set.
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
-/// use der_parser::ber::*;
-/// use der_parser::error::BerError;
-/// use nom::{IResult,Err};
-///
+/// # use der_parser::ber::{parse_ber_integer, BerObject};
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
-/// fn localparse_set(i:&[u8]) -> IResult<&[u8],BerObject,BerError> {
+/// fn localparse_set(i:&[u8]) -> BerResult {
 ///     parse_der_set_defined_m!(i,
 ///         parse_ber_integer >>
+///         // macros can also be called
 ///         call!(parse_ber_integer)
 ///     )
 /// }
+///
 /// let empty = &b""[..];
 /// let bytes = [ 0x31, 0x0a,
 ///               0x02, 0x03, 0x01, 0x00, 0x01,
@@ -212,20 +210,18 @@ macro_rules! parse_der_defined(
 /// Given a list of expected parsers, apply them to build a DER sequence.
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
-/// use der_parser::ber::*;
-/// use der_parser::error::BerError;
-/// use nom::{IResult,Err};
-///
+/// # use der_parser::ber::{parse_ber_integer, BerObject};
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
-/// fn localparse_seq(i:&[u8]) -> IResult<&[u8],BerObject,BerError> {
+/// fn localparse_seq(i:&[u8]) -> BerResult {
 ///     parse_der_sequence_defined!(i,
 ///         parse_ber_integer >>
 ///         parse_ber_integer
 ///     )
 /// }
+///
 /// let empty = &b""[..];
 /// let bytes = [ 0x30, 0x0a,
 ///               0x02, 0x03, 0x01, 0x00, 0x01,
@@ -263,20 +259,18 @@ macro_rules! parse_der_sequence_defined(
 /// Given a list of expected parsers, apply them to build a DER set.
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
-/// use der_parser::ber::*;
-/// use der_parser::error::BerError;
-/// use nom::{IResult,Err};
-///
+/// # use der_parser::ber::{parse_ber_integer, BerObject};
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
-/// fn localparse_set(i:&[u8]) -> IResult<&[u8],BerObject,BerError> {
+/// fn localparse_set(i:&[u8]) -> BerResult {
 ///     parse_der_set_defined!(i,
 ///         parse_ber_integer >>
 ///         parse_ber_integer
 ///     )
 /// }
+///
 /// let empty = &b""[..];
 /// let bytes = [ 0x31, 0x0a,
 ///               0x02, 0x03, 0x01, 0x00, 0x01,
@@ -315,17 +309,15 @@ macro_rules! parse_der_set_defined(
 /// Given a subparser for a DER type, parse a sequence of identical objects.
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
-/// use der_parser::ber::*;
-/// use der_parser::error::BerError;
-/// use nom::{IResult,Err};
-///
+/// # use der_parser::ber::{parse_ber_integer, BerObject};
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
-/// fn parser(i:&[u8]) -> IResult<&[u8],BerObject,BerError> {
+/// fn parser(i:&[u8]) -> BerResult {
 ///     parse_der_sequence_of!(i, parse_ber_integer)
 /// };
+///
 /// let empty = &b""[..];
 /// let bytes = [ 0x30, 0x0a,
 ///               0x02, 0x03, 0x01, 0x00, 0x01,
@@ -363,17 +355,15 @@ macro_rules! parse_der_sequence_of(
 /// Given a subparser for a DER type, parse a set of identical objects.
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
-/// use der_parser::ber::*;
-/// use der_parser::error::BerError;
-/// use nom::{IResult,Err};
-///
+/// # use der_parser::ber::{parse_ber_integer, BerObject};
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
-/// fn parser(i:&[u8]) -> IResult<&[u8],BerObject,BerError> {
+/// fn parser(i:&[u8]) -> BerResult {
 ///     parse_der_set_of!(i, parse_ber_integer)
 /// };
+///
 /// let empty = &b""[..];
 /// let bytes = [ 0x31, 0x0a,
 ///               0x02, 0x03, 0x01, 0x00, 0x01,
@@ -412,13 +402,10 @@ macro_rules! parse_der_set_of(
 /// If the parsing failed, the `ContextSpecific` object has value `None`.
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
-/// use der_parser::ber::*;
-/// use der_parser::error::BerError;
-/// use nom::{IResult,Err};
-///
+/// # use der_parser::ber::*;
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
 /// let empty = &b""[..];
 /// let bytes1 = [ 0x30, 0x0a,
@@ -440,10 +427,10 @@ macro_rules! parse_der_set_of(
 ///     BerObject::from_int_slice(b"\x01\x00\x01"),
 /// ]);
 ///
-/// fn parse_optional_enum(i:&[u8]) -> IResult<&[u8],BerObject, BerError> {
+/// fn parse_optional_enum(i:&[u8]) -> BerResult {
 ///     parse_der_optional!(i, parse_ber_enum)
 /// }
-/// fn parser(i:&[u8]) -> IResult<&[u8],BerObject, BerError> {
+/// fn parser(i:&[u8]) -> BerResult {
 ///     parse_der_sequence_defined_m!(i,
 ///         parse_optional_enum >>
 ///         parse_ber_integer
@@ -480,7 +467,7 @@ macro_rules! parse_der_optional(
 /// The returned object is a tuple containing a [`BerObjectHeader`](struct.BerObjectHeader.html)
 /// and the object returned by the subparser.
 ///
-/// To ensure the subparser consumes all bytes from the constructed object, add the `empty!()`
+/// To ensure the subparser consumes all bytes from the constructed object, add the `eof!()`
 /// subparser as the last parsing item.
 ///
 /// To verify the tag of the constructed element, use the `TAG` version, for ex
@@ -495,13 +482,10 @@ macro_rules! parse_der_optional(
 /// Basic struct parsing (ignoring tag):
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
-/// use der_parser::ber::*;
-/// # use der_parser::error::BerError;
-/// use nom::{IResult,Err};
-///
+/// # use der_parser::ber::*;
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
 /// #[derive(Debug, PartialEq)]
 /// struct MyStruct<'a>{
@@ -509,12 +493,12 @@ macro_rules! parse_der_optional(
 ///     b: BerObject<'a>,
 /// }
 ///
-/// fn parse_struct01(i: &[u8]) -> IResult<&[u8],(BerObjectHeader,MyStruct), BerError> {
+/// fn parse_struct01(i: &[u8]) -> BerResult<(BerObjectHeader,MyStruct)> {
 ///     parse_der_struct!(
 ///         i,
 ///         a: parse_ber_integer >>
 ///         b: parse_ber_integer >>
-///            empty!() >>
+///            eof!() >>
 ///         ( MyStruct{ a: a, b: b } )
 ///     )
 /// }
@@ -544,25 +528,23 @@ macro_rules! parse_der_optional(
 /// To check the expected tag, use the `TAG <tagname>` variant:
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
 /// # use der_parser::ber::*;
-/// # use der_parser::error::BerError;
-/// # use nom::{IResult,Err};
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
 /// struct MyStruct<'a>{
 ///     a: BerObject<'a>,
 ///     b: BerObject<'a>,
 /// }
 ///
-/// fn parse_struct_with_tag(i: &[u8]) -> IResult<&[u8],(BerObjectHeader,MyStruct), BerError> {
+/// fn parse_struct_with_tag(i: &[u8]) -> BerResult<(BerObjectHeader,MyStruct)> {
 ///     parse_der_struct!(
 ///         i,
 ///         TAG BerTag::Sequence,
 ///         a: parse_ber_integer >>
 ///         b: parse_ber_integer >>
-///            empty!() >>
+///            eof!() >>
 ///         ( MyStruct{ a: a, b: b } )
 ///     )
 /// }
@@ -611,21 +593,19 @@ macro_rules! parse_der_struct(
 /// The following parses `[2] INTEGER`:
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
-/// use der_parser::ber::*;
-/// use der_parser::error::BerError;
-/// use nom::{IResult,Err};
-///
+/// # use der_parser::ber::{parse_ber_integer, BerObject};
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
-/// fn parse_int_explicit(i:&[u8]) -> IResult<&[u8],u32,BerError> {
+/// fn parse_int_explicit(i:&[u8]) -> BerResult<u32> {
 ///     map_res!(
 ///         i,
 ///         parse_der_tagged!(EXPLICIT 2, parse_ber_integer),
 ///         |x: BerObject| x.as_u32()
 ///     )
 /// }
+///
 /// let bytes = &[0xa2, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
 /// let res = parse_int_explicit(bytes);
 /// match res {
@@ -641,21 +621,19 @@ macro_rules! parse_der_struct(
 /// The following parses `[2] IMPLICIT INTEGER`:
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
-/// use der_parser::ber::*;
-/// use der_parser::error::BerError;
-/// use nom::{IResult,Err};
-///
+/// # use der_parser::ber::{parse_ber_integer, BerObject, BerTag};
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
-/// fn parse_int_implicit(i:&[u8]) -> IResult<&[u8],u32,BerError> {
+/// fn parse_int_implicit(i:&[u8]) -> BerResult<u32> {
 ///     map_res!(
 ///         i,
 ///         parse_der_tagged!(IMPLICIT 2, BerTag::Integer),
 ///         |x: BerObject| x.as_u32()
 ///     )
 /// }
+///
 /// let bytes = &[0x82, 0x03, 0x01, 0x00, 0x01];
 /// let res = parse_int_implicit(bytes);
 /// match res {
@@ -707,7 +685,7 @@ macro_rules! parse_der_tagged(
 /// The returned object is a tuple containing a [`BerObjectHeader`](struct.BerObjectHeader.html)
 /// and the object returned by the subparser.
 ///
-/// To ensure the subparser consumes all bytes from the constructed object, add the `empty!()`
+/// To ensure the subparser consumes all bytes from the constructed object, add the `eof!()`
 /// subparser as the last parsing item.
 ///
 /// # Examples
@@ -715,27 +693,26 @@ macro_rules! parse_der_tagged(
 /// The following parses `[APPLICATION 2] INTEGER`:
 ///
 /// ```rust
-/// # #[macro_use] extern crate nom;
-/// # #[macro_use] extern crate rusticata_macros;
 /// # #[macro_use] extern crate der_parser;
-/// use der_parser::ber::*;
-/// use der_parser::error::BerError;
-/// use nom::{IResult,Err};
-///
+/// # use der_parser::ber::*;
+/// # use der_parser::error::BerResult;
+/// #
 /// # fn main() {
 /// #[derive(Debug, PartialEq)]
 /// struct SimpleStruct {
 ///     a: u32,
 /// };
-/// fn parse_app01(i:&[u8]) -> IResult<&[u8],(BerObjectHeader,SimpleStruct),BerError> {
+///
+/// fn parse_app01(i:&[u8]) -> BerResult<(BerObjectHeader,SimpleStruct)> {
 ///     parse_der_application!(
 ///         i,
 ///         APPLICATION 2,
 ///         a: map_res!(parse_ber_integer,|x: BerObject| x.as_u32()) >>
-///            empty!() >>
+///            eof!() >>
 ///         ( SimpleStruct{ a:a } )
 ///     )
 /// }
+///
 /// let bytes = &[0x62, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
 /// let res = parse_app01(bytes);
 /// match res {
