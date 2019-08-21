@@ -111,5 +111,11 @@ pub mod oid;
 pub use ber::parse_ber;
 pub use der::parse_der;
 
+// re-exports nom macros, so this crate's macros can be used without importing nom
+#[doc(hidden)]
+pub use nom::{alt, call, complete, do_parse, many0, map, map_res, verify};
+#[doc(hidden)]
+pub use rusticata_macros::{custom_check, empty, flat_take};
+
 #[cfg(feature = "bigint")]
 extern crate num_bigint;
