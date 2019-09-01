@@ -668,6 +668,18 @@ where
     }
 }
 
+/// Parse BER object and try to decode it as a 32-bits unsigned integer
+#[inline]
+pub fn parse_ber_u32(i: &[u8]) -> BerResult<u32> {
+    map_res!(i, parse_ber_integer, |o: BerObject| o.as_u32())
+}
+
+/// Parse BER object and try to decode it as a 64-bits unsigned integer
+#[inline]
+pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
+    map_res!(i, parse_ber_integer, |o: BerObject| o.as_u64())
+}
+
 fn parse_ber_recursive(i: &[u8], depth: usize) -> BerResult {
     custom_check!(i, depth > MAX_RECURSION, BerError::BerMaxDepth)?;
     let (rem, hdr) = ber_read_element_header(i)?;
