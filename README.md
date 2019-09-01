@@ -96,6 +96,11 @@ or use the `bigint` feature of this crate and use
 
 ## Changes
 
+### 3.0.2
+
+- Add `parse_ber_u32` and `parse_ber_u64` functions
+- Fix typo in description
+
 ### 3.0.1
 
 - Add crate `BerResult` and `DerResult` types
