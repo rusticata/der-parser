@@ -1,5 +1,5 @@
 [package]
-description = "Parser for BER/DER encoding data"
+description = "Parser for BER/DER encoded data"
 license = "MIT/Apache-2.0"
 keywords = ["BER","DER","ASN1","parser","nom"]
 homepage = "https://github.com/rusticata/der-parser"
