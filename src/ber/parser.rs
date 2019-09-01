@@ -1,6 +1,7 @@
 use crate::ber::*;
 use crate::error::*;
 use crate::oid::*;
+use nom::combinator::map_res;
 use nom::error::ErrorKind;
 use nom::number::streaming::be_u8;
 use nom::{Err, Needed};
@@ -671,13 +672,13 @@ where
 /// Parse BER object and try to decode it as a 32-bits unsigned integer
 #[inline]
 pub fn parse_ber_u32(i: &[u8]) -> BerResult<u32> {
-    map_res!(i, parse_ber_integer, |o: BerObject| o.as_u32())
+    map_res(parse_ber_integer, |o| o.as_u32())(i)
 }
 
 /// Parse BER object and try to decode it as a 64-bits unsigned integer
 #[inline]
 pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
-    map_res!(i, parse_ber_integer, |o: BerObject| o.as_u64())
+    map_res(parse_ber_integer, |o| o.as_u64())(i)
 }
 
 fn parse_ber_recursive(i: &[u8], depth: usize) -> BerResult {
