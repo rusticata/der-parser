@@ -40,15 +40,19 @@ fn test_oid() {
         parse_der(&[0x06, 0x06, 42, 129, 122, 1, 16, 9]),
         Ok((
             empty,
-            BerObject::from_obj(BerObjectContent::OID(Oid::from(&[1, 2, 250, 1, 16, 9])))
+            BerObject::from_obj(BerObjectContent::OID(
+                Oid::from(&[1, 2, 250, 1, 16, 9]).unwrap()
+            ))
         ))
     );
     // Dubuisson 433
     assert_eq!(
-        parse_der(&[0x06, 0x05, 129, 122, 1, 16, 9]),
+        parse_der(&[0x0d, 0x05, 129, 122, 1, 16, 9]),
         Ok((
             empty,
-            BerObject::from_obj(BerObjectContent::OID(Oid::from(&[250, 1, 16, 9])))
+            BerObject::from_obj(BerObjectContent::RelativeOID(
+                Oid::from_relative(&[250, 1, 16, 9]).unwrap()
+            ))
         ))
     );
 }
@@ -60,9 +64,27 @@ fn test_rel_oid() {
         parse_der(&[0x0d, 0x04, 0xc2, 0x7b, 0x03, 0x02]),
         Ok((
             empty,
-            BerObject::from_obj(BerObjectContent::RelativeOID(Oid::from(&[8571, 3, 2])))
+            BerObject::from_obj(BerObjectContent::RelativeOID(
+                Oid::from_relative(&[8571, 3, 2]).unwrap()
+            ))
         ))
     );
+}
+
+#[test]
+fn test_oid_iter_length_check() {
+    use der_parser::oid;
+    use std::borrow::Cow;
+    // empty
+    assert!(Oid::new(Cow::Borrowed(&[])).iter().is_some());
+    assert!(Oid::new_relative(Cow::Borrowed(&[])).iter().is_some());
+    // ok
+    assert!(oid!(0).iter().is_some());
+    assert!(oid!(1.2).iter().is_some());
+    assert!(oid!(1.2.3456.23.54).iter().is_some());
+    // too long
+    assert!(oid!(1.2.18445618199572250625).iter().is_none());
+    assert!(oid!(rel 18445618199572250625).iter().is_none());
 }
 
 #[test]

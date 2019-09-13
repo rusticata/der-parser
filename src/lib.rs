@@ -120,3 +120,8 @@ pub use rusticata_macros::{custom_check, flat_take};
 
 #[cfg(feature = "bigint")]
 extern crate num_bigint;
+
+use proc_macro_hack::proc_macro_hack;
+
+#[proc_macro_hack]
+pub use der_oid_macro::oid;

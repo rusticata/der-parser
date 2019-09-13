@@ -102,6 +102,16 @@ or use the `bigint` feature of this crate and use
   do now only parse if the characters are valid.
 - `as_str()` was added to `BerObjectContent` to obtain a `&str` for the types above.
   `as_slice()` works as before.
+- Change the api around `Oid` to achieve zero-copy. The following changed:
+  - The `Oid` struct now has a lifetime and uses `Cow` internally.
+  - The procedural macro `oid!` was added.
+  - `Oid::from` returns a `Result` now.
+  - The `Oid` struct now encodes whether the oid is relative or not.
+  - The `Debug` implementation now shows whether the oid is relative
+    and uses the bigint feature if available.
+  - The `Oid::iter` method now returns an `Option`. `Oid::iter_bigint` was
+    added.
+  - `Hash` is now derived for `Oid`.
 
 ### 3.0.3
 

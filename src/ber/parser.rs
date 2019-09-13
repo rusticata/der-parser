@@ -5,6 +5,7 @@ use nom::combinator::map_res;
 use nom::error::ErrorKind;
 use nom::number::streaming::be_u8;
 use nom::{Err, Needed};
+use std::borrow::Cow;
 
 /// Maximum recursion limit
 pub const MAX_RECURSION: usize = 50;
@@ -63,50 +64,6 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
         let b = i[0] & 0b0111_1111;
         Ok((&i[1..], (a, b)))
     }
-}
-
-fn ber_read_relative_oid(i: &[u8]) -> Result<Vec<u64>, u64> {
-    let mut oid = Vec::new();
-    let mut acc: u64;
-
-    if i.is_empty() {
-        return Ok(oid);
-    };
-
-    acc = 0;
-    for &c in &i[0..] {
-        acc = (acc << 7) | u64::from(c & 0b0111_1111);
-        if (c & (1 << 7)) == 0 {
-            oid.push(acc);
-            acc = 0;
-        }
-    }
-
-    match acc {
-        0 => Ok(oid),
-        _ => Err(acc),
-    }
-}
-
-fn ber_read_oid(i: &[u8]) -> Result<Vec<u64>, u64> {
-    let mut oid = Vec::new();
-    let mut index = 0;
-
-    if i.is_empty() {
-        return Err(0);
-    };
-
-    /* first element = X*40 + Y (See 8.19.4) */
-    let acc = u64::from(i[0]);
-    if acc < 128 {
-        oid.push(acc / 40);
-        oid.push(acc % 40);
-        index = 1;
-    }
-
-    let rel_oid = ber_read_relative_oid(&i[index..])?;
-    oid.extend(&rel_oid);
-    Ok(oid)
 }
 
 /// Read an object header
@@ -189,8 +146,8 @@ pub(crate) fn ber_read_content_oid(i: &[u8], len: usize) -> BerResult<BerObjectC
     do_parse! {
         i,
              error_if!(len == 0, ErrorKind::LengthValue) >>
-        oid: map_res!(take!(len),ber_read_oid) >>
-        ( BerObjectContent::OID(Oid::from(&oid)) )
+        oid: verify!(take!(len), |os: &[u8]| (os.last().unwrap() >> 7) == 0u8) >>
+        ( BerObjectContent::OID(Oid::new(Cow::Borrowed(oid))) )
     }
 }
 
@@ -215,8 +172,10 @@ pub(crate) fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<Be
     do_parse! {
         i,
              custom_check!(len == 0, BerError::InvalidLength) >>
-        oid: map_res!(take!(len), ber_read_relative_oid) >>
-        ( BerObjectContent::RelativeOID(Oid::from(&oid)) )
+        oid: verify!(take!(len), |os: &[u8]| {
+            (os.last().unwrap() >> 7) == 0u8
+        }) >>
+        ( BerObjectContent::RelativeOID(Oid::new_relative(Cow::Borrowed(oid))) )
     }
 }
 
