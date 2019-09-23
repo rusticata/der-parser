@@ -89,7 +89,7 @@ fn struct02() {
         0x30, 0x45, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x46, 0x52,
         0x31, 0x13, 0x30, 0x11, 0x06, 0x03, 0x55, 0x04, 0x08, 0x0c, 0x0a, 0x53, 0x6f, 0x6d, 0x65,
         0x2d, 0x53, 0x74, 0x61, 0x74, 0x65, 0x31, 0x21, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x04, 0x0a,
-        0x0c, 0x18, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x20, 0x57, 0x69, 0x64, 0x67,
+        0x16, 0x18, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x20, 0x57, 0x69, 0x64, 0x67,
         0x69, 0x74, 0x73, 0x20, 0x50, 0x74, 0x79, 0x20, 0x4c, 0x74, 0x64,
     ];
     #[derive(Debug, PartialEq)]
@@ -110,20 +110,20 @@ fn struct02() {
             Rdn {
                 a: Attr {
                     oid: Oid::from(&[2, 5, 4, 6]), // countryName
-                    val: BerObject::from_obj(BerObjectContent::PrintableString(b"FR")),
+                    val: BerObject::from_obj(BerObjectContent::PrintableString("FR")),
                 },
             },
             Rdn {
                 a: Attr {
                     oid: Oid::from(&[2, 5, 4, 8]), // stateOrProvinceName
-                    val: BerObject::from_obj(BerObjectContent::UTF8String(b"Some-State")),
+                    val: BerObject::from_obj(BerObjectContent::UTF8String("Some-State")),
                 },
             },
             Rdn {
                 a: Attr {
                     oid: Oid::from(&[2, 5, 4, 10]), // organizationName
-                    val: BerObject::from_obj(BerObjectContent::UTF8String(
-                        b"Internet Widgits Pty Ltd",
+                    val: BerObject::from_obj(BerObjectContent::IA5String(
+                        "Internet Widgits Pty Ltd",
                     )),
                 },
             },
@@ -152,7 +152,12 @@ fn struct02() {
         parse_der_struct!(i, l: many0!(complete!(parse_rdn)) >> (Name { l: l }))
             .map(|(rem, x)| (rem, x.1))
     }
-    assert_eq!(parse_name(&bytes), Ok((empty, expected)));
+    let parsed = parse_name(&bytes).unwrap(); 
+    assert_eq!(parsed, (empty, expected));
+    //
+    assert_eq!(parsed.1.l[0].a.val.as_str(), Ok("FR"));
+    assert_eq!(parsed.1.l[1].a.val.as_str(), Ok("Some-State"));
+    assert_eq!(parsed.1.l[2].a.val.as_str(), Ok("Internet Widgits Pty Ltd"));
 }
 
 #[test]

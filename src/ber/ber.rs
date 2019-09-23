@@ -76,10 +76,10 @@ pub enum BerObjectContent<'a> {
     Enum(u64),
     OID(Oid),
     RelativeOID(Oid),
-    NumericString(&'a [u8]),
-    PrintableString(&'a [u8]),
-    IA5String(&'a [u8]),
-    UTF8String(&'a [u8]),
+    NumericString(&'a str),
+    PrintableString(&'a str),
+    IA5String(&'a str),
+    UTF8String(&'a str),
     T61String(&'a [u8]),
 
     BmpString(&'a [u8]),
@@ -279,6 +279,15 @@ impl<'a> BerObject<'a> {
         self.content.as_slice()
     }
 
+    /// Attempt to get the content from a DER object, as a str.
+    /// This can fail if the object does not contain a string type.
+    ///
+    /// Only NumericString, PrintableString, UTF8String and IA5String
+    /// are considered here. Other string types can be read using `as_slice`.
+    pub fn as_str(&self) -> Result<&'a str, BerError> {
+        self.content.as_str()
+    }
+
     /// Test if object class is Universal
     pub fn is_universal(&self) -> bool {
         self.class == 0
@@ -410,17 +419,28 @@ impl<'a> BerObjectContent<'a> {
     #[rustfmt::skip]
     pub fn as_slice(&self) -> Result<&'a [u8],BerError> {
         match *self {
+            BerObjectContent::NumericString(s) |
+            BerObjectContent::PrintableString(s) |
+            BerObjectContent::UTF8String(s) |
+            BerObjectContent::IA5String(s) => Ok(s.as_ref()),
             BerObjectContent::Integer(s) |
             BerObjectContent::BitString(_,BitStringObject{data:s}) |
             BerObjectContent::OctetString(s) |
-            BerObjectContent::NumericString(s) |
-            BerObjectContent::PrintableString(s) |
-            BerObjectContent::IA5String(s) |
-            BerObjectContent::UTF8String(s) |
             BerObjectContent::T61String(s) |
             BerObjectContent::BmpString(s) |
             BerObjectContent::GeneralString(s) |
             BerObjectContent::Unknown(_,s) => Ok(s),
+            _ => Err(BerError::BerTypeError),
+        }
+    }
+
+    #[rustfmt::skip]
+    pub fn as_str(&self) -> Result<&'a str,BerError> {
+        match *self {
+            BerObjectContent::NumericString(s) |
+            BerObjectContent::PrintableString(s) |
+            BerObjectContent::UTF8String(s) |
+            BerObjectContent::IA5String(s) => Ok(s),
             _ => Err(BerError::BerTypeError),
         }
     }

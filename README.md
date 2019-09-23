@@ -96,6 +96,13 @@ or use the `bigint` feature of this crate and use
 
 ## Changes
 
+### 4.0.0
+
+- The string types `IA5String`, `NumericString`, `PrintableString` and `UTF8String`
+  do now only parse if the characters are valid.
+- `as_str()` was added to `BerObjectContent` to obtain a `&str` for the types above.
+  `as_slice()` works as before.
+
 ### 3.0.2
 
 - Add `parse_ber_u32` and `parse_ber_u64` functions
