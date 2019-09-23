@@ -16,23 +16,6 @@ impl Oid {
         Oid(s.to_owned())
     }
 
-    /// Convert the OID to a string representation.
-    /// The string contains the IDs separated by dots, for ex: "1.2.840.113549.1.1.5"
-    pub fn to_string(&self) -> String {
-        if self.0.is_empty() {
-            return String::new();
-        }
-
-        let mut s = self.0[0].to_string();
-
-        for it in self.0.iter().skip(1) {
-            s.push('.');
-            s = s + &it.to_string();
-        }
-
-        s
-    }
-
     /// Return an iterator on every ID
     pub fn iter(&self) -> slice::Iter<u64> {
         self.0.iter()
@@ -40,8 +23,17 @@ impl Oid {
 }
 
 impl fmt::Display for Oid {
+    /// Convert the OID to a string representation.
+    /// The string contains the IDs separated by dots, for ex: "1.2.840.113549.1.1.5"
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.to_string())
+        if self.0.is_empty() {
+            return Ok(())
+        }
+        write!(f, "{}", self.0[0])?;
+        for it in self.0.iter().skip(1) {
+            write!(f, ".{}", it)?;
+        }
+        Ok(())
     }
 }
 
