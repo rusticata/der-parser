@@ -22,6 +22,7 @@ matrix:
        - BENCH=1
 script:
   - |
+      (rustup component add clippy && cargo clippy -- -D clippy:all || exit 0)
       cargo build --verbose --features "$FEATURES" &&
       cargo test --verbose --features "$FEATURES" &&
       ([ "$BENCH" != 1 ] || cargo bench --verbose --features "$FEATURES")
