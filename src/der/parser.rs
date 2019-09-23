@@ -303,12 +303,11 @@ pub fn der_read_element_content_as(
         | BerTag::GeneralString => {
             der_constraint_fail_if!(i, constructed);
         }
-        BerTag::UtcTime | BerTag::GeneralizedTime => match i.get(len - 1) {
-            Some(b'Z') => (),
-            _ => {
+        BerTag::UtcTime | BerTag::GeneralizedTime => {
+            if len == 0 || i.get(len - 1).copied() != Some(b'Z') {
                 return Err(Err::Error(BerError::DerConstraintFailed));
             }
-        },
+        }
         _ => (),
     }
     ber_read_element_content_as(i, tag, len, constructed, depth)
