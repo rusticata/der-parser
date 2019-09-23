@@ -203,7 +203,11 @@ pub(crate) fn ber_read_content_enum(i: &[u8], len: usize) -> BerResult<BerObject
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
 pub(crate) fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map!(i, take!(len), |s| BerObjectContent::UTF8String(s))
+    map_res!(i, take!(len), |bytes| {
+        std::str::from_utf8(bytes)
+            .map(|s| BerObjectContent::UTF8String(s))
+            .map_err(|_| BerError::BerValueError)
+    })
 }
 
 #[inline]
@@ -276,17 +280,45 @@ pub(crate) fn ber_read_content_set(
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_numericstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map!(i, take!(len), |s| BerObjectContent::NumericString(s))
+pub(crate) fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
+    fn is_numeric(b: &u8) -> bool {
+        match *b {
+            b'0'..=b'9' | b' ' => true,
+            _ => false,
+        }
+    }
+    map_res!(i, take!(len), |bytes: &'a [u8]| {
+        if !bytes.iter().all(is_numeric) {
+            return Err(BerError::BerValueError)
+        }
+        std::str::from_utf8(bytes)
+            .map_err(|_| BerError::BerValueError)
+            .map(|s| BerObjectContent::NumericString(s))
+    })
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_printablestring(
-    i: &[u8],
+pub(crate) fn ber_read_content_printablestring<'a>(
+    i: &'a [u8],
     len: usize,
-) -> BerResult<BerObjectContent> {
-    map!(i, take!(len), |s| BerObjectContent::PrintableString(s))
+) -> BerResult<BerObjectContent<'a>> {
+    fn is_printable(b: &u8) -> bool {
+        match *b {
+            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b' ' |
+            b'\'' | b'(' | b')' | b'+' | b',' | b'-' | b'.' | b'/' |
+            b':' | b'=' | b'?' => true,
+            _ => false,
+        }
+    }
+    map_res!(i, take!(len), |bytes: &'a [u8]| {
+        if !bytes.iter().all(is_printable) {
+            return Err(BerError::BerValueError)
+        }
+        std::str::from_utf8(bytes)
+            .map(|s| BerObjectContent::PrintableString(s))
+            .map_err(|_| BerError::BerValueError)
+    })
 }
 
 // XXX check if constructed, or indefinite length (8.21)
@@ -297,8 +329,15 @@ pub(crate) fn ber_read_content_t61string(i: &[u8], len: usize) -> BerResult<BerO
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_ia5string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map!(i, take!(len), |s| BerObjectContent::IA5String(s))
+pub(crate) fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
+    map_res!(i, take!(len), |bytes: &'a [u8]| {
+        if !bytes.iter().all(u8::is_ascii) {
+            return Err(BerError::BerValueError)
+        }
+        std::str::from_utf8(bytes)
+            .map(|s| BerObjectContent::IA5String(s))
+            .map_err(|_| BerError::BerValueError)
+    })
 }
 
 #[inline]
@@ -533,7 +572,7 @@ pub fn parse_ber_enum(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Enumerated)
 }
 
-/// Read a UTF-8 string value
+/// Read a UTF-8 string value. The encoding is checked.
 #[inline]
 pub fn parse_ber_utf8string(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Utf8String)
@@ -571,13 +610,15 @@ pub fn parse_ber_set(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Set)
 }
 
-/// Read a numeric string value
+/// Read a numeric string value. The content is verified to
+/// contain only digits and spaces.
 #[inline]
 pub fn parse_ber_numericstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::NumericString)
 }
 
-/// Read a printable string value
+/// Read a printable string value. The content is verified to
+/// contain only the allowed characters.
 #[inline]
 pub fn parse_ber_printablestring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::PrintableString)
@@ -589,7 +630,7 @@ pub fn parse_ber_t61string(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::T61String)
 }
 
-/// Read an IA5 string value
+/// Read an IA5 string value. The content is verified to be ASCII.
 #[inline]
 pub fn parse_ber_ia5string(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::Ia5String)
@@ -717,4 +758,57 @@ fn parse_ber_recursive(i: &[u8], depth: usize) -> BerResult {
 #[inline]
 pub fn parse_ber(i: &[u8]) -> BerResult {
     parse_ber_recursive(i, 0)
+}
+
+
+#[test]
+fn test_numericstring() {
+    assert_eq!(
+        ber_read_content_numericstring(b" 0123  4495768 ", 15),
+        Ok(([].as_ref(), BerObjectContent::NumericString(" 0123  4495768 "))),
+    );
+    assert_eq!(
+        ber_read_content_numericstring(b"", 0),
+        Ok(([].as_ref(), BerObjectContent::NumericString(""))),
+    );
+    assert!(ber_read_content_numericstring(b"123a", 4).is_err());
+}
+
+#[test]
+fn test_printablestring() {
+    assert_eq!(
+        ber_read_content_printablestring(b"AZaz09 '()+,-./:=?", 18),
+        Ok(([].as_ref(), BerObjectContent::PrintableString("AZaz09 '()+,-./:=?"))),
+    );
+    assert_eq!(
+        ber_read_content_printablestring(b"", 0),
+        Ok(([].as_ref(), BerObjectContent::PrintableString(""))),
+    );
+    assert!(ber_read_content_printablestring(b"]", 1).is_err());
+}
+
+#[test]
+fn test_ia5string() {
+    assert_eq!(
+        ber_read_content_ia5string(b"AZaz09 '()+,-./:=?[]{}\0\n", 24),
+        Ok(([].as_ref(), BerObjectContent::IA5String("AZaz09 '()+,-./:=?[]{}\0\n"))),
+    );
+    assert_eq!(
+        ber_read_content_ia5string(b"", 0),
+        Ok(([].as_ref(), BerObjectContent::IA5String(""))),
+    );
+    assert!(ber_read_content_ia5string(b"\xFF", 1).is_err());
+}
+
+#[test]
+fn test_utf8string() {
+    assert_eq!(
+        ber_read_content_utf8string("AZaz09 '()+,-./:=?[]{}\0\nüÜ".as_ref(), 28),
+        Ok(([].as_ref(), BerObjectContent::UTF8String("AZaz09 '()+,-./:=?[]{}\0\nüÜ"))),
+    );
+    assert_eq!(
+        ber_read_content_utf8string(b"", 0),
+        Ok(([].as_ref(), BerObjectContent::UTF8String(""))),
+    );
+    assert!(ber_read_content_utf8string(b"\xe2\x28\xa1", 3).is_err());
 }

@@ -127,7 +127,7 @@ pub fn parse_der_enum(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::Enumerated)
 }
 
-/// Read a UTF-8 string value
+/// Read a UTF-8 string value. The encoding is checked.
 #[inline]
 pub fn parse_der_utf8string(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::Utf8String)
@@ -165,13 +165,15 @@ pub fn parse_der_set(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::Set)
 }
 
-/// Read a numeric string value
+/// Read a numeric string value. The content is verified to
+/// contain only digits and spaces.
 #[inline]
 pub fn parse_der_numericstring(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::NumericString)
 }
 
-/// Read a printable string value
+/// Read a printable string value. The content is verified to
+/// contain only the allowed characters.
 #[inline]
 pub fn parse_der_printablestring(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::PrintableString)
@@ -183,7 +185,7 @@ pub fn parse_der_t61string(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::T61String)
 }
 
-/// Read an IA5 string value
+/// Read an IA5 string value. The content is verified to be ASCII.
 #[inline]
 pub fn parse_der_ia5string(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::Ia5String)

@@ -167,7 +167,7 @@ fn test_ber_utf8string() {
     let bytes = [
         0x0c, 0x0a, 0x53, 0x6f, 0x6d, 0x65, 0x2d, 0x53, 0x74, 0x61, 0x74, 0x65,
     ];
-    let expected = BerObject::from_obj(BerObjectContent::UTF8String(b"Some-State"));
+    let expected = BerObject::from_obj(BerObjectContent::UTF8String("Some-State"));
     assert_eq!(parse_ber_utf8string(&bytes), Ok((empty, expected)));
 }
 
