@@ -135,5 +135,4 @@ mod tests {
         pp.set_flag(PrettyPrinterFlag::ShowHeader);
         println!("{:?}", pp);
     }
-
 }

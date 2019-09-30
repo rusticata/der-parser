@@ -27,7 +27,7 @@ impl fmt::Display for Oid {
     /// The string contains the IDs separated by dots, for ex: "1.2.840.113549.1.1.5"
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.0.is_empty() {
-            return Ok(())
+            return Ok(());
         }
         write!(f, "{}", self.0[0])?;
         for it in self.0.iter().skip(1) {
@@ -70,5 +70,4 @@ mod tests {
         let oid = Oid::from_str("1.2.840.113549.1.1.5").unwrap();
         assert_eq!(oid_ref, oid);
     }
-
 }

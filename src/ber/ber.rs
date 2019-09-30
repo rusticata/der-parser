@@ -666,5 +666,4 @@ mod tests {
 
         assert_eq!(obj.as_biguint(), Some(expected));
     }
-
 }
