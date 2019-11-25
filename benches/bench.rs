@@ -1,3 +1,4 @@
+#![cfg(all(feature = "unstable", test))]
 #![feature(test)]
 
 extern crate test;
