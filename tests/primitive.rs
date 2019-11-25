@@ -200,3 +200,15 @@ fn test_invalid_param() {
         .err()
         .expect("expected erreur");
 }
+
+#[test]
+fn test_pretty_print() {
+    let bytes = hex!("01 01 ff");
+    let obj = parse_der(&bytes).map(|(_, b)| b).expect("expected error");
+    println!("{:?}", obj.as_pretty(0, 2));
+
+    // controlling the pretty-printer
+    let mut pp = obj.as_pretty(0, 4);
+    pp.set_flag(PrettyPrinterFlag::ShowHeader);
+    println!("{:?}", pp);
+}
