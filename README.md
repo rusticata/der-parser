@@ -96,6 +96,14 @@ or use the `bigint` feature of this crate and use
 
 ## Changes
 
+### 3.0.3
+
+- Make the pretty-printer function public
+- Fix DER datestring sanity check
+- CI
+  - add rusfmt check
+  - add cargo clippy
+
 ### 3.0.2
 
 - Add `parse_ber_u32` and `parse_ber_u64` functions
