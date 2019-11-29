@@ -152,7 +152,7 @@ fn struct02() {
         parse_der_struct!(i, l: many0!(complete!(parse_rdn)) >> (Name { l: l }))
             .map(|(rem, x)| (rem, x.1))
     }
-    let parsed = parse_name(&bytes).unwrap(); 
+    let parsed = parse_name(&bytes).unwrap();
     assert_eq!(parsed, (empty, expected));
     //
     assert_eq!(parsed.1.l[0].a.val.as_str(), Ok("FR"));
