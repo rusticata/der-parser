@@ -284,6 +284,8 @@ pub(crate) fn ber_read_content_numericstring<'a>(
     i: &'a [u8],
     len: usize,
 ) -> BerResult<BerObjectContent<'a>> {
+    // Argument must be a reference, because of the .iter().all(F) call below
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn is_numeric(b: &u8) -> bool {
         match *b {
             b'0'..=b'9' | b' ' => true,
@@ -306,6 +308,8 @@ pub(crate) fn ber_read_content_printablestring<'a>(
     i: &'a [u8],
     len: usize,
 ) -> BerResult<BerObjectContent<'a>> {
+    // Argument must be a reference, because of the .iter().all(F) call below
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn is_printable(b: &u8) -> bool {
         match *b {
             b'a'..=b'z'
