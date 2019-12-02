@@ -102,6 +102,7 @@ or use the `bigint` feature of this crate and use
   do now only parse if the characters are valid.
 - `as_str()` was added to `BerObjectContent` to obtain a `&str` for the types above.
   `as_slice()` works as before.
+- Implement `Error` trait for `BerError`
 
 ### 3.0.3
 

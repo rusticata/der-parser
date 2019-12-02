@@ -3,6 +3,8 @@
 use crate::ber::BerObject;
 use crate::der::DerObject;
 use nom::error::{ErrorKind, ParseError};
+use std::error::Error;
+use std::fmt;
 
 /// Holds the result of parsing functions
 ///
@@ -66,5 +68,25 @@ impl<I> ParseError<I> for BerError {
     }
     fn append(_input: I, kind: ErrorKind, _other: Self) -> Self {
         BerError::NomError(kind)
+    }
+}
+
+impl fmt::Display for BerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Error for BerError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_unwrap_bererror() {
+        let e = BerError::IntegerTooLarge;
+        // println!("{}", e);
+        let _: Result<(), Box<dyn Error>> = Err(Box::new(e));
     }
 }
