@@ -238,7 +238,6 @@ fn test_der_set_of() {
 
 #[test]
 fn test_der_utctime() {
-    let empty = &b""[..];
     let bytes = hex!("17 0D 30 32 31 32 31 33 31 34 32 39 32 33 5A FF");
     let expected = DerObject::from_obj(BerObjectContent::UTCTime(&bytes[2..(2 + 0x0d)]));
     assert_eq!(parse_der_utctime(&bytes), Ok((&[0xff][..], expected)));
