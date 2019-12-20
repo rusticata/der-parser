@@ -76,7 +76,6 @@ pub fn parse_der_bool(i: &[u8]) -> DerResult {
 /// # extern crate nom;
 /// # use der_parser::der::{parse_der_integer, DerObject};
 /// # use der_parser::ber::BerObjectContent;
-/// # fn main() {
 /// let empty = &b""[..];
 /// let bytes = [0x02, 0x03, 0x01, 0x00, 0x01];
 /// let expected  = DerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
@@ -84,7 +83,6 @@ pub fn parse_der_bool(i: &[u8]) -> DerResult {
 ///     parse_der_integer(&bytes),
 ///     Ok((empty, expected))
 /// );
-/// # }
 /// ```
 #[inline]
 pub fn parse_der_integer(i: &[u8]) -> DerResult {

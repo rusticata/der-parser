@@ -185,13 +185,11 @@ impl<'a> BerObject<'a> {
     /// ```rust
     /// # extern crate der_parser;
     /// # use der_parser::ber::{BerObject,BerObjectContent};
-    /// # fn main() {
     /// let der_int  = BerObject::from_int_slice(b"\x01\x00\x01");
     /// assert_eq!(
     ///     der_int.as_u64(),
     ///     Ok(0x10001)
     /// );
-    /// # }
     /// ```
     pub fn as_u64(&self) -> Result<u64, BerError> {
         self.content.as_u64()
@@ -203,13 +201,11 @@ impl<'a> BerObject<'a> {
     /// ```rust
     /// # extern crate der_parser;
     /// # use der_parser::ber::{BerObject,BerObjectContent};
-    /// # fn main() {
     /// let der_int  = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
     /// assert_eq!(
     ///     der_int.as_u32(),
     ///     Ok(0x10001)
     /// );
-    /// # }
     /// ```
     pub fn as_u32(&self) -> Result<u32, BerError> {
         self.content.as_u32()
