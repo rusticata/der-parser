@@ -22,14 +22,12 @@
 //! # #[macro_use] extern crate der_parser;
 //! use der_parser::parse_der;
 //!
-//! # fn main() {
 //! let bytes = [ 0x30, 0x0a,
 //!               0x02, 0x03, 0x01, 0x00, 0x01,
 //!               0x02, 0x03, 0x01, 0x00, 0x00,
 //! ];
 //!
 //! let parsed = parse_der(&bytes);
-//! # }
 //! ```
 //!
 //! The second (and preferred) parsing method is to specify the expected objects recursively. The
@@ -44,7 +42,6 @@
 //! use der_parser::ber::*;
 //! use der_parser::error::BerResult;
 //!
-//! # fn main() {
 //! fn localparse_seq(i:&[u8]) -> BerResult {
 //!     parse_der_sequence_defined!(i,
 //!         parse_ber_integer >>
@@ -57,7 +54,6 @@
 //!               0x02, 0x03, 0x01, 0x00, 0x00,
 //! ];
 //! let parsed = localparse_seq(&bytes);
-//! # }
 //! ```
 //!
 //! All functions return a [`BerResult`](error/type.BerResult.html) object: the parsed

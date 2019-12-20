@@ -1,7 +1,8 @@
 use crate::ber::*;
 use crate::error::*;
 use crate::oid::*;
-use nom::combinator::map_res;
+use nom::bytes::streaming::take;
+use nom::combinator::{map, map_res};
 use nom::error::ErrorKind;
 use nom::number::streaming::be_u8;
 use nom::{Err, Needed};
@@ -10,6 +11,7 @@ use nom::{Err, Needed};
 pub const MAX_RECURSION: usize = 50;
 
 /// Try to parse input bytes as u64
+#[inline]
 pub(crate) fn bytes_to_u64(s: &[u8]) -> Result<u64, BerError> {
     let mut u: u64 = 0;
     for &c in s {
@@ -157,7 +159,7 @@ pub(crate) fn ber_read_content_bool(i: &[u8]) -> BerResult<BerObjectContent> {
 
 #[inline]
 pub(crate) fn ber_read_content_integer(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map!(i, take!(len), |i| { BerObjectContent::Integer(i) })
+    map(take(len), BerObjectContent::Integer)(i)
 }
 
 // XXX check if constructed (8.6.3)
@@ -175,7 +177,7 @@ pub(crate) fn ber_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerO
 // XXX check if constructed (8.7)
 #[inline]
 pub(crate) fn ber_read_content_octetstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map!(i, take!(len), |s| BerObjectContent::OctetString(s))
+    map(take(len), BerObjectContent::OctetString)(i)
 }
 
 #[inline]
@@ -343,7 +345,7 @@ pub(crate) fn ber_read_content_printablestring<'a>(
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
 pub(crate) fn ber_read_content_t61string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map!(i, take!(len), |s| BerObjectContent::T61String(s))
+    map(take(len), BerObjectContent::T61String)(i)
 }
 
 // XXX check if constructed, or indefinite length (8.21)
@@ -352,19 +354,19 @@ pub(crate) fn ber_read_content_ia5string<'a>(
     i: &'a [u8],
     len: usize,
 ) -> BerResult<BerObjectContent<'a>> {
-    map_res!(i, take!(len), |bytes: &'a [u8]| {
+    map_res(take(len), |bytes: &'a [u8]| {
         if !bytes.iter().all(u8::is_ascii) {
             return Err(BerError::BerValueError);
         }
         std::str::from_utf8(bytes)
-            .map(|s| BerObjectContent::IA5String(s))
+            .map(BerObjectContent::IA5String)
             .map_err(|_| BerError::BerValueError)
-    })
+    })(i)
 }
 
 #[inline]
 pub(crate) fn ber_read_content_utctime(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map!(i, take!(len), |s| BerObjectContent::UTCTime(s))
+    map(take(len), BerObjectContent::UTCTime)(i)
 }
 
 #[inline]
@@ -372,19 +374,19 @@ pub(crate) fn ber_read_content_generalizedtime(
     i: &[u8],
     len: usize,
 ) -> BerResult<BerObjectContent> {
-    map!(i, take!(len), |s| BerObjectContent::GeneralizedTime(s))
+    map(take(len), BerObjectContent::GeneralizedTime)(i)
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
 pub(crate) fn ber_read_content_generalstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map!(i, take!(len), |s| BerObjectContent::GeneralString(s))
+    map(take(len), BerObjectContent::GeneralString)(i)
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
 pub(crate) fn ber_read_content_bmpstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map!(i, take!(len), |s| BerObjectContent::BmpString(s))
+    map(take(len), BerObjectContent::BmpString)(i)
 }
 
 /// Parse the next bytes as the content of a BER object.
@@ -549,7 +551,6 @@ pub fn parse_ber_bool(i: &[u8]) -> BerResult {
 /// # extern crate nom;
 /// # use der_parser::ber::parse_ber_integer;
 /// # use der_parser::ber::{BerObject,BerObjectContent};
-/// # fn main() {
 /// let empty = &b""[..];
 /// let bytes = [0x02, 0x03, 0x01, 0x00, 0x01];
 /// let expected  = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
@@ -557,7 +558,6 @@ pub fn parse_ber_bool(i: &[u8]) -> BerResult {
 ///     parse_ber_integer(&bytes),
 ///     Ok((empty, expected))
 /// );
-/// # }
 /// ```
 #[inline]
 pub fn parse_ber_integer(i: &[u8]) -> BerResult {
