@@ -36,6 +36,7 @@ num-bigint = { version = "0.2", optional = true }
 [features]
 default = []
 bigint = ["num-bigint"]
+unstable = []
 
 [dev-dependencies]
 hex-literal = "0.2"

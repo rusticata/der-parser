@@ -28,7 +28,7 @@ matrix:
     - rust: nightly
       env:
        - NAME="nightly,bigint"
-       - FEATURES='bigint'
+       - FEATURES='bigint,unstable'
        - BENCH=1
 before_script:
   - ([ "$CLIPPY" != yes ] || rustup component add clippy)
