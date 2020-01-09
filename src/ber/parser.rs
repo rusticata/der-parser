@@ -3,7 +3,6 @@ use crate::error::*;
 use crate::oid::*;
 use nom::bytes::streaming::take;
 use nom::combinator::{map, map_res};
-use nom::error::ErrorKind;
 use nom::number::streaming::be_u8;
 use nom::{Err, Needed};
 
@@ -113,34 +112,34 @@ fn ber_read_oid(i: &[u8]) -> Result<Vec<u64>, u64> {
 
 /// Read an object header
 pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
-    do_parse! {
-        i,
-        el:   parse_identifier >>
-        len:  parse_ber_length_byte >>
-        llen: cond!(len.0 == 1, take!(len.1)) >>
-        ( {
-            let len : u64 = match len.0 {
-                0 => u64::from(len.1),
-                _ => {
-                    // if len is 0xff -> error (8.1.3.5)
-                    if len.1 == 0b0111_1111 {
-                        return Err(::nom::Err::Error(BerError::InvalidTag));
-                    }
-                    // XXX llen: test if 0 (indefinite form), if len is 0xff -> error
-                    match bytes_to_u64(llen.unwrap()) {
-                        Ok(l)  => l,
-                        Err(_) => { return Err(::nom::Err::Error(BerError::InvalidTag)); },
-                    }
-                },
-            };
-            BerObjectHeader {
-                class: el.0,
-                structured: el.1,
-                tag: BerTag(el.2),
-                len,
+    let (i1, el) = parse_identifier(i)?;
+    let (i2, len) = parse_ber_length_byte(i1)?;
+    let (i3, len) = match len.0 {
+        0 => (i2, u64::from(len.1)),
+        _ => {
+            // if len is 0xff -> error (8.1.3.5)
+            if len.1 == 0b0111_1111 {
+                return Err(::nom::Err::Error(BerError::InvalidTag));
             }
-        } )
-    }
+            let (i3, llen) = take(len.1)(i2)?;
+            // XXX llen: test if 0 (indefinite form), if len is 0xff -> error
+            match bytes_to_u64(llen) {
+                Ok(l) => (i3, l),
+                Err(_) => {
+                    return Err(::nom::Err::Error(BerError::InvalidTag));
+                }
+            }
+        }
+    };
+    Ok((
+        i3,
+        BerObjectHeader {
+            class: el.0,
+            structured: el.1,
+            tag: BerTag(el.2),
+            len,
+        },
+    ))
 }
 
 #[inline]
@@ -188,12 +187,12 @@ pub(crate) fn ber_read_content_null(i: &[u8]) -> BerResult<BerObjectContent> {
 // XXX check if primitive (8.19.1)
 #[inline]
 pub(crate) fn ber_read_content_oid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    do_parse! {
-        i,
-             error_if!(len == 0, ErrorKind::LengthValue) >>
-        oid: map_res!(take!(len),ber_read_oid) >>
-        ( BerObjectContent::OID(Oid::from(&oid)) )
-    }
+    custom_check!(i, len == 0, BerError::InvalidLength)?;
+
+    let (i1, oid) = map_res(take(len), ber_read_oid)(i)?;
+
+    let obj = BerObjectContent::OID(Oid::from(&oid));
+    Ok((i1, obj))
 }
 
 // XXX check if primitive (8.4)
@@ -205,21 +204,21 @@ pub(crate) fn ber_read_content_enum(i: &[u8], len: usize) -> BerResult<BerObject
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
 pub(crate) fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map_res!(i, take!(len), |bytes| {
+    map_res(take(len), |bytes| {
         std::str::from_utf8(bytes)
             .map(|s| BerObjectContent::UTF8String(s))
             .map_err(|_| BerError::BerValueError)
-    })
+    })(i)
 }
 
 #[inline]
 pub(crate) fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    do_parse! {
-        i,
-             custom_check!(len == 0, BerError::InvalidLength) >>
-        oid: map_res!(take!(len), ber_read_relative_oid) >>
-        ( BerObjectContent::RelativeOID(Oid::from(&oid)) )
-    }
+    custom_check!(i, len == 0, BerError::InvalidLength)?;
+
+    let (i1, oid) = map_res(take(len), ber_read_relative_oid)(i)?;
+
+    let obj = BerObjectContent::RelativeOID(Oid::from(&oid));
+    Ok((i1, obj))
 }
 
 #[inline]
