@@ -50,7 +50,7 @@ fn encode_relative<'a>(ids: &'a [u64]) -> impl Iterator<Item = u8> + 'a {
 
 impl<'a> Oid<'a> {
     /// Create an OID from the ASN.1 DER encoded form.
-    pub fn new(asn1: Cow<'a, [u8]>) -> Oid {
+    pub const fn new(asn1: Cow<'a, [u8]>) -> Oid {
         Oid {
             asn1,
             relative: false,
@@ -58,7 +58,7 @@ impl<'a> Oid<'a> {
     }
 
     /// Create a relative OID from the ASN.1 DER encoded form.
-    pub fn new_relative(asn1: Cow<'a, [u8]>) -> Oid {
+    pub const fn new_relative(asn1: Cow<'a, [u8]>) -> Oid {
         Oid {
             asn1,
             relative: true,
