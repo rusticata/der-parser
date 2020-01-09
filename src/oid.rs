@@ -1,5 +1,52 @@
-//! Object ID (OID) representation
-
+//! Object ID (OID) representations.
+//!
+//! The parser does not copy oids when parsing. The [Oid struct](struct.Oid.html)
+//! only has a reference to the DER encoded form of the oid.
+//!
+//! # The `der_parser::oid!` macro
+//!
+//! Since the DER encoded oids are not very readable we provide a
+//! procedural macro `oid!`. The macro can be used the following ways:
+//!
+//! - `oid!(1.4.42.23)`: Create a const expression for the corresponding `Oid<'static>`
+//! - `oid!(rel 42.23)`: Create a const expression for the corresponding relative `Oid<'static>`
+//! - `oid!(raw 1.4.42.23)`/`oid!(raw rel 42.23)`: Obtain the DER encoded form as a byte array.
+//!
+//! # Comparing oids
+//!
+//! Comparing a parsed oid to a static oid is probably the most common
+//! thing done with oids in your code. The `oid!` macro can be used in expression positions for
+//! this purpose. For example
+//! ```
+//! use der_parser::{oid, oid::Oid};
+//!
+//! # let some_oid: Oid<'static> = oid!(1.2.456);
+//! const SOME_STATIC_OID: Oid<'static> = oid!(1.2.456);
+//! assert_eq!(some_oid, SOME_STATIC_OID)
+//! ```
+//! To get a relative Oid use `oid!(rel 1.2)`.
+//!
+//! Because of limitations for procedural macros ([rust issue](https://github.com/rust-lang/rust/issues/54727))
+//! and constants used in patterns ([rust issue](https://github.com/rust-lang/rust/issues/31434))
+//! the `oid` macro can not directly be used in patterns, also not through constants.
+//! You can do this, though:
+//! ```
+//! # use der_parser::{oid, oid::Oid};
+//! # let some_oid: Oid<'static> = oid!(1.2.456);
+//! const SOME_OID: Oid<'static> = oid!(1.2.456);
+//! if some_oid == SOME_OID || some_oid == oid!(1.2.456) {
+//!     println!("match");
+//! }
+//!
+//! // Alternatively, compare the DER encoded form directly:
+//! const SOME_OID_RAW: &[u8] = &oid!(raw 1.2.456);
+//! match some_oid.bytes() {
+//!     SOME_OID_RAW => println!("match"),
+//!     _ => panic!("no match"),
+//! }
+//! ```
+//! *Attention*, be aware that the latter version might not handle the case of a relative oid correctly. An
+//! extra check might be necessary.
 use std::borrow::Cow;
 use std::convert::From;
 use std::fmt;
@@ -26,9 +73,9 @@ pub enum ParseError {
 ///
 /// For non-relative oids restrictions apply to the first two components.
 ///
-/// This library ships with a procedural macro `oid` which can be used to
+/// This library contains a procedural macro `oid` which can be used to
 /// create oids. For example `oid!(1.2.44.233)` or `oid!(rel 44.233)`
-/// for relative oids.
+/// for relative oids. See the [module documentation](index.html) for more information.
 #[derive(Hash, PartialEq, Eq, Clone)]
 pub struct Oid<'a> {
     asn1: Cow<'a, [u8]>,
@@ -49,7 +96,8 @@ fn encode_relative<'a>(ids: &'a [u64]) -> impl Iterator<Item = u8> + 'a {
 }
 
 impl<'a> Oid<'a> {
-    /// Create an OID from the ASN.1 DER encoded form.
+    /// Create an OID from the ASN.1 DER encoded form. See the [module documentation](index.html)
+    /// for other ways to create oids.
     pub const fn new(asn1: Cow<'a, [u8]>) -> Oid {
         Oid {
             asn1,
@@ -57,7 +105,8 @@ impl<'a> Oid<'a> {
         }
     }
 
-    /// Create a relative OID from the ASN.1 DER encoded form.
+    /// Create a relative OID from the ASN.1 DER encoded form. See the [module documentation](index.html)
+    /// for other ways to create relative oids.
     pub const fn new_relative(asn1: Cow<'a, [u8]>) -> Oid {
         Oid {
             asn1,
@@ -66,6 +115,7 @@ impl<'a> Oid<'a> {
     }
 
     /// Build an OID from an array of object identifier components.
+    /// This method allocates memory on the heap.
     pub fn from<'b>(s: &'b [u64]) -> Result<Oid<'static>, ParseError> {
         if s.len() < 2 {
             if s.len() == 1 && s[0] == 0 {

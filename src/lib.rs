@@ -120,4 +120,5 @@ extern crate num_bigint;
 use proc_macro_hack::proc_macro_hack;
 
 #[proc_macro_hack]
+/// Procedural macro to get encoded oids, see the [oid module](oid/index.html).
 pub use der_oid_macro::oid;
