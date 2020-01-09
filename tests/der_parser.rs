@@ -113,9 +113,9 @@ fn test_der_oid() {
     let bytes = [
         0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x05,
     ];
-    let expected = DerObject::from_obj(BerObjectContent::OID(Oid::from(&[
-        1, 2, 840, 113549, 1, 1, 5,
-    ])));
+    let expected = DerObject::from_obj(BerObjectContent::OID(
+        Oid::from(&[1, 2, 840, 113549, 1, 1, 5]).unwrap(),
+    ));
     assert_eq!(parse_der_oid(&bytes), Ok((empty, expected)));
 }
 
@@ -140,7 +140,9 @@ fn test_der_utf8string() {
 fn test_der_relativeoid() {
     let empty = &b""[..];
     let bytes = [0x0d, 0x04, 0xc2, 0x7b, 0x03, 0x02];
-    let expected = DerObject::from_obj(BerObjectContent::RelativeOID(Oid::from(&[8571, 3, 2])));
+    let expected = DerObject::from_obj(BerObjectContent::RelativeOID(
+        Oid::from_relative(&[8571, 3, 2]).unwrap(),
+    ));
     assert_eq!(parse_der_relative_oid(&bytes), Ok((empty, expected)));
 }
 
@@ -398,15 +400,15 @@ fn test_der_seq_dn() {
     ];
     let expected = DerObject::from_seq(vec![
         DerObject::from_set(vec![DerObject::from_seq(vec![
-            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 6]))), // countryName
+            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 6]).unwrap())), // countryName
             DerObject::from_obj(BerObjectContent::PrintableString("FR")),
         ])]),
         DerObject::from_set(vec![DerObject::from_seq(vec![
-            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 8]))), // stateOrProvinceName
+            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 8]).unwrap())), // stateOrProvinceName
             DerObject::from_obj(BerObjectContent::UTF8String("Some-State")),
         ])]),
         DerObject::from_set(vec![DerObject::from_seq(vec![
-            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 10]))), // organizationName
+            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 10]).unwrap())), // organizationName
             DerObject::from_obj(BerObjectContent::UTF8String("Internet Widgits Pty Ltd")),
         ])]),
     ]);
@@ -425,15 +427,15 @@ fn test_der_seq_dn_defined() {
     ];
     let expected = DerObject::from_seq(vec![
         DerObject::from_set(vec![DerObject::from_seq(vec![
-            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 6]))), // countryName
+            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 6]).unwrap())), // countryName
             DerObject::from_obj(BerObjectContent::PrintableString("FR")),
         ])]),
         DerObject::from_set(vec![DerObject::from_seq(vec![
-            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 8]))), // stateOrProvinceName
+            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 8]).unwrap())), // stateOrProvinceName
             DerObject::from_obj(BerObjectContent::UTF8String("Some-State")),
         ])]),
         DerObject::from_set(vec![DerObject::from_seq(vec![
-            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 10]))), // organizationName
+            DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 10]).unwrap())), // organizationName
             DerObject::from_obj(BerObjectContent::UTF8String("Internet Widgits Pty Ltd")),
         ])]),
     ]);

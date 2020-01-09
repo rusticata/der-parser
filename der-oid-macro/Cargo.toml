@@ -1,0 +1,14 @@
+[package]
+name = "der-oid-macro"
+description = "Macro to encode DER oids at compile time"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+nom = "5.0"
+num-bigint = "0.2"
+num-traits = "0.2"
+proc-macro-hack = "0.5"
