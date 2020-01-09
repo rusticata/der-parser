@@ -94,7 +94,7 @@ fn struct02() {
     ];
     #[derive(Debug, PartialEq)]
     struct Attr<'a> {
-        oid: Oid,
+        oid: Oid<'a>,
         val: BerObject<'a>,
     };
     #[derive(Debug, PartialEq)]
@@ -109,19 +109,19 @@ fn struct02() {
         l: vec![
             Rdn {
                 a: Attr {
-                    oid: Oid::from(&[2, 5, 4, 6]), // countryName
+                    oid: Oid::from(&[2, 5, 4, 6]).unwrap(), // countryName
                     val: BerObject::from_obj(BerObjectContent::PrintableString("FR")),
                 },
             },
             Rdn {
                 a: Attr {
-                    oid: Oid::from(&[2, 5, 4, 8]), // stateOrProvinceName
+                    oid: Oid::from(&[2, 5, 4, 8]).unwrap(), // stateOrProvinceName
                     val: BerObject::from_obj(BerObjectContent::UTF8String("Some-State")),
                 },
             },
             Rdn {
                 a: Attr {
-                    oid: Oid::from(&[2, 5, 4, 10]), // organizationName
+                    oid: Oid::from(&[2, 5, 4, 10]).unwrap(), // organizationName
                     val: BerObject::from_obj(BerObjectContent::IA5String(
                         "Internet Widgits Pty Ltd",
                     )),
@@ -136,9 +136,12 @@ fn struct02() {
         )
     }
     fn parse_attr_type_and_value(i: &[u8]) -> BerResult<Attr> {
+        fn clone_oid<'a>(x: BerObject<'a>) -> Result<Oid<'a>, BerError> {
+            x.as_oid().map(|o| o.clone())
+        }
         parse_der_struct!(
             i,
-            o: map_res!(parse_ber_oid, |x: BerObject| x.as_oid().map(|o| o.clone()))
+            o: map_res!(parse_ber_oid, clone_oid)
                 >> s: parse_directory_string
                 >> (Attr { oid: o, val: s })
         )
