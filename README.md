@@ -96,6 +96,11 @@ or use the `bigint` feature of this crate and use
 
 ## Changes
 
+### 3.0.4
+
+- Use cloned instead of copied to support older rust compiler (1.33)
+- Fix new clippy warnings (rust 1.40)
+
 ### 3.0.3
 
 - Make the pretty-printer function public
