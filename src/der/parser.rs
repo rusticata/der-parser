@@ -304,7 +304,7 @@ pub fn der_read_element_content_as(
             der_constraint_fail_if!(i, constructed);
         }
         BerTag::UtcTime | BerTag::GeneralizedTime => {
-            if len == 0 || i.get(len - 1).copied() != Some(b'Z') {
+            if len == 0 || i.get(len - 1).cloned() != Some(b'Z') {
                 return Err(Err::Error(BerError::DerConstraintFailed));
             }
         }
