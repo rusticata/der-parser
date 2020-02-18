@@ -48,13 +48,14 @@ impl debug BerTag {
 }
 
 /// Representation of a DER-encoded (X.690) object
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct BerObject<'a> {
     pub class: u8,
     pub structured: u8,
     pub tag: BerTag,
 
     pub content: BerObjectContent<'a>,
+    pub raw_tag: Option<&'a [u8]>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -138,13 +139,14 @@ impl<'a> BerObject<'a> {
     /// can be invalid.
     pub fn from_header_and_content<'hdr>(
         hdr: BerObjectHeader<'hdr>,
-        c: BerObjectContent<'a>,
-    ) -> BerObject<'a> {
+        c: BerObjectContent<'hdr>,
+    ) -> BerObject<'hdr> {
         BerObject {
             class: hdr.class,
             structured: hdr.structured,
             tag: hdr.tag,
             content: c,
+            raw_tag: hdr.raw_tag,
         }
     }
     /// Build a BerObject from its content, using default flags (no class, correct tag,
@@ -161,6 +163,7 @@ impl<'a> BerObject<'a> {
             structured,
             tag,
             content: c,
+            raw_tag: None,
         }
     }
 
@@ -171,7 +174,13 @@ impl<'a> BerObject<'a> {
             structured: 0,
             tag: BerTag::Integer,
             content: BerObjectContent::Integer(i),
+            raw_tag: None,
         }
+    }
+
+    /// Set a tag for the BER object
+    pub fn set_raw_tag(self, raw_tag: Option<&'a [u8]>) -> BerObject {
+        BerObject { raw_tag, ..self }
     }
 
     /// Build a DER sequence object from a vector of DER objects
@@ -310,6 +319,23 @@ impl<'a> BerObject<'a> {
     /// Test if object is constructed
     pub fn is_constructed(&self) -> bool {
         self.structured == 1
+    }
+}
+
+impl<'a> PartialEq<BerObject<'a>> for BerObject<'a> {
+    fn eq(&self, other: &BerObject) -> bool {
+        self.class == other.class
+            && self.tag == other.tag
+            && self.structured == other.structured
+            && self.content == other.content
+            && {
+                // it tag is present for both, compare it
+                if self.raw_tag.xor(other.raw_tag).is_none() {
+                    self.raw_tag == other.raw_tag
+                } else {
+                    true
+                }
+            }
     }
 }
 

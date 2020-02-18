@@ -274,6 +274,7 @@ fn test_der_contextspecific() {
         structured: 1,
         tag: BerTag(0),
         content: BerObjectContent::Unknown(BerTag(0), &bytes[2..]),
+        raw_tag: Some(&[0xa0]),
     };
     assert_eq!(parse_der(&bytes), Ok((empty, expected)));
 }
@@ -290,6 +291,7 @@ fn test_der_explicit() {
             BerTag(0),
             Some(Box::new(DerObject::from_int_slice(b"\x02"))),
         ),
+        raw_tag: Some(&[0xa0]),
     };
     assert_eq!(
         parse_der_explicit(&bytes, BerTag(0), parse_der_integer),
@@ -312,6 +314,7 @@ fn test_der_implicit() {
         structured: 0,
         tag: BerTag(1),
         content: BerObjectContent::ContextSpecific(BerTag(1), Some(Box::new(pass))),
+        raw_tag: Some(&[0x81]),
     };
     fn der_read_ia5string_content(
         i: &[u8],
@@ -341,6 +344,7 @@ fn test_der_implicit_long_tag() {
         structured: 0,
         tag: BerTag(0x52),
         content: BerObjectContent::ContextSpecific(BerTag(0x52), Some(Box::new(pass))),
+        raw_tag: Some(&[0x5f, 0x52]),
     };
     fn der_read_ia5string_content(
         i: &[u8],

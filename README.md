@@ -114,7 +114,9 @@ or use the `bigint` feature of this crate and use
     added.
   - `Hash` is now derived for `Oid`.
 - Add method to extract raw tag from header
-  - `BerObjectHeader` now has a lifetime
+  - `BerObjectHeader` now has a lifetime and a `raw_tag` field
+  - `BerObject` now has a `raw_tag` field
+  - Implement `PartialEq` manually for `BerObject`: `raw_tag` is compared only if both fields provide it
 
 ### 3.0.3
 

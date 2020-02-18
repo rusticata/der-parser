@@ -132,9 +132,9 @@ macro_rules! parse_der_sequence_defined_m(
 ///               0x02, 0x03, 0x01, 0x00, 0x00,
 /// ];
 /// let expected  = BerObject::from_set(vec![
-///     BerObject::from_int_slice(b"\x01\x00\x01"),
-///     BerObject::from_int_slice(b"\x01\x00\x00"),
-/// ]);
+///     BerObject::from_int_slice(b"\x01\x00\x01").set_raw_tag(Some(&[0x2])),
+///     BerObject::from_int_slice(b"\x01\x00\x00").set_raw_tag(Some(&[0x2])),
+/// ]).set_raw_tag(Some(&[0x31]));
 /// assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
 /// # }
 /// ```
@@ -276,10 +276,10 @@ macro_rules! parse_der_sequence_defined(
 ///               0x02, 0x03, 0x01, 0x00, 0x01,
 ///               0x02, 0x03, 0x01, 0x00, 0x00,
 /// ];
-/// let expected  = BerObject::from_set(vec![
-///     BerObject::from_int_slice(b"\x01\x00\x01"),
-///     BerObject::from_int_slice(b"\x01\x00\x00"),
-/// ]);
+///  let expected = BerObject::from_set(vec![
+///      BerObject::from_int_slice(b"\x01\x00\x01").set_raw_tag(Some(&[0x2])),
+///      BerObject::from_int_slice(b"\x01\x00\x00").set_raw_tag(Some(&[0x2])),
+///  ]).set_raw_tag(Some(&[0x31]));
 /// assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
 /// # }
 /// ```

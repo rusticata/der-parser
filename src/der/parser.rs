@@ -313,7 +313,7 @@ pub fn der_read_element_content_as(
     ber_read_element_content_as(i, tag, len, constructed, depth)
 }
 
-pub fn der_read_element_content<'a>(i: &'a [u8], hdr: BerObjectHeader) -> DerResult<'a> {
+pub fn der_read_element_content<'a>(i: &'a [u8], hdr: BerObjectHeader<'a>) -> DerResult<'a> {
     match hdr.class {
         // universal
         0b00 |
