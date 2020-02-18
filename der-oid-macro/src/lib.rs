@@ -64,7 +64,7 @@ fn encode_components(components: &[num_bigint::BigUint], relative: bool) -> Vec<
         dec = &dec[2..];
     }
 
-    for int in dec.into_iter() {
+    for int in dec.iter() {
         let mut bytes = int.to_bytes_be();
         if bytes[0] == 0 {
             enc.push(0u8);
@@ -125,7 +125,7 @@ pub fn oid(item: TokenStream) -> TokenStream {
     s.push(']');
 
     let code = if raw {
-        format!("{}", s)
+        s
     } else if relative {
         format!(
             "der_parser::oid::Oid::new_relative(std::borrow::Cow::Borrowed(&{}))",
