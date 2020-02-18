@@ -113,6 +113,8 @@ or use the `bigint` feature of this crate and use
   - The `Oid::iter` method now returns an `Option`. `Oid::iter_bigint` was
     added.
   - `Hash` is now derived for `Oid`.
+- Add method to extract raw tag from header
+  - `BerObjectHeader` now has a lifetime
 
 ### 3.0.3
 

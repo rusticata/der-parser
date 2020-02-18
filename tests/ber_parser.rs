@@ -188,3 +188,21 @@ fn test_ber_bmpstring() {
     let expected = BerObject::from_obj(BerObjectContent::BmpString(b"\x00U\x00s\x00e\x00r"));
     assert_eq!(parse_ber_bmpstring(&bytes), Ok((empty, expected)));
 }
+
+#[test]
+fn test_ber_customtags() {
+    let bytes = hex!("8f 02 12 34");
+    let hdr = ber_read_element_header(&bytes)
+        .expect("ber_read_element_header")
+        .1;
+    // println!("{:?}", hdr);
+    let expected: &[u8] = &[0x8f];
+    assert_eq!(hdr.raw_tag, Some(expected));
+    let bytes = hex!("9f 0f 02 12 34");
+    let hdr = ber_read_element_header(&bytes)
+        .expect("ber_read_element_header")
+        .1;
+    // println!("{:?}", hdr);
+    let expected: &[u8] = &[0x9f, 0x0f];
+    assert_eq!(hdr.raw_tag, Some(expected));
+}

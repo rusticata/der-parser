@@ -72,6 +72,7 @@ fn struct01() {
             structured: 1,
             tag: BerTag::Sequence,
             len: 0xa,
+            raw_tag: Some(&[0x30]),
         },
         MyStruct {
             a: BerObject::from_int_slice(b"\x01\x00\x01"),
@@ -175,6 +176,7 @@ fn struct_with_garbage() {
             structured: 1,
             tag: BerTag::Sequence,
             len: 0xc,
+            raw_tag: Some(&[0x30]),
         },
         MyStruct {
             a: BerObject::from_int_slice(b"\x01\x00\x01"),
@@ -200,6 +202,7 @@ fn struct_verify_tag() {
             structured: 1,
             tag: BerTag::Sequence,
             len: 0xa,
+            raw_tag: Some(&[0x30]),
         },
         MyStruct {
             a: BerObject::from_int_slice(b"\x01\x00\x01"),

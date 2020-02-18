@@ -217,6 +217,7 @@ fn test_invalid_param() {
         structured: 0,
         tag: BerTag(2),
         len: 1,
+        raw_tag: None,
     };
     der_read_element_content(&bytes, hdr)
         .err()

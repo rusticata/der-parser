@@ -313,7 +313,7 @@ pub fn der_read_element_content_as(
     ber_read_element_content_as(i, tag, len, constructed, depth)
 }
 
-pub fn der_read_element_content(i: &[u8], hdr: BerObjectHeader) -> DerResult {
+pub fn der_read_element_content<'a>(i: &'a [u8], hdr: BerObjectHeader) -> DerResult<'a> {
     match hdr.class {
         // universal
         0b00 |
@@ -397,6 +397,7 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
                 structured: el.1,
                 tag: BerTag(el.2),
                 len,
+                raw_tag: Some(el.3),
             }
         } )
     }

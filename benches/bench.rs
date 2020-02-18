@@ -28,7 +28,8 @@ fn bench_der_read_element_header(b: &mut Bencher) {
                         class: 0,
                         structured: 0,
                         tag: BerTag(12),
-                        len: 10
+                        len: 10,
+                        raw_tag: Some(&[0xc]),
                     }
                 );
             }

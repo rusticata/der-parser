@@ -24,7 +24,7 @@ pub(crate) fn bytes_to_u64(s: &[u8]) -> Result<u64, BerError> {
     Ok(u)
 }
 
-pub(crate) fn parse_identifier(i: &[u8]) -> BerResult<(u8, u8, u32)> {
+pub(crate) fn parse_identifier(i: &[u8]) -> BerResult<(u8, u8, u32, &[u8])> {
     if i.is_empty() {
         Err(Err::Incomplete(Needed::Size(1)))
     } else {
@@ -53,7 +53,9 @@ pub(crate) fn parse_identifier(i: &[u8]) -> BerResult<(u8, u8, u32)> {
             }
         }
 
-        Ok((&i[tag_byte_count..], (a, b, c)))
+        let (raw_tag, rem) = i.split_at(tag_byte_count);
+
+        Ok((rem, (a, b, c, raw_tag)))
     }
 }
 
@@ -95,6 +97,7 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
             structured: el.1,
             tag: BerTag(el.2),
             len,
+            raw_tag: Some(el.3),
         },
     ))
 }

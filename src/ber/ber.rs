@@ -58,11 +58,13 @@ pub struct BerObject<'a> {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct BerObjectHeader {
+pub struct BerObjectHeader<'a> {
     pub class: u8,
     pub structured: u8,
     pub tag: BerTag,
     pub len: u64,
+
+    pub raw_tag: Option<&'a [u8]>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -96,7 +98,7 @@ pub enum BerObjectContent<'a> {
     Unknown(BerTag, &'a [u8]),
 }
 
-impl BerObjectHeader {
+impl<'a> BerObjectHeader<'a> {
     /// Test if object class is Universal
     #[inline]
     pub fn is_universal(&self) -> bool {
@@ -134,7 +136,10 @@ impl<'a> BerObject<'a> {
     /// Build a BerObject from a header and content.
     /// Note: values are not checked, so the tag can be different from the real content, or flags
     /// can be invalid.
-    pub fn from_header_and_content(hdr: BerObjectHeader, c: BerObjectContent) -> BerObject {
+    pub fn from_header_and_content<'hdr>(
+        hdr: BerObjectHeader<'hdr>,
+        c: BerObjectContent<'a>,
+    ) -> BerObject<'a> {
         BerObject {
             class: hdr.class,
             structured: hdr.structured,
