@@ -3,6 +3,10 @@ name = "der-oid-macro"
 description = "Macro to encode DER oids at compile time"
 version = "0.1.0"
 edition = "2018"
+license = "MIT/Apache-2.0"
+homepage = "https://github.com/rusticata/der-parser"
+repository = "https://github.com/rusticata/der-parser.git"
+authors = ["Pierre Chifflier <chifflier@wzdftpd.net>", "Jannik Schürg <schuerg@ins.uni-bonn.de>"]
 
 [lib]
 proc-macro = true
