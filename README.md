@@ -117,6 +117,7 @@ or use the `bigint` feature of this crate and use
   - `BerObjectHeader` now has a lifetime and a `raw_tag` field
   - `BerObject` now has a `raw_tag` field
   - Implement `PartialEq` manually for `BerObject`: `raw_tag` is compared only if both fields provide it
+- Minimum rust version is now 1.37
 
 ### 3.0.3
 
