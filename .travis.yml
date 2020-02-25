@@ -1,5 +1,9 @@
 language: rust
 sudo: false
+env:
+  global:
+    - RUST_VERSION="stable"
+    - RUST_VERSION_MIN="1.34.0"
 matrix:
   include:
     - rust: stable
@@ -16,9 +20,15 @@ matrix:
        - NAME="stable,fmt"
        - FEATURES=''
        - RUSTFMT=yes
+    - rust: stable
+      env:
+       - NAME="rust-${RUST_VERSION_MIN}"
+       - RUST_VERSION="${RUST_VERSION_MIN}"
+       - FEATURES=''
     - rust: nightly
       env:
        - NAME="nightly"
+       - RUST_VERSION="nightly"
        - FEATURES=''
        - BENCH=1
     - rust: stable
@@ -28,9 +38,12 @@ matrix:
     - rust: nightly
       env:
        - NAME="nightly,bigint"
+       - RUST_VERSION="nightly"
        - FEATURES='bigint,unstable'
        - BENCH=1
 before_script:
+  - rustup default "${RUST_VERSION}"
+  - rustc --version
   - ([ "$CLIPPY" != yes ] || rustup component add clippy)
   - ([ "$RUSTFMT" != yes ] || rustup component add rustfmt)
 script:
