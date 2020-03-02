@@ -85,9 +85,10 @@
 //!   Basic Encoding Rules (BER), Canonical Encoding Rules (CER) and Distinguished Encoding Rules
 //!   (DER)."
 
-#![deny(/*missing_docs,*/unsafe_code,
+#![deny(/*missing_docs,*/
         unstable_features,
         unused_import_braces, unused_qualifications)]
+#![forbid(unsafe_code)]
 
 #[macro_use]
 extern crate nom;
