@@ -2,7 +2,8 @@ use crate::ber::*;
 use crate::der::DerObject;
 use crate::error::*;
 use nom::number::streaming::be_u8;
-use nom::{Err, Needed};
+use nom::*;
+use rusticata_macros::custom_check;
 
 /// Parse DER object
 pub fn parse_der(i: &[u8]) -> DerResult {

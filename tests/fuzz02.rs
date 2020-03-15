@@ -1,5 +1,3 @@
-extern crate der_parser;
-
 #[test]
 fn test02() {
     let data = b"\x06\x00\x01\x00\x00\x2a";

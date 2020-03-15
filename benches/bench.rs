@@ -4,16 +4,14 @@
 extern crate test;
 use test::Bencher;
 
-#[macro_use]
-extern crate der_parser;
-#[macro_use]
-extern crate hex_literal;
-
 use der_parser::ber::{BerObjectHeader, BerTag};
 use der_parser::der::{
     der_read_element_header, parse_der, parse_der_integer, parse_der_u32, DerObject,
 };
 use der_parser::error::DerResult;
+use der_parser::*;
+use hex_literal::hex;
+use nom::{map, map_res};
 
 #[bench]
 fn bench_der_read_element_header(b: &mut Bencher) {

@@ -1,11 +1,9 @@
 #![allow(deprecated)]
 
-#[macro_use]
-extern crate der_parser;
-
 use der_parser::ber::{parse_ber_integer, BerObject, BerObjectHeader};
 use der_parser::der::{parse_der_enum, parse_der_integer};
 use der_parser::error::{BerResult, DerResult};
+use der_parser::*;
 
 // Do not import nom, to check types and re-exports
 

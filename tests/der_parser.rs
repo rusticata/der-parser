@@ -1,21 +1,14 @@
 #![allow(deprecated)]
 
-#[macro_use]
-extern crate pretty_assertions;
-
-#[macro_use]
-extern crate nom;
-#[macro_use]
-extern crate der_parser;
-#[macro_use]
-extern crate hex_literal;
-
 use der_parser::ber::{ber_read_element_content_as, BerObjectContent, BerTag, BitStringObject};
 use der_parser::der::*;
 use der_parser::error::*;
 use der_parser::oid::*;
+use der_parser::*;
+use hex_literal::hex;
 use nom::error::ErrorKind;
-use nom::Err;
+use nom::{error_position, Err};
+use pretty_assertions::assert_eq;
 
 #[test]
 fn test_der_bool() {

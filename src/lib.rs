@@ -91,12 +91,6 @@
 #![forbid(unsafe_code)]
 
 #[macro_use]
-extern crate nom;
-
-#[macro_use]
-extern crate rusticata_macros;
-
-#[macro_use]
 mod macros;
 
 #[allow(clippy::module_inception)]
@@ -114,9 +108,6 @@ pub use der::parse_der;
 pub use nom::{alt, call, complete, do_parse, eof, many0, map, map_res, verify};
 #[doc(hidden)]
 pub use rusticata_macros::{custom_check, flat_take};
-
-#[cfg(feature = "bigint")]
-extern crate num_bigint;
 
 use proc_macro_hack::proc_macro_hack;
 

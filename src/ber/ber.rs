@@ -1,6 +1,7 @@
 use crate::ber::bytes_to_u64;
 use crate::error::BerError;
 use crate::oid::Oid;
+use rusticata_macros::newtype_enum;
 use std::convert::AsRef;
 use std::convert::From;
 use std::ops::Index;

@@ -1,15 +1,9 @@
-#[macro_use]
-extern crate pretty_assertions;
-
-#[macro_use]
-extern crate hex_literal;
-extern crate der_parser;
-extern crate nom;
-
 use der_parser::ber::*;
 use der_parser::error::*;
 use der_parser::oid::*;
+use hex_literal::hex;
 use nom::Err;
+use pretty_assertions::assert_eq;
 
 #[test]
 fn test_ber_bool() {

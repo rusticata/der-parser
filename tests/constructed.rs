@@ -1,17 +1,10 @@
-#[macro_use]
-extern crate pretty_assertions;
-
-extern crate der_parser;
-
-#[macro_use]
-extern crate nom;
-
 use der_parser::ber::*;
 use der_parser::error::*;
 use der_parser::*;
 use nom::error::ErrorKind;
-use nom::Err;
+use nom::*;
 use oid::Oid;
+use pretty_assertions::assert_eq;
 
 #[derive(Debug, PartialEq)]
 struct MyStruct<'a> {

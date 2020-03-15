@@ -4,7 +4,8 @@ use crate::oid::*;
 use nom::bytes::streaming::take;
 use nom::combinator::{map, map_res, verify};
 use nom::number::streaming::be_u8;
-use nom::{Err, Needed};
+use nom::*;
+use rusticata_macros::{custom_check, flat_take, parse_hex_to_u64};
 use std::borrow::Cow;
 
 /// Maximum recursion limit

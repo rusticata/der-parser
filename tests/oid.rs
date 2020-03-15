@@ -1,7 +1,5 @@
 //! Test the API provided to compare OIDs
 
-extern crate der_parser;
-
 use der_parser::oid;
 use der_parser::oid::Oid;
 
