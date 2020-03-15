@@ -114,7 +114,7 @@ fn test_der_oid() {
         0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x05,
     ];
     let expected = DerObject::from_obj(BerObjectContent::OID(
-        Oid::from(&[1, 2, 840, 113549, 1, 1, 5]).unwrap(),
+        Oid::from(&[1, 2, 840, 113_549, 1, 1, 5]).unwrap(),
     ));
     assert_eq!(parse_der_oid(&bytes), Ok((empty, expected)));
 }
@@ -521,15 +521,15 @@ fn test_parse_u32() {
     );
     assert_eq!(
         parse_der_u32(&[0x02, 0x03, 0xff, 0xff, 0xff]),
-        Ok((empty, 0xffffff))
+        Ok((empty, 0x00ff_ffff))
     );
     assert_eq!(
         parse_der_u32(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),
-        Ok((empty, 0x1234567))
+        Ok((empty, 0x0123_4567))
     );
     assert_eq!(
         parse_der_u32(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),
-        Ok((empty, 0xffffffff))
+        Ok((empty, 0xffff_ffff))
     );
     let s = &[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89];
     assert_eq!(parse_der_u32(s), Err(Err::Error(BerError::IntegerTooLarge)));
@@ -553,19 +553,19 @@ fn test_parse_u64() {
     );
     assert_eq!(
         parse_der_u64(&[0x02, 0x03, 0xff, 0xff, 0xff]),
-        Ok((empty, 0xffffff))
+        Ok((empty, 0x00ff_ffff))
     );
     assert_eq!(
         parse_der_u64(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),
-        Ok((empty, 0x1234567))
+        Ok((empty, 0x0123_4567))
     );
     assert_eq!(
         parse_der_u64(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),
-        Ok((empty, 0xffffffff))
+        Ok((empty, 0xffff_ffff))
     );
     assert_eq!(
         parse_der_u64(&[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89]),
-        Ok((empty, 0x123456789))
+        Ok((empty, 0x0001_2345_6789))
     );
     let s = &[0x01, 0x01, 0xff];
     assert_eq!(parse_der_u64(s), Err(Err::Error(BerError::InvalidTag)));

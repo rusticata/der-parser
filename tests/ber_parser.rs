@@ -149,7 +149,7 @@ fn test_ber_oid() {
         0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x05,
     ];
     let expected = BerObject::from_obj(BerObjectContent::OID(
-        Oid::from(&[1, 2, 840, 113549, 1, 1, 5]).unwrap(),
+        Oid::from(&[1, 2, 840, 113_549, 1, 1, 5]).unwrap(),
     ));
     assert_eq!(parse_ber_oid(&bytes), Ok((empty, expected)));
 }

@@ -120,7 +120,7 @@ fn oid_macro_edge_cases() {
     assert_eq!(undef.bytes(), [0].as_ref());
 
     let two = oid!(1.2);
-    assert_eq!(two.bytes(), [1 * 40 + 2].as_ref());
+    assert_eq!(two.bytes(), [40 + 2].as_ref());
 
     let spacing = oid!(5.2);
     assert_eq!(spacing.bytes(), [5 * 40 + 2].as_ref());

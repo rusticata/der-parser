@@ -197,15 +197,13 @@ fn test_invalid_length() {
         .err()
         .expect("expected error");
     let bytes = hex!("02 85 ff ff ff ff ff 00");
-    let res = parse_ber(&bytes)
-        .err()
-        .expect("parsing should have returned error");
+    let res = parse_ber(&bytes).expect_err("parsing should have returned error");
     // get error
     match res {
         Err::Error(e) => {
             assert_eq!(e, BerError::InvalidLength);
         }
-        _ => assert!(false),
+        _ => panic!("not the expected nom error kind"),
     }
     let bytes = hex!("02 02 00");
     let res = parse_der(&bytes).err().expect("expected error");

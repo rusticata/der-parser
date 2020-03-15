@@ -137,7 +137,7 @@ fn struct02() {
         )
     }
     fn parse_attr_type_and_value(i: &[u8]) -> BerResult<Attr> {
-        fn clone_oid<'a>(x: BerObject<'a>) -> Result<Oid<'a>, BerError> {
+        fn clone_oid(x: BerObject) -> Result<Oid, BerError> {
             x.as_oid().map(|o| o.clone())
         }
         parse_der_struct!(
@@ -236,14 +236,9 @@ fn tagged_explicit() {
     }
     let bytes = &[0xa2, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
     // EXPLICIT tagged value parsing
-    let res = parse_int_explicit(bytes);
-    match res {
-        Ok((rem, val)) => {
-            assert!(rem.is_empty());
-            assert_eq!(val, 0x10001);
-        }
-        _ => assert!(false),
-    }
+    let (rem, val) = parse_int_explicit(bytes).expect("Could not parse explicit int");
+    assert!(rem.is_empty());
+    assert_eq!(val, 0x10001);
     // omitting EXPLICIT keyword
     let a = parse_int_explicit(bytes);
     let b = parse_int_noexplicit(bytes);
@@ -274,14 +269,9 @@ fn tagged_implicit() {
     }
     let bytes = &[0x82, 0x03, 0x01, 0x00, 0x01];
     // IMPLICIT tagged value parsing
-    let res = parse_int_implicit(bytes);
-    match res {
-        Ok((rem, val)) => {
-            assert!(rem.is_empty());
-            assert_eq!(val, 0x10001);
-        }
-        _ => assert!(false),
-    }
+    let (rem, val) = parse_int_implicit(bytes).expect("could not parse implicit int");
+    assert!(rem.is_empty());
+    assert_eq!(val, 0x10001);
     // wrong tag
     assert_eq!(
         parse_der_tagged!(bytes as &[u8],IMPLICIT 3,BerTag::Integer),
@@ -307,15 +297,10 @@ fn application() {
         )
     }
     let bytes = &[0x62, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
-    let res = parse_app01(bytes);
-    match res {
-        Ok((rem, (hdr, app))) => {
-            assert!(rem.is_empty());
-            assert_eq!(hdr.tag, BerTag::Integer);
-            assert!(hdr.is_application());
-            assert_eq!(hdr.structured, 1);
-            assert_eq!(app, SimpleStruct { a: 0x10001 });
-        }
-        _ => assert!(false),
-    }
+    let (rem, (hdr, app)) = parse_app01(bytes).expect("could not parse application");
+    assert!(rem.is_empty());
+    assert_eq!(hdr.tag, BerTag::Integer);
+    assert!(hdr.is_application());
+    assert_eq!(hdr.structured, 1);
+    assert_eq!(app, SimpleStruct { a: 0x10001 });
 }

@@ -17,8 +17,8 @@ fn compare_oid(oid: &Oid) -> bool {
 
 #[test]
 fn test_compare_oid() {
-    let oid = Oid::from(&[1, 2, 840, 113549, 1, 1, 1]).unwrap();
+    let oid = Oid::from(&[1, 2, 840, 113_549, 1, 1, 1]).unwrap();
     assert_eq!(oid, oid!(1.2.840.113549.1.1.1));
-    let oid = Oid::from(&[1, 2, 840, 113549, 1, 1, 1]).unwrap();
+    let oid = Oid::from(&[1, 2, 840, 113_549, 1, 1, 1]).unwrap();
     assert!(compare_oid(&oid));
 }

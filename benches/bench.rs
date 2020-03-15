@@ -46,7 +46,7 @@ fn bench_der_map_res_integer_u32(b: &mut Bencher) {
             .as_u32());
         match res {
             Ok((_rem, i)) => {
-                assert_eq!(i, 0x1234567);
+                assert_eq!(i, 0x0123_4567);
             }
             _ => assert!(false),
         }
@@ -60,7 +60,7 @@ fn bench_parse_der_u32(b: &mut Bencher) {
         let res = parse_der_u32(&bytes);
         match res {
             Ok((_rem, i)) => {
-                assert_eq!(i, 0x1234567);
+                assert_eq!(i, 0x0123_4567);
             }
             _ => assert!(false),
         }
