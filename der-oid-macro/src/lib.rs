@@ -18,7 +18,7 @@ fn parse_arg(arg: &str) -> (bool, bool, Vec<&str>) {
 
     fn uint<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
         verify(recognize(separated_list(char('_'), digit1)), |s: &str| {
-            s.len() == 1 || s.chars().nth(0) != Some('0')
+            s.len() == 1 || !s.starts_with('0')
         })(i)
     }
 
