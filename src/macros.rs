@@ -56,7 +56,7 @@ macro_rules! parse_ber_defined_m(
             do_parse!(
                 $i,
                 hdr:     ber_read_element_header >>
-                         custom_check!(hdr.class != 0b00, $crate::error::BerError::InvalidClass) >>
+                         custom_check!(hdr.class != $crate::ber::BerClass::Universal, $crate::error::BerError::InvalidClass) >>
                          custom_check!(hdr.structured != 0b1, $crate::error::BerError::ConstructExpected) >>
                          custom_check!(hdr.tag != $tag, $crate::error::BerError::InvalidTag) >>
                 content: flat_take!(hdr.len as usize, fold_der_defined_m!( $($args)* )) >>
@@ -183,7 +183,7 @@ macro_rules! parse_der_defined(
             do_parse!(
                 $i,
                 hdr:     ber_read_element_header >>
-                         custom_check!(hdr.class != 0b00, $crate::error::BerError::InvalidClass) >>
+                         custom_check!(hdr.class != $crate::ber::BerClass::Universal, $crate::error::BerError::InvalidClass) >>
                          custom_check!(hdr.structured != 0b1, $crate::error::BerError::ConstructExpected) >>
                          custom_check!(hdr.tag != $tag, $crate::error::BerError::InvalidTag) >>
                 content: take!(hdr.len) >>
@@ -510,7 +510,7 @@ macro_rules! parse_der_optional(
 /// let empty = &b""[..];
 /// let expected = (
 ///     BerObjectHeader{
-///         class: 0,
+///         class: BerClass::Universal,
 ///         structured: 1,
 ///         tag: BerTag::Sequence,
 ///         len: 0xa,
@@ -735,7 +735,7 @@ macro_rules! parse_der_application(
         do_parse!(
             $i,
             hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader|
-                         hdr.class == 0b01 && hdr.tag.0 == $tag) >>
+                         hdr.class == $crate::ber::BerClass::Application && hdr.tag.0 == $tag) >>
             res: flat_take!(hdr.len as usize, do_parse!( $($rest)* )) >>
             (hdr,res)
         )

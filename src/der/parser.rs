@@ -4,6 +4,7 @@ use crate::error::*;
 use nom::number::streaming::be_u8;
 use nom::*;
 use rusticata_macros::custom_check;
+use std::convert::TryFrom;
 
 /// Parse DER object
 pub fn parse_der(i: &[u8]) -> DerResult {
@@ -316,19 +317,12 @@ pub fn der_read_element_content_as(
 
 pub fn der_read_element_content<'a>(i: &'a [u8], hdr: BerObjectHeader<'a>) -> DerResult<'a> {
     match hdr.class {
-        // universal
-        0b00 |
-        // private
-        0b11 => (),
-        // application
-        0b01 |
-        // context-specific
-        0b10 => return map!(
-            i,
-            take!(hdr.len),
-            |b| { DerObject::from_header_and_content(hdr,BerObjectContent::Unknown(hdr.tag, b)) }
-        ),
-        _    => { return Err(Err::Error(BerError::InvalidClass)); },
+        BerClass::Universal | BerClass::Private => (),
+        _ => {
+            return map!(i, take!(hdr.len), |b| {
+                DerObject::from_header_and_content(hdr, BerObjectContent::Unknown(hdr.tag, b))
+            })
+        }
     }
     match der_read_element_content_as(i, hdr.tag, hdr.len as usize, hdr.is_constructed(), 0) {
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
@@ -369,6 +363,10 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
         len:  parse_ber_length_byte >>
         llen: cond!(len.0 == 1, take!(len.1)) >>
         ( {
+            let class = match BerClass::try_from(el.0) {
+                Ok(c) => c,
+                Err(_) => unreachable!(), // Cannot fail, we read only 2 bits
+            };
             let len : u64 = match len.0 {
                 0 => u64::from(len.1),
                 _ => {
@@ -394,7 +392,7 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
                 },
             };
             BerObjectHeader {
-                class: el.0,
+                class,
                 structured: el.1,
                 tag: BerTag(el.2),
                 len,

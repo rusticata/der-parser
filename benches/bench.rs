@@ -4,7 +4,7 @@
 extern crate test;
 use test::Bencher;
 
-use der_parser::ber::{BerObjectHeader, BerTag};
+use der_parser::ber::{BerClass, BerObjectHeader, BerTag};
 use der_parser::der::{
     der_read_element_header, parse_der, parse_der_integer, parse_der_u32, DerObject,
 };
@@ -23,7 +23,7 @@ fn bench_der_read_element_header(b: &mut Bencher) {
                 assert_eq!(
                     hdr,
                     BerObjectHeader {
-                        class: 0,
+                        class: BerClass::Universal,
                         structured: 0,
                         tag: BerTag(12),
                         len: 10,

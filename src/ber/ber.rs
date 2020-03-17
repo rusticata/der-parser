@@ -4,8 +4,22 @@ use crate::oid::Oid;
 use rusticata_macros::newtype_enum;
 use std::convert::AsRef;
 use std::convert::From;
+use std::convert::TryFrom;
 use std::ops::Index;
 use std::vec::Vec;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct BerClassFromIntError(pub(crate) ());
+
+/// BER Object class of tag
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[repr(u8)]
+pub enum BerClass {
+    Universal = 0b00,
+    Application = 0b01,
+    ContextSpecific = 0b10,
+    Private = 0b11,
+}
 
 /// Defined in X.680 section 8.4
 /// X.690 doesn't specify the maxmimum tag size so we're assuming that people
@@ -51,7 +65,7 @@ impl debug BerTag {
 /// Representation of a DER-encoded (X.690) object
 #[derive(Debug, Clone)]
 pub struct BerObject<'a> {
-    pub class: u8,
+    pub class: BerClass,
     pub structured: u8,
     pub tag: BerTag,
 
@@ -61,7 +75,7 @@ pub struct BerObject<'a> {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BerObjectHeader<'a> {
-    pub class: u8,
+    pub class: BerClass,
     pub structured: u8,
     pub tag: BerTag,
     pub len: u64,
@@ -100,26 +114,41 @@ pub enum BerObjectContent<'a> {
     Unknown(BerTag, &'a [u8]),
 }
 
+impl TryFrom<u8> for BerClass {
+    type Error = BerClassFromIntError;
+
+    #[inline]
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0b00 => Ok(BerClass::Universal),
+            0b01 => Ok(BerClass::Application),
+            0b10 => Ok(BerClass::ContextSpecific),
+            0b11 => Ok(BerClass::Private),
+            _ => Err(BerClassFromIntError(())),
+        }
+    }
+}
+
 impl<'a> BerObjectHeader<'a> {
     /// Test if object class is Universal
     #[inline]
     pub fn is_universal(&self) -> bool {
-        self.class == 0
+        self.class == BerClass::Universal
     }
     /// Test if object class is Application
     #[inline]
     pub fn is_application(&self) -> bool {
-        self.class == 0b01
+        self.class == BerClass::Application
     }
     /// Test if object class is Context-specific
     #[inline]
     pub fn is_contextspecific(&self) -> bool {
-        self.class == 0b10
+        self.class == BerClass::ContextSpecific
     }
     /// Test if object class is Private
     #[inline]
     pub fn is_private(&self) -> bool {
-        self.class == 0b11
+        self.class == BerClass::Private
     }
 
     /// Test if object is primitive
@@ -153,7 +182,7 @@ impl<'a> BerObject<'a> {
     /// Build a BerObject from its content, using default flags (no class, correct tag,
     /// and structured flag set only for Set and Sequence)
     pub fn from_obj(c: BerObjectContent) -> BerObject {
-        let class = 0;
+        let class = BerClass::Universal;
         let tag = c.tag();
         let structured = match tag {
             BerTag::Sequence | BerTag::Set => 1,
@@ -171,7 +200,7 @@ impl<'a> BerObject<'a> {
     /// Build a DER integer object from a slice containing an encoded integer
     pub fn from_int_slice(i: &'a [u8]) -> BerObject<'a> {
         BerObject {
-            class: 0,
+            class: BerClass::Universal,
             structured: 0,
             tag: BerTag::Integer,
             content: BerObjectContent::Integer(i),
@@ -298,19 +327,19 @@ impl<'a> BerObject<'a> {
 
     /// Test if object class is Universal
     pub fn is_universal(&self) -> bool {
-        self.class == 0
+        self.class == BerClass::Universal
     }
     /// Test if object class is Application
     pub fn is_application(&self) -> bool {
-        self.class == 0b01
+        self.class == BerClass::Application
     }
     /// Test if object class is Context-specific
     pub fn is_contextspecific(&self) -> bool {
-        self.class == 0b10
+        self.class == BerClass::ContextSpecific
     }
     /// Test if object class is Private
     pub fn is_private(&self) -> bool {
-        self.class == 0b11
+        self.class == BerClass::Private
     }
 
     /// Test if object is primitive

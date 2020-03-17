@@ -105,7 +105,7 @@ fn test_unknown_context_specific() {
     assert_eq!(
         res.1,
         BerObject {
-            class: 2,
+            class: BerClass::ContextSpecific,
             structured: 0,
             tag: BerTag(0),
             content: BerObjectContent::Unknown(BerTag(0x0), &bytes[2..]),
@@ -122,7 +122,7 @@ fn test_unknown_long_tag() {
     assert_eq!(
         res.1,
         BerObject {
-            class: 2,
+            class: BerClass::ContextSpecific,
             structured: 0,
             tag: BerTag(0x22),
             content: BerObjectContent::Unknown(BerTag(0x22), &bytes[3..]),
@@ -139,7 +139,7 @@ fn test_unknown_longer_tag() {
     assert_eq!(
         res.1,
         BerObject {
-            class: 2,
+            class: BerClass::ContextSpecific,
             structured: 0,
             tag: BerTag(0x1122),
             content: BerObjectContent::Unknown(BerTag(0x1122), &bytes[4..]),
@@ -201,21 +201,6 @@ fn test_invalid_length() {
     let bytes = hex!("02 02 00");
     let res = parse_der(&bytes).err().expect("expected error");
     assert_eq!(res, Err::Incomplete(Needed::Size(2)));
-}
-
-#[test]
-fn test_invalid_param() {
-    let bytes = hex!("00");
-    let hdr = BerObjectHeader {
-        class: 8,
-        structured: 0,
-        tag: BerTag(2),
-        len: 1,
-        raw_tag: None,
-    };
-    der_read_element_content(&bytes, hdr)
-        .err()
-        .expect("expected erreur");
 }
 
 #[test]

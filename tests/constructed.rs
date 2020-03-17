@@ -61,7 +61,7 @@ fn struct01() {
     let empty = &b""[..];
     let expected = (
         BerObjectHeader {
-            class: 0,
+            class: BerClass::Universal,
             structured: 1,
             tag: BerTag::Sequence,
             len: 0xa,
@@ -165,7 +165,7 @@ fn struct_with_garbage() {
     let empty = &b""[..];
     let expected = (
         BerObjectHeader {
-            class: 0,
+            class: BerClass::Universal,
             structured: 1,
             tag: BerTag::Sequence,
             len: 0xc,
@@ -191,7 +191,7 @@ fn struct_verify_tag() {
     let empty = &b""[..];
     let expected = (
         BerObjectHeader {
-            class: 0,
+            class: BerClass::Universal,
             structured: 1,
             tag: BerTag::Sequence,
             len: 0xa,

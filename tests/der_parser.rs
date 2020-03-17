@@ -1,6 +1,8 @@
 #![allow(deprecated)]
 
-use der_parser::ber::{ber_read_element_content_as, BerObjectContent, BerTag, BitStringObject};
+use der_parser::ber::{
+    ber_read_element_content_as, BerClass, BerObjectContent, BerTag, BitStringObject,
+};
 use der_parser::der::*;
 use der_parser::error::*;
 use der_parser::oid::*;
@@ -265,7 +267,7 @@ fn test_der_contextspecific() {
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let empty = &b""[..];
     let expected = DerObject {
-        class: 2,
+        class: BerClass::ContextSpecific,
         structured: 1,
         tag: BerTag(0),
         content: BerObjectContent::Unknown(BerTag(0), &bytes[2..]),
@@ -279,7 +281,7 @@ fn test_der_explicit() {
     let empty = &b""[..];
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let expected = DerObject {
-        class: 2,
+        class: BerClass::ContextSpecific,
         structured: 1,
         tag: BerTag(0),
         content: BerObjectContent::ContextSpecific(
@@ -305,7 +307,7 @@ fn test_der_implicit() {
     let bytes = [0x81, 0x04, 0x70, 0x61, 0x73, 0x73];
     let pass = DerObject::from_obj(BerObjectContent::IA5String("pass"));
     let expected = DerObject {
-        class: 2,
+        class: BerClass::ContextSpecific,
         structured: 0,
         tag: BerTag(1),
         content: BerObjectContent::ContextSpecific(BerTag(1), Some(Box::new(pass))),
@@ -335,7 +337,7 @@ fn test_der_implicit_long_tag() {
     let bytes = [0x5f, 0x52, 0x04, 0x70, 0x61, 0x73, 0x73];
     let pass = DerObject::from_obj(BerObjectContent::IA5String("pass"));
     let expected = DerObject {
-        class: 1,
+        class: BerClass::Application,
         structured: 0,
         tag: BerTag(0x52),
         content: BerObjectContent::ContextSpecific(BerTag(0x52), Some(Box::new(pass))),

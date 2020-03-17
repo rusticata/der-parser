@@ -54,7 +54,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
             write!(f, "{:1$}", " ", self.indent)?;
         };
         if self.flags.contains(&PrettyPrinterFlag::ShowHeader) {
-            write!(f, "[c:{}, s:{}, t:{}] ", self.obj.class, self.obj.structured, self.obj.tag)?;
+            write!(f, "[c:{:?}, s:{}, t:{}] ", self.obj.class, self.obj.structured, self.obj.tag)?;
         };
         fn print_utf8_string_with_type(f: &mut fmt::Formatter, s: &[u8], ty: &str) -> fmt::Result {
             match str::from_utf8(s) {

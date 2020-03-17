@@ -7,6 +7,7 @@ use nom::number::streaming::be_u8;
 use nom::*;
 use rusticata_macros::{custom_check, flat_take, parse_hex_to_u64};
 use std::borrow::Cow;
+use std::convert::TryFrom;
 
 /// Maximum recursion limit
 pub const MAX_RECURSION: usize = 50;
@@ -73,6 +74,10 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
 /// Read an object header
 pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
     let (i1, el) = parse_identifier(i)?;
+    let class = match BerClass::try_from(el.0) {
+        Ok(c) => c,
+        Err(_) => unreachable!(), // Cannot fail, we read only 2 bits
+    };
     let (i2, len) = parse_ber_length_byte(i1)?;
     let (i3, len) = match len.0 {
         0 => (i2, u64::from(len.1)),
@@ -94,7 +99,7 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
     Ok((
         i3,
         BerObjectHeader {
-            class: el.0,
+            class,
             structured: el.1,
             tag: BerTag(el.2),
             len,
@@ -713,19 +718,12 @@ fn parse_ber_recursive(i: &[u8], depth: usize) -> BerResult {
         BerError::InvalidLength
     )?;
     match hdr.class {
-        // universal
-        0b00 |
-        // private
-        0b11 => (),
-        // application
-        0b01 |
-        // context-specific
-        0b10 => return map!(
-            rem,
-            take!(hdr.len),
-            |b| { BerObject::from_header_and_content(hdr,BerObjectContent::Unknown(hdr.tag, b)) }
-        ),
-        _    => { return Err(Err::Error(BerError::InvalidClass)); },
+        BerClass::Universal | BerClass::Private => (),
+        _ => {
+            return map!(rem, take!(hdr.len), |b| {
+                BerObject::from_header_and_content(hdr, BerObjectContent::Unknown(hdr.tag, b))
+            })
+        }
     }
     match ber_read_element_content_as(rem, hdr.tag, hdr.len as usize, hdr.is_constructed(), depth) {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
