@@ -35,6 +35,10 @@ matrix:
       env:
        - NAME="stable,bigint"
        - FEATURES='bigint'
+    - rust: stable
+      env:
+       - NAME="stable,bigint,serialize"
+       - FEATURES='bigint,serialize'
     - rust: nightly
       env:
        - NAME="nightly,bigint"

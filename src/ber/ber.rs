@@ -223,6 +223,17 @@ impl<'a> BerObject<'a> {
         BerObject::from_obj(BerObjectContent::Set(l))
     }
 
+    /// Build a BER header from this object (`len` is set to 0)
+    pub fn to_header(&self) -> BerObjectHeader {
+        BerObjectHeader {
+            class: self.class,
+            structured: self.structured,
+            tag: self.tag,
+            len: 0,
+            raw_tag: self.raw_tag,
+        }
+    }
+
     /// Attempt to read integer value from DER object.
     /// This can fail if the object is not an integer, or if it is too large.
     ///

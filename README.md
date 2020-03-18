@@ -80,6 +80,13 @@ return an error if the integer is too large), [`BerObject::as_u64`](ber/struct.B
 or use the `bigint` feature of this crate and use
 [`BerObject::as_bigint`](ber/struct.BerObject.html#method.as_bigint).
 
+# Serialization
+
+Support for encoding BER/DER objects is currently being tested and can be used by activating the `serialize` feature.
+Note that current status is **experimental**.
+
+See the `ber_encode_*` functions in the [`ber`](ber/index.html) module, and [`BerObject::to_vec`](ber/struct.BerObject.html#method.to_vec)
+
 # References
 
 - [[X.680]] Abstract Syntax Notation One (ASN.1): Specification of basic notation.
