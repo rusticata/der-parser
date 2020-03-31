@@ -15,6 +15,7 @@ include = [
   "LICENSE-*",
   "CHANGELOG.md",
   "README.md",
+  "UPGRADING.md",
   ".gitignore",
   ".travis.yml",
   "Cargo.toml",

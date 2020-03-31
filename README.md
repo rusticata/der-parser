@@ -103,7 +103,7 @@ See the `ber_encode_*` functions in the [`ber`](ber/index.html) module, and [`Be
 
 ## Changes
 
-See `CHANGELOG.md`
+See `CHANGELOG.md`, and `UPGRADING.md` for instructions for upgrading major versions.
 
 ## License
 
