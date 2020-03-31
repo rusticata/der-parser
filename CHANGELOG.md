@@ -25,6 +25,8 @@
   - `BerObjectHeader` now has a lifetime and a `raw_tag` field
   - `BerObject` now has a `raw_tag` field
   - Implement `PartialEq` manually for `BerObject`: `raw_tag` is compared only if both fields provide it
+- Add type `BerClass`
+- Start adding serialization support (experimental) using the `serialize` feature
 
 ### Changed/Fixed
 
