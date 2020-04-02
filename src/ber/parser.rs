@@ -712,6 +712,19 @@ pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
 }
 
 /// Parse BER object recursively, specifying the maximum recursion depth
+///
+/// Return a tuple containing the remaining (unparsed) bytes and the BER Object, or an error.
+///
+/// ### Example
+///
+/// ```
+/// use der_parser::ber::{parse_ber_recursive, BerTag};
+///
+/// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (_, obj) = parse_ber_recursive(bytes, 1).expect("parsing failed");
+///
+/// assert_eq!(obj.tag, BerTag::Integer);
+/// ```
 pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     let (rem, hdr) = ber_read_element_header(i)?;
@@ -745,7 +758,20 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
 
 /// Parse BER object recursively
 ///
+/// Return a tuple containing the remaining (unparsed) bytes and the BER Object, or an error.
+///
 /// *Note: this is the same as calling `parse_ber_recursive` with `MAX_RECURSION`.
+///
+/// ### Example
+///
+/// ```
+/// use der_parser::ber::{parse_ber, BerTag};
+///
+/// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (_, obj) = parse_ber(bytes).expect("parsing failed");
+///
+/// assert_eq!(obj.tag, BerTag::Integer);
+/// ```
 #[inline]
 pub fn parse_ber(i: &[u8]) -> BerResult {
     parse_ber_recursive(i, MAX_RECURSION)
