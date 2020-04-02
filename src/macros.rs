@@ -667,11 +667,11 @@ macro_rules! parse_der_tagged(
         )
     });
     ($i:expr, IMPLICIT $tag:expr, $type:expr) => ({
-        use $crate::ber::{BerObjectHeader,ber_read_element_header,ber_read_element_content_as};
+        use $crate::ber::{BerObjectHeader,ber_read_element_header,ber_read_element_content_as,MAX_RECURSION};
         do_parse!(
             $i,
             hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader| hdr.tag.0 == $tag) >>
-            res: call!(ber_read_element_content_as, $type, hdr.len as usize, hdr.is_constructed(), 0) >>
+            res: call!(ber_read_element_content_as, $type, hdr.len as usize, hdr.is_constructed(), MAX_RECURSION) >>
             (BerObject::from_obj(res))
         )
     });

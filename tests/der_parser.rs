@@ -1,7 +1,7 @@
 #![allow(deprecated)]
 
 use der_parser::ber::{
-    ber_read_element_content_as, BerClass, BerObjectContent, BerTag, BitStringObject,
+    ber_read_element_content_as, BerClass, BerObjectContent, BerTag, BitStringObject, MAX_RECURSION,
 };
 use der_parser::der::*;
 use der_parser::error::*;
@@ -318,7 +318,7 @@ fn test_der_implicit() {
         _tag: BerTag,
         len: usize,
     ) -> BerResult<BerObjectContent> {
-        ber_read_element_content_as(i, DerTag::Ia5String, len, false, 0)
+        ber_read_element_content_as(i, DerTag::Ia5String, len, false, MAX_RECURSION)
     }
     assert_eq!(
         parse_der_implicit(&bytes, BerTag(1), der_read_ia5string_content),
@@ -348,7 +348,7 @@ fn test_der_implicit_long_tag() {
         _tag: BerTag,
         len: usize,
     ) -> BerResult<BerObjectContent> {
-        ber_read_element_content_as(i, DerTag::Ia5String, len, false, 0)
+        ber_read_element_content_as(i, DerTag::Ia5String, len, false, MAX_RECURSION)
     }
     assert_eq!(
         parse_der_implicit(&bytes, BerTag(0x52), der_read_ia5string_content),

@@ -12,6 +12,11 @@ Their types have change from slice to `str` in the `BerObjectContent` enum.
 The `class` field of `BerObject` struct now uses the newtype `BerClass`. Use the provided constants
 (for ex `BerClass:Universal`). To access the value, just use `class.0`.
 
+### Maximum depth
+
+The `depth` argument of functions (for ex. `ber_read_element_content_as`) has changed, and is now the maximum possible depth while parsing.
+Change it (usually from `0`) to a possible limit, for ex `der_parser::ber::MAX_RECURSION`.
+
 ### Oid
 
 This is probably the most impacting change.

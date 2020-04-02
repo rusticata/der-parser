@@ -30,6 +30,8 @@
 
 ### Changed/Fixed
 
+- Maximum recursion logic has changed. Instead of providing the current depth, the argument is
+  now the maximum possible depth.
 - Change the api around `Oid` to achieve zero-copy. The following changed:
   - The `Oid` struct now has a lifetime and uses `Cow` internally.
   - The procedural macro `oid!` was added.

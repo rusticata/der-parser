@@ -36,7 +36,7 @@ pub fn parse_der_with_tag(i: &[u8], tag: BerTag) -> DerResult {
         i,
         hdr: der_read_element_header >>
              custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
-        o:   call!(der_read_element_content_as, hdr.tag, hdr.len as usize, hdr.is_constructed(), 0) >>
+        o:   call!(der_read_element_content_as, hdr.tag, hdr.len as usize, hdr.is_constructed(), MAX_RECURSION) >>
         ( BerObject::from_header_and_content(hdr, o) )
     }
 }
@@ -281,7 +281,7 @@ pub fn der_read_element_content_as(
     tag: BerTag,
     len: usize,
     constructed: bool,
-    depth: usize,
+    max_depth: usize,
 ) -> BerResult<BerObjectContent> {
     if i.len() < len {
         return Err(Err::Incomplete(Needed::Size(len)));
@@ -312,7 +312,7 @@ pub fn der_read_element_content_as(
         }
         _ => (),
     }
-    ber_read_element_content_as(i, tag, len, constructed, depth)
+    ber_read_element_content_as(i, tag, len, constructed, max_depth)
 }
 
 pub fn der_read_element_content<'a>(i: &'a [u8], hdr: BerObjectHeader<'a>) -> DerResult<'a> {
@@ -324,7 +324,13 @@ pub fn der_read_element_content<'a>(i: &'a [u8], hdr: BerObjectHeader<'a>) -> De
             })
         }
     }
-    match der_read_element_content_as(i, hdr.tag, hdr.len as usize, hdr.is_constructed(), 0) {
+    match der_read_element_content_as(
+        i,
+        hdr.tag,
+        hdr.len as usize,
+        hdr.is_constructed(),
+        MAX_RECURSION,
+    ) {
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => map!(i, take!(hdr.len), |b| {
             DerObject::from_header_and_content(hdr, BerObjectContent::Unknown(hdr.tag, b))

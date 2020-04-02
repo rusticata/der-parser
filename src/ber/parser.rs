@@ -9,7 +9,7 @@ use rusticata_macros::{custom_check, flat_take, parse_hex_to_u64};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 
-/// Maximum recursion limit
+/// Default maximum recursion limit
 pub const MAX_RECURSION: usize = 50;
 
 /// Try to parse input bytes as u64
@@ -191,15 +191,16 @@ pub(crate) fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<Be
 pub(crate) fn ber_read_content_sequence(
     i: &[u8],
     len: usize,
-    depth: usize,
+    max_depth: usize,
 ) -> BerResult<BerObjectContent> {
+    custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     if len == 0 {
         // indefinite form
         // read until end-of-content
         map!(
             i,
             many_till!(
-                call!(parse_ber_recursive, depth + 1),
+                call!(parse_ber_recursive, max_depth - 1),
                 parse_ber_endofcontent
             ),
             |(l, _)| { BerObjectContent::Sequence(l) }
@@ -209,7 +210,7 @@ pub(crate) fn ber_read_content_sequence(
             i,
             flat_take!(
                 len,
-                many0!(complete!(call!(parse_ber_recursive, depth + 1)))
+                many0!(complete!(call!(parse_ber_recursive, max_depth - 1)))
             ),
             |l| { BerObjectContent::Sequence(l) }
         )
@@ -220,15 +221,16 @@ pub(crate) fn ber_read_content_sequence(
 pub(crate) fn ber_read_content_set(
     i: &[u8],
     len: usize,
-    depth: usize,
+    max_depth: usize,
 ) -> BerResult<BerObjectContent> {
+    custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     if len == 0 {
         // indefinite form
         // read until end-of-content
         map!(
             i,
             many_till!(
-                call!(parse_ber_recursive, depth + 1),
+                call!(parse_ber_recursive, max_depth - 1),
                 parse_ber_endofcontent
             ),
             |(l, _)| { BerObjectContent::Set(l) }
@@ -238,7 +240,7 @@ pub(crate) fn ber_read_content_set(
             i,
             flat_take!(
                 len,
-                many0!(complete!(call!(parse_ber_recursive, depth + 1)))
+                many0!(complete!(call!(parse_ber_recursive, max_depth - 1)))
             ),
             |l| { BerObjectContent::Set(l) }
         )
@@ -362,7 +364,7 @@ pub fn ber_read_element_content_as(
     tag: BerTag,
     len: usize,
     constructed: bool,
-    depth: usize,
+    max_depth: usize,
 ) -> BerResult<BerObjectContent> {
     if i.len() < len {
         return Err(Err::Incomplete(Needed::Size(len)));
@@ -422,12 +424,12 @@ pub fn ber_read_element_content_as(
         // 0x10: sequence
         BerTag::Sequence => {
             custom_check!(i, !constructed, BerError::ConstructExpected)?;
-            ber_read_content_sequence(i, len, depth)
+            ber_read_content_sequence(i, len, max_depth)
         }
         // 0x11: set
         BerTag::Set => {
             custom_check!(i, !constructed, BerError::ConstructExpected)?;
-            ber_read_content_set(i, len, depth)
+            ber_read_content_set(i, len, max_depth)
         }
         // 0x12: numericstring
         BerTag::NumericString => {
@@ -468,13 +470,13 @@ pub fn ber_read_element_content_as(
     }
 }
 //
-/// Parse a BER object, expecting a value with specificed tag
+/// Parse a BER object, expecting a value with specified tag
 pub fn parse_ber_with_tag(i: &[u8], tag: BerTag) -> BerResult {
     do_parse! {
         i,
         hdr: ber_read_element_header >>
              custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
-        o:   call!(ber_read_element_content_as, hdr.tag, hdr.len as usize, hdr.is_constructed(), 0) >>
+        o:   call!(ber_read_element_content_as, hdr.tag, hdr.len as usize, hdr.is_constructed(), MAX_RECURSION) >>
         ( BerObject::from_header_and_content(hdr, o) )
     }
 }
@@ -709,8 +711,8 @@ pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
     map_res(parse_ber_integer, |o| o.as_u64())(i)
 }
 
-fn parse_ber_recursive(i: &[u8], depth: usize) -> BerResult {
-    custom_check!(i, depth > MAX_RECURSION, BerError::BerMaxDepth)?;
+fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
+    custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     let (rem, hdr) = ber_read_element_header(i)?;
     custom_check!(
         i,
@@ -725,7 +727,13 @@ fn parse_ber_recursive(i: &[u8], depth: usize) -> BerResult {
             })
         }
     }
-    match ber_read_element_content_as(rem, hdr.tag, hdr.len as usize, hdr.is_constructed(), depth) {
+    match ber_read_element_content_as(
+        rem,
+        hdr.tag,
+        hdr.len as usize,
+        hdr.is_constructed(),
+        max_depth,
+    ) {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => map!(rem, take!(hdr.len), |b| {
             BerObject::from_header_and_content(hdr, BerObjectContent::Unknown(hdr.tag, b))
@@ -737,7 +745,7 @@ fn parse_ber_recursive(i: &[u8], depth: usize) -> BerResult {
 /// Parse BER object
 #[inline]
 pub fn parse_ber(i: &[u8]) -> BerResult {
-    parse_ber_recursive(i, 0)
+    parse_ber_recursive(i, MAX_RECURSION)
 }
 
 #[test]

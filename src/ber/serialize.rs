@@ -357,7 +357,7 @@ mod test {
             _tag: BerTag,
             len: usize,
         ) -> BerResult<BerObjectContent> {
-            ber_read_element_content_as(i, BerTag::Integer, len, false, 0)
+            ber_read_element_content_as(i, BerTag::Integer, len, false, MAX_RECURSION)
         }
         fn local_parse(i: &[u8]) -> BerResult<BerObject> {
             parse_ber_implicit(i, BerTag(2), der_read_integer_content)

@@ -17,11 +17,11 @@ fn test_flat_take() {
         Ok((empty, BerObject::from_obj(BerObjectContent::Boolean(false))))
     );
     assert_eq!(
-        ber_read_element_content_as(&[0xff], BerTag::Boolean, 0x01, false, 0),
+        ber_read_element_content_as(&[0xff], BerTag::Boolean, 0x01, false, MAX_RECURSION),
         Ok((empty, BerObjectContent::Boolean(true)))
     );
     assert_eq!(
-        ber_read_element_content_as(&[0x00], BerTag::Boolean, 0x01, false, 0),
+        ber_read_element_content_as(&[0x00], BerTag::Boolean, 0x01, false, MAX_RECURSION),
         Ok((empty, BerObjectContent::Boolean(false)))
     );
 }
