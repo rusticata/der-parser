@@ -6,14 +6,24 @@ use nom::*;
 use rusticata_macros::custom_check;
 use std::convert::TryFrom;
 
-/// Parse DER object
+pub use crate::ber::MAX_RECURSION;
+
+/// Parse DER object recursively
+///
+/// *Note: this is the same as calling `parse_der_recursive` with `MAX_RECURSION`.
+#[inline]
 pub fn parse_der(i: &[u8]) -> DerResult {
+    parse_der_recursive(i, MAX_RECURSION)
+}
+
+/// Parse DER object recursively, specifying the maximum recursion depth
+pub fn parse_der_recursive(i: &[u8], max_depth: usize) -> DerResult {
     do_parse! {
         i,
         hdr:     der_read_element_header >>
                  // XXX safety check: length cannot be more than 2^32 bytes
                  custom_check!(hdr.len > u64::from(::std::u32::MAX), BerError::InvalidLength) >>
-        content: call!(der_read_element_content,hdr) >>
+        content: call!(der_read_element_content_recursive, hdr, max_depth) >>
         ( content )
     }
 }
@@ -315,7 +325,18 @@ pub fn der_read_element_content_as(
     ber_read_element_content_as(i, tag, len, constructed, max_depth)
 }
 
+/// Parse DER object content recursively
+///
+/// *Note: an error is raised if recursion depth exceeds `MAX_RECURSION`.
 pub fn der_read_element_content<'a>(i: &'a [u8], hdr: BerObjectHeader<'a>) -> DerResult<'a> {
+    der_read_element_content_recursive(i, hdr, MAX_RECURSION)
+}
+
+fn der_read_element_content_recursive<'a>(
+    i: &'a [u8],
+    hdr: BerObjectHeader<'a>,
+    max_depth: usize,
+) -> DerResult<'a> {
     match hdr.class {
         BerClass::Universal | BerClass::Private => (),
         _ => {
@@ -329,7 +350,7 @@ pub fn der_read_element_content<'a>(i: &'a [u8], hdr: BerObjectHeader<'a>) -> De
         hdr.tag,
         hdr.len as usize,
         hdr.is_constructed(),
-        MAX_RECURSION,
+        max_depth,
     ) {
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => map!(i, take!(hdr.len), |b| {

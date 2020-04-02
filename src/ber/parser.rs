@@ -711,7 +711,8 @@ pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
     map_res(parse_ber_integer, |o| o.as_u64())(i)
 }
 
-fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
+/// Parse BER object recursively, specifying the maximum recursion depth
+pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     let (rem, hdr) = ber_read_element_header(i)?;
     custom_check!(
@@ -742,7 +743,9 @@ fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     }
 }
 
-/// Parse BER object
+/// Parse BER object recursively
+///
+/// *Note: this is the same as calling `parse_ber_recursive` with `MAX_RECURSION`.
 #[inline]
 pub fn parse_ber(i: &[u8]) -> BerResult {
     parse_ber_recursive(i, MAX_RECURSION)
