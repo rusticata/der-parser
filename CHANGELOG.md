@@ -10,6 +10,8 @@
 
 ## 4.0.0
 
+**Attention** This is a major release, with several API-breaking changes. See `UPGRADING.md` for instructions.
+
 ### Thanks
 
 - Jannik Schürg (oid, string verifications)
