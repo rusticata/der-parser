@@ -23,7 +23,7 @@ pub use crate::ber::MAX_RECURSION;
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_der(bytes).expect("parsing failed");
 ///
-/// assert_eq!(obj.tag, BerTag::Integer);
+/// assert_eq!(obj.header.tag, BerTag::Integer);
 /// ```
 #[inline]
 pub fn parse_der(i: &[u8]) -> DerResult {
@@ -43,7 +43,7 @@ pub fn parse_der(i: &[u8]) -> DerResult {
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_der_recursive(bytes, 1).expect("parsing failed");
 ///
-/// assert_eq!(obj.tag, BerTag::Integer);
+/// assert_eq!(obj.header.tag, BerTag::Integer);
 /// ```
 pub fn parse_der_recursive(i: &[u8], max_depth: usize) -> DerResult {
     do_parse! {

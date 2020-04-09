@@ -63,17 +63,13 @@ impl debug BerTag {
 }
 
 /// Representation of a DER-encoded (X.690) object
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BerObject<'a> {
-    pub class: BerClass,
-    pub structured: u8,
-    pub tag: BerTag,
-
+    pub header: BerObjectHeader<'a>,
     pub content: BerObjectContent<'a>,
-    pub raw_tag: Option<&'a [u8]>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug)]
 pub struct BerObjectHeader<'a> {
     pub class: BerClass,
     pub structured: u8,
@@ -168,16 +164,10 @@ impl<'a> BerObject<'a> {
     /// Note: values are not checked, so the tag can be different from the real content, or flags
     /// can be invalid.
     pub fn from_header_and_content<'hdr>(
-        hdr: BerObjectHeader<'hdr>,
-        c: BerObjectContent<'hdr>,
+        header: BerObjectHeader<'hdr>,
+        content: BerObjectContent<'hdr>,
     ) -> BerObject<'hdr> {
-        BerObject {
-            class: hdr.class,
-            structured: hdr.structured,
-            tag: hdr.tag,
-            content: c,
-            raw_tag: hdr.raw_tag,
-        }
+        BerObject { header, content }
     }
     /// Build a BerObject from its content, using default flags (no class, correct tag,
     /// and structured flag set only for Set and Sequence)
@@ -188,29 +178,38 @@ impl<'a> BerObject<'a> {
             BerTag::Sequence | BerTag::Set => 1,
             _ => 0,
         };
-        BerObject {
+        let header = BerObjectHeader {
             class,
             structured,
             tag,
-            content: c,
+            len: 0,
             raw_tag: None,
-        }
+        };
+        BerObject { header, content: c }
     }
 
     /// Build a DER integer object from a slice containing an encoded integer
     pub fn from_int_slice(i: &'a [u8]) -> BerObject<'a> {
-        BerObject {
+        let header = BerObjectHeader {
             class: BerClass::Universal,
             structured: 0,
             tag: BerTag::Integer,
-            content: BerObjectContent::Integer(i),
+            len: 0,
             raw_tag: None,
+        };
+        BerObject {
+            header,
+            content: BerObjectContent::Integer(i),
         }
     }
 
     /// Set a tag for the BER object
     pub fn set_raw_tag(self, raw_tag: Option<&'a [u8]>) -> BerObject {
-        BerObject { raw_tag, ..self }
+        let header = BerObjectHeader {
+            raw_tag,
+            ..self.header
+        };
+        BerObject { header, ..self }
     }
 
     /// Build a DER sequence object from a vector of DER objects
@@ -223,15 +222,13 @@ impl<'a> BerObject<'a> {
         BerObject::from_obj(BerObjectContent::Set(l))
     }
 
-    /// Build a BER header from this object (`len` is set to 0)
+    /// Build a BER header from this object content
+    #[deprecated(
+        since = "0.5.0",
+        note = "please use `obj.header` or `obj.header.clone()` instead"
+    )]
     pub fn to_header(&self) -> BerObjectHeader {
-        BerObjectHeader {
-            class: self.class,
-            structured: self.structured,
-            tag: self.tag,
-            len: 0,
-            raw_tag: self.raw_tag,
-        }
+        self.header.clone()
     }
 
     /// Attempt to read integer value from DER object.
@@ -338,45 +335,28 @@ impl<'a> BerObject<'a> {
 
     /// Test if object class is Universal
     pub fn is_universal(&self) -> bool {
-        self.class == BerClass::Universal
+        self.header.class == BerClass::Universal
     }
     /// Test if object class is Application
     pub fn is_application(&self) -> bool {
-        self.class == BerClass::Application
+        self.header.class == BerClass::Application
     }
     /// Test if object class is Context-specific
     pub fn is_contextspecific(&self) -> bool {
-        self.class == BerClass::ContextSpecific
+        self.header.class == BerClass::ContextSpecific
     }
     /// Test if object class is Private
     pub fn is_private(&self) -> bool {
-        self.class == BerClass::Private
+        self.header.class == BerClass::Private
     }
 
     /// Test if object is primitive
     pub fn is_primitive(&self) -> bool {
-        self.structured == 0
+        self.header.structured == 0
     }
     /// Test if object is constructed
     pub fn is_constructed(&self) -> bool {
-        self.structured == 1
-    }
-}
-
-impl<'a> PartialEq<BerObject<'a>> for BerObject<'a> {
-    fn eq(&self, other: &BerObject) -> bool {
-        self.class == other.class
-            && self.tag == other.tag
-            && self.structured == other.structured
-            && self.content == other.content
-            && {
-                // it tag is present for both, compare it
-                if self.raw_tag.xor(other.raw_tag).is_none() {
-                    self.raw_tag == other.raw_tag
-                } else {
-                    true
-                }
-            }
+        self.header.structured == 1
     }
 }
 
@@ -391,6 +371,30 @@ impl<'a> From<Oid<'a>> for BerObject<'a> {
 impl<'a> From<BerObjectContent<'a>> for BerObject<'a> {
     fn from(obj: BerObjectContent<'a>) -> BerObject<'a> {
         BerObject::from_obj(obj)
+    }
+}
+
+/// Compare two BER headers. `len` fields are compared only if both objects have it set (same for `raw_tag`)
+impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
+    fn eq(&self, other: &BerObjectHeader) -> bool {
+        self.class == other.class
+            && self.tag == other.tag
+            && self.structured == other.structured
+            && {
+                if self.len != 0 && other.len != 0 {
+                    self.len == other.len
+                } else {
+                    true
+                }
+            }
+            && {
+                // it tag is present for both, compare it
+                if self.raw_tag.xor(other.raw_tag).is_none() {
+                    self.raw_tag == other.raw_tag
+                } else {
+                    true
+                }
+            }
     }
 }
 

@@ -1,5 +1,15 @@
 ## Upgrading from 3.x to 4.0
 
+### Ber Object and Header
+
+The `class`, `structured` and `tag` fields were duplicated in `BerObject` and the header.
+Now, a header is always created and embedded in the BER object, with the following changes:
+
+- To access these fields, use the header: `obj.tag` becomes `obj.header.tag`, etc.
+- `BerObject::to_header()` is now deprecated
+- The `len` field is now public. However, in some cases it can be 0 (when creating an object, 0 means that serialization will calculate the length)
+- As a consequence, `PartialEq` on BER objects and headers compare `len` only if set in both objects
+
 ### BER String types verification
 
 Some BER String types (`IA5String`, `NumericString`, `PrintableString` and `UTF8String`) are now

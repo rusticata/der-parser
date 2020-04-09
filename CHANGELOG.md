@@ -32,6 +32,7 @@
 
 ### Changed/Fixed
 
+- Make header part of `BerObject`, remove duplicate fields
 - Maximum recursion logic has changed. Instead of providing the current depth, the argument is
   now the maximum possible depth.
 - Change the api around `Oid` to achieve zero-copy. The following changed:
