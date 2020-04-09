@@ -228,7 +228,7 @@ impl<'a> BerObject<'a> {
         note = "please use `obj.header` or `obj.header.clone()` instead"
     )]
     pub fn to_header(&self) -> BerObjectHeader {
-        self.header.clone()
+        self.header
     }
 
     /// Attempt to read integer value from DER object.
