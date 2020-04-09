@@ -99,7 +99,7 @@ pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
             class,
             tag,
             len: v.as_ref().len() as u64,
-            ..obj.to_header()
+            ..obj.header
         };
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
@@ -182,7 +182,7 @@ pub fn ber_encode_object<'a, 'b: 'a, W: Write + Default + AsRef<[u8]> + 'a>(
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
         let hdr = BerObjectHeader {
             len: v.as_ref().len() as u64,
-            ..obj.to_header()
+            ..obj.header
         };
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
