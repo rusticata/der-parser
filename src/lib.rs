@@ -1,8 +1,21 @@
+//! [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE-MIT)
+//! [![Apache License 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE-APACHE)
+//! [![docs.rs](https://docs.rs/der-parser/badge.svg)](https://docs.rs/der-parser)
+//! [![crates.io](https://img.shields.io/crates/v/der-parser.svg)](https://crates.io/crates/der-parser)
+//! [![Download numbers](https://img.shields.io/crates/d/der-parser.svg)](https://crates.io/crates/der-parser)
+//! [![Travis CI](https://travis-ci.org/rusticata/der-parser.svg?branch=master)](https://travis-ci.org/rusticata/der-parser)
+//! [![AppVeyor CI](https://ci.appveyor.com/api/projects/status/github/rusticata/der-parser?svg=true)](https://ci.appveyor.com/project/chifflier/der-parser)
+//! [![dependency status](https://deps.rs/crate/der-parser/4.0.0-alpha3/status.svg)](https://deps.rs/crate/der-parser/4.0.0-alpha3)
+//!
 //! # BER/DER Parser
 //!
 //! A parser for Basic Encoding Rules (BER [[X.690]]) and Distinguished Encoding Rules(DER
 //! [[X.690]]), implemented with the [nom](https://github.com/Geal/nom) parser combinator
 //! framework.
+//!
+//! It is written in pure Rust, fast, and makes extensive use of zero-copy. A lot of care is taken
+//! to ensure security and safety of this crate, including design (recursion limit, defensive
+//! programming), tests, and fuzzing. It also aims to be panic-free.
 //!
 //! The code is available on [Github](https://github.com/rusticata/der-parser)
 //! and is part of the [Rusticata](https://github.com/rusticata) project.
@@ -15,6 +28,7 @@
 //!
 //! The first parsing method can be done using the [`parse_ber`](ber/fn.parse_ber.html) and
 //! [`parse_der`](der/fn.parse_der.html) methods.
+//! It is useful when decoding an arbitrary DER object.
 //! However, it cannot fully parse all objects, especially those containing IMPLICIT, OPTIONAL, or
 //! DEFINED BY items.
 //!
@@ -63,15 +77,33 @@
 //!
 //! # Notes
 //!
+//! ## BER/DER Integers
+//!
+//! DER integers can be of any size, so it is not possible to store them as simple integers (they
+//! are stored as raw bytes).
+//!
+//! To get a simple value, use [`BerObject::as_u32`](ber/struct.BerObject.html#method.as_u32)
+//! (knowning that this method will return an error if the integer is too large),
+//! [`BerObject::as_u64`](ber/struct.BerObject.html#method.as_u64), or use the `bigint` feature of
+//! this crate and use [`BerObject::as_bigint`](ber/struct.BerObject.html#method.as_bigint).
+//!
+//! ```rust
+//! use der_parser::ber::*;
+//! use der_parser::error::BerResult;
+//!
+//! let data = &[0x02, 0x03, 0x01, 0x00, 0x01];
+//!
+//! let (_, object) = parse_ber_integer(data).expect("parsing failed");
+//! assert_eq!(object.as_u64(), Ok(65537));
+//! ```
+//!
+//! Access to the raw value is possible using the `as_slice` method.
+//!
+//! ## Misc Notes
+//!
 //! - The DER constraints are verified if using `parse_der`.
 //! - `BerObject` and `DerObject` are the same objects (type alias). The only difference is the
 //!   verification of constraints *during parsing*.
-//! - DER integers can be of any size, so it is not possible to store them as simple integers (they
-//! are stored as raw bytes). To get a simple value, use
-//! [`BerObject::as_u32`](ber/struct.BerObject.html#method.as_u32) (knowning that this method will
-//! return an error if the integer is too large), [`BerObject::as_u64`](ber/struct.BerObject.html#method.as_u64),
-//! or use the `bigint` feature of this crate and use
-//! [`BerObject::as_bigint`](ber/struct.BerObject.html#method.as_bigint).
 //!
 //! # Serialization
 //!
