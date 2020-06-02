@@ -116,6 +116,8 @@ impl<'a> Oid<'a> {
 
     /// Build an OID from an array of object identifier components.
     /// This method allocates memory on the heap.
+    // we do not use .copied() for compatibility with 1.34
+    #[allow(clippy::map_clone)]
     pub fn from<'b>(s: &'b [u64]) -> Result<Oid<'static>, ParseError> {
         if s.len() < 2 {
             if s.len() == 1 && s[0] == 0 {

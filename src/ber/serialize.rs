@@ -8,6 +8,8 @@ use cookie_factory::sequence::tuple;
 use cookie_factory::{GenError, SerializeFn};
 use std::io::Write;
 
+// we do not use .copied() for compatibility with 1.34
+#[allow(clippy::map_clone)]
 fn encode_length<'a, W: Write + 'a>(len: u64) -> impl SerializeFn<W> + 'a {
     move |out| {
         if len <= 127 {
@@ -106,6 +108,8 @@ pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     }
 }
 
+// we do not use .copied() for compatibility with 1.34
+#[allow(clippy::map_clone)]
 fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     c: &'a BerObjectContent,
 ) -> impl SerializeFn<W> + 'a {
