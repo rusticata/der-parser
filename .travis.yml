@@ -25,6 +25,11 @@ matrix:
        - NAME="rust-${RUST_VERSION_MIN}"
        - RUST_VERSION="${RUST_VERSION_MIN}"
        - FEATURES=''
+    - rust: stable
+      env:
+       - NAME="min-version,features"
+       - RUST_VERSION="${RUST_VERSION_MIN}"
+       - FEATURES='bigint,serialize'
     - rust: nightly
       env:
        - NAME="nightly"
@@ -41,9 +46,9 @@ matrix:
        - FEATURES='bigint,serialize'
     - rust: nightly
       env:
-       - NAME="nightly,bigint"
+       - NAME="nightly,bigint,serialize"
        - RUST_VERSION="nightly"
-       - FEATURES='bigint,unstable'
+       - FEATURES='bigint,serialize,unstable'
        - BENCH=1
 before_script:
   - rustup default "${RUST_VERSION}"
