@@ -131,7 +131,7 @@ impl<'a> Oid<'a> {
         }
         let asn1_encoded: Vec<u8> = [(s[0] * 40 + s[1]) as u8]
             .iter()
-            .copied()
+            .map(|&x| x)
             .chain(encode_relative(&s[2..]))
             .collect();
         Ok(Oid {

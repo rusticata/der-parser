@@ -18,7 +18,7 @@ fn encode_length<'a, W: Write + 'a>(len: u64) -> impl SerializeFn<W> + 'a {
             let v: Vec<u8> = len
                 .to_be_bytes()
                 .iter()
-                .copied()
+                .map(|&x| x)
                 .skip_while(|&b| b == 0)
                 .collect();
             let b0 = 0b1000_0000 | (v.len() as u8);
@@ -125,7 +125,7 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
             let v: Vec<u8> = i
                 .to_be_bytes()
                 .iter()
-                .copied()
+                .map(|&x| x)
                 .skip_while(|&b| b == 0)
                 .collect();
             slice(v)(out)

@@ -374,6 +374,16 @@ impl<'a> From<BerObjectContent<'a>> for BerObject<'a> {
     }
 }
 
+/// Replacement function for Option.xor (>= 1.37)
+#[inline]
+pub fn xor_option<T>(opta: Option<T>, optb: Option<T>) -> Option<T> {
+    match (opta, optb) {
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        _ => None,
+    }
+}
+
 /// Compare two BER headers. `len` fields are compared only if both objects have it set (same for `raw_tag`)
 impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
     fn eq(&self, other: &BerObjectHeader) -> bool {
@@ -389,7 +399,7 @@ impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
             }
             && {
                 // it tag is present for both, compare it
-                if self.raw_tag.xor(other.raw_tag).is_none() {
+                if xor_option(self.raw_tag, other.raw_tag).is_none() {
                     self.raw_tag == other.raw_tag
                 } else {
                     true

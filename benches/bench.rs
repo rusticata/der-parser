@@ -1,3 +1,4 @@
+#![cfg(feature = "unstable")]
 #![cfg(all(feature = "unstable", test))]
 #![feature(test)]
 
