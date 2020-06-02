@@ -47,7 +47,7 @@
   - The `Oid::iter` method now returns an `Option`. `Oid::iter_bigint` was
     added.
   - `Hash` is now derived for `Oid`.
-- Minimum rust version is now 1.37
+- Minimum rust version is now 1.34
 
 ## 3.0.3
 
