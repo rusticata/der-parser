@@ -5,7 +5,7 @@
 //! [![Download numbers](https://img.shields.io/crates/d/der-parser.svg)](https://crates.io/crates/der-parser)
 //! [![Travis CI](https://travis-ci.org/rusticata/der-parser.svg?branch=master)](https://travis-ci.org/rusticata/der-parser)
 //! [![AppVeyor CI](https://ci.appveyor.com/api/projects/status/github/rusticata/der-parser?svg=true)](https://ci.appveyor.com/project/chifflier/der-parser)
-//! [![dependency status](https://deps.rs/crate/der-parser/4.0.0-beta1/status.svg)](https://deps.rs/crate/der-parser/4.0.0-beta1)
+//! [![dependency status](https://deps.rs/crate/der-parser/4.0.0/status.svg)](https://deps.rs/crate/der-parser/4.0.0)
 //!
 //! # BER/DER Parser
 //!

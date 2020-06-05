@@ -1,11 +1,11 @@
 [package]
-description = "Parser for BER/DER encoded data"
+description = "Parser/encoder for ASN.1 BER/DER data"
 license = "MIT/Apache-2.0"
 keywords = ["BER","DER","ASN1","parser","nom"]
 homepage = "https://github.com/rusticata/der-parser"
 repository = "https://github.com/rusticata/der-parser.git"
 name = "der-parser"
-version = "4.0.0-beta1"
+version = "4.0.0"
 authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
 categories = ["parser-implementations"]
 readme = "README.md"
