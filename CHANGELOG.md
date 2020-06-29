@@ -6,7 +6,11 @@
 
 ### Added
 
+## 4.0.1
+
 ### Changed/Fixed
+
+- Add workaround to fix parsing of empty sequence or set
 
 ## 4.0.0
 

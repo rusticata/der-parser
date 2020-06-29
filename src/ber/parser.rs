@@ -195,6 +195,9 @@ pub(crate) fn ber_read_content_sequence(
 ) -> BerResult<BerObjectContent> {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     if len == 0 {
+        if i.is_empty() {
+            return Ok((i, BerObjectContent::Sequence(Vec::new())));
+        }
         // indefinite form
         // read until end-of-content
         map!(
@@ -225,6 +228,9 @@ pub(crate) fn ber_read_content_set(
 ) -> BerResult<BerObjectContent> {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     if len == 0 {
+        if i.is_empty() {
+            return Ok((i, BerObjectContent::Set(Vec::new())));
+        }
         // indefinite form
         // read until end-of-content
         map!(

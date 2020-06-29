@@ -1,6 +1,7 @@
 use der_parser::ber::*;
 use der_parser::error::*;
 use der_parser::*;
+use hex_literal::hex;
 use nom::error::ErrorKind;
 use nom::*;
 use oid::Oid;
@@ -51,6 +52,13 @@ fn parse_struct04(i: &[u8], tag: BerTag) -> BerResult<(BerObjectHeader, MyStruct
            eof!() >>
         ( MyStruct{ a: a, b: b } )
     )
+}
+
+#[test]
+fn empty_seq() {
+    let data = &hex!("30 00");
+    let (_, res) = parse_ber_sequence(data).expect("parsing empty sequence failed");
+    assert!(res.as_sequence().unwrap().is_empty());
 }
 
 #[test]
