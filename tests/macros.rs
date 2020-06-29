@@ -71,7 +71,7 @@ fn parse_optional_enum(i: &[u8]) -> DerResult {
 fn parse_struct01(i: &[u8]) -> BerResult<(BerObjectHeader, MyStruct)> {
     parse_der_struct!(
         i,
-        a: parse_ber_integer >> b: parse_ber_integer >> (MyStruct { a: a, b: b })
+        a: parse_ber_integer >> b: parse_ber_integer >> (MyStruct { a, b })
     )
 }
 

@@ -16,14 +16,14 @@ struct MyStruct<'a> {
 fn parse_struct01(i: &[u8]) -> BerResult<(BerObjectHeader, MyStruct)> {
     parse_der_struct!(
         i,
-        a: parse_ber_integer >> b: parse_ber_integer >> (MyStruct { a: a, b: b })
+        a: parse_ber_integer >> b: parse_ber_integer >> (MyStruct { a, b })
     )
 }
 
 fn parse_struct01_complete(i: &[u8]) -> BerResult<(BerObjectHeader, MyStruct)> {
     parse_der_struct!(
         i,
-        a: parse_ber_integer >> b: parse_ber_integer >> eof!() >> (MyStruct { a: a, b: b })
+        a: parse_ber_integer >> b: parse_ber_integer >> eof!() >> (MyStruct { a, b })
     )
 }
 
@@ -50,7 +50,7 @@ fn parse_struct04(i: &[u8], tag: BerTag) -> BerResult<(BerObjectHeader, MyStruct
         a: parse_ber_integer >>
         b: parse_ber_integer >>
            eof!() >>
-        ( MyStruct{ a: a, b: b } )
+        ( MyStruct{ a, b } )
     )
 }
 
@@ -150,11 +150,10 @@ fn struct02() {
         .map(|(rem, x)| (rem, x.1))
     };
     fn parse_rdn(i: &[u8]) -> BerResult<Rdn> {
-        parse_der_struct!(i, a: parse_attr_type_and_value >> (Rdn { a: a }))
-            .map(|(rem, x)| (rem, x.1))
+        parse_der_struct!(i, a: parse_attr_type_and_value >> (Rdn { a })).map(|(rem, x)| (rem, x.1))
     }
     fn parse_name(i: &[u8]) -> BerResult<Name> {
-        parse_der_struct!(i, l: many0!(complete!(parse_rdn)) >> (Name { l: l }))
+        parse_der_struct!(i, l: many0!(complete!(parse_rdn)) >> (Name { l }))
             .map(|(rem, x)| (rem, x.1))
     }
     let parsed = parse_name(&bytes).unwrap();
