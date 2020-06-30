@@ -13,6 +13,6 @@ proc-macro = true
 
 [dependencies]
 nom = "5.0"
-num-bigint = "0.2"
+num-bigint = "0.3"
 num-traits = "0.2"
 proc-macro-hack = "0.5"
