@@ -376,7 +376,7 @@ impl<'a> From<BerObjectContent<'a>> for BerObject<'a> {
 
 /// Replacement function for Option.xor (>= 1.37)
 #[inline]
-pub fn xor_option<T>(opta: Option<T>, optb: Option<T>) -> Option<T> {
+pub(crate) fn xor_option<T>(opta: Option<T>, optb: Option<T>) -> Option<T> {
     match (opta, optb) {
         (Some(a), None) => Some(a),
         (None, Some(b)) => Some(b),
@@ -550,9 +550,11 @@ impl<'a> BerObjectContent<'a> {
 }
 
 #[cfg(feature = "bigint")]
+#[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]
 use num_bigint::{BigInt, BigUint, Sign};
 
 #[cfg(feature = "bigint")]
+#[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]
 impl<'a> BerObject<'a> {
     pub fn as_bigint(&self) -> Option<BigInt> {
         match self.content {

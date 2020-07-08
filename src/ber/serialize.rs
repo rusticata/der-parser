@@ -32,6 +32,7 @@ fn encode_length<'a, W: Write + 'a>(len: u64) -> impl SerializeFn<W> + 'a {
 /// Encode header as object
 ///
 /// The `len` field must be correct
+#[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
 pub fn ber_encode_header<'a, 'b: 'a, W: Write + 'a>(
     hdr: &'b BerObjectHeader,
 ) -> impl SerializeFn<W> + 'a {
@@ -64,6 +65,7 @@ fn ber_encode_sequence<'a, W: Write + Default + AsRef<[u8]> + 'a>(
 /// Encode the provided object in an EXPLICIT tagged value, using the provided tag ans class
 ///
 /// Note: `obj` should be the object to be encapsulated, not the `ContextSpecific` variant.
+#[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
 pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     tag: BerTag,
     class: BerClass,
@@ -88,6 +90,7 @@ pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
 /// Encode the provided object in an IMPLICIT tagged value, using the provided tag and class
 ///
 /// Note: `obj` should be the object to be encapsulated, not the `ContextSpecific` variant.
+#[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
 pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     tag: BerTag,
     class: BerClass,
@@ -163,6 +166,7 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
 /// This can be used to craft invalid objects.
 ///
 /// *This function is only available if the `serialize` feature is enabled.*
+#[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
 pub fn ber_encode_object_raw<'a, 'b: 'a, 'c: 'a, W: Write + Default + AsRef<[u8]> + 'a>(
     hdr: &'b BerObjectHeader,
     content: &'c BerObjectContent,
@@ -178,6 +182,7 @@ pub fn ber_encode_object_raw<'a, 'b: 'a, 'c: 'a, W: Write + Default + AsRef<[u8]
 /// `ContextSpecific` objects will be encoded as EXPLICIT.
 ///
 /// *This function is only available if the `serialize` feature is enabled.*
+#[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
 pub fn ber_encode_object<'a, 'b: 'a, W: Write + Default + AsRef<[u8]> + 'a>(
     obj: &'b BerObject,
 ) -> impl SerializeFn<W> + 'a {
@@ -202,6 +207,7 @@ impl<'a> BerObject<'a> {
     /// `ContextSpecific` objects will be encoded as EXPLICIT.
     ///
     /// *This function is only available if the `serialize` feature is enabled.*
+    #[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
     pub fn to_vec(&self) -> Result<Vec<u8>, GenError> {
         gen_simple(ber_encode_object(self), Vec::new())
     }

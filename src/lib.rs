@@ -129,6 +129,9 @@
         unstable_features,
         unused_import_braces, unused_qualifications)]
 #![forbid(unsafe_code)]
+// pragmas for doc
+#![deny(intra_doc_link_resolution_failure)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[macro_use]
 mod macros;
@@ -145,6 +148,7 @@ pub use der::parse_der;
 
 pub extern crate nom;
 #[cfg(feature = "bigint")]
+#[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]
 pub extern crate num_bigint;
 
 // re-exports nom macros, so this crate's macros can be used without importing nom

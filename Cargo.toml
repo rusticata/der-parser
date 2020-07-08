@@ -29,8 +29,8 @@ include = [
 ]
 
 [package.metadata.docs.rs]
-features = [ "bigint", "serialize" ]
 all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 cookie-factory = { version="0.3.0", optional=true }
