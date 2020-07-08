@@ -550,7 +550,7 @@ impl<'a> BerObjectContent<'a> {
 }
 
 #[cfg(feature = "bigint")]
-pub use num_bigint::{BigInt, BigUint, Sign};
+use num_bigint::{BigInt, BigUint, Sign};
 
 #[cfg(feature = "bigint")]
 impl<'a> BerObject<'a> {

@@ -143,6 +143,10 @@ pub mod oid;
 pub use ber::parse_ber;
 pub use der::parse_der;
 
+pub extern crate nom;
+#[cfg(feature = "bigint")]
+pub extern crate num_bigint;
+
 // re-exports nom macros, so this crate's macros can be used without importing nom
 #[doc(hidden)]
 pub use nom::{alt, call, complete, do_parse, eof, many0, map, map_res, verify};

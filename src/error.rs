@@ -3,6 +3,7 @@
 use crate::ber::BerObject;
 use crate::der::DerObject;
 use nom::error::{ErrorKind, ParseError};
+use nom::IResult;
 use std::error::Error;
 use std::fmt;
 
@@ -13,7 +14,7 @@ use std::fmt;
 /// Note that this type is also a `Result`, so usual functions (`map`, `unwrap` etc.) are available.
 ///
 /// This type is a wrapper around nom's IResult type
-pub type BerResult<'a, O = BerObject<'a>> = ::nom::IResult<&'a [u8], O, BerError>;
+pub type BerResult<'a, O = BerObject<'a>> = IResult<&'a [u8], O, BerError>;
 
 /// Holds the result of parsing functions (DER)
 ///
