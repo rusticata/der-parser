@@ -5,7 +5,7 @@
 //! [![Download numbers](https://img.shields.io/crates/d/der-parser.svg)](https://crates.io/crates/der-parser)
 //! [![Travis CI](https://travis-ci.org/rusticata/der-parser.svg?branch=master)](https://travis-ci.org/rusticata/der-parser)
 //! [![AppVeyor CI](https://ci.appveyor.com/api/projects/status/github/rusticata/der-parser?svg=true)](https://ci.appveyor.com/project/chifflier/der-parser)
-//! [![dependency status](https://deps.rs/crate/der-parser/4.0.1/status.svg)](https://deps.rs/crate/der-parser/4.0.1)
+//! [![dependency status](https://deps.rs/crate/der-parser/4.0.2/status.svg)](https://deps.rs/crate/der-parser/4.0.2)
 //!
 //! # BER/DER Parser
 //!
@@ -110,7 +110,8 @@
 //! Support for encoding BER/DER objects is currently being tested and can be used by activating the `serialize` feature.
 //! Note that current status is **experimental**.
 //!
-//! See the `ber_encode_*` functions in the [`ber`](ber/index.html) module, and [`BerObject::to_vec`](ber/struct.BerObject.html#method.to_vec)
+//! See the `ber_encode_*` functions in the [`ber`](ber/index.html) module, and
+//! [`BerObject::to_vec`](ber/struct.BerObject.html#method.to_vec)
 //!
 //! # References
 //!

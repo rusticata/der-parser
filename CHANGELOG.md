@@ -6,6 +6,12 @@
 
 ### Added
 
+## 4.0.2
+
+### Changed/Fixed
+
+- Upgrade dependencies on num-bigint and der-oid-macro
+
 ## 4.0.1
 
 ### Changed/Fixed
