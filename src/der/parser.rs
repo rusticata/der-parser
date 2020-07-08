@@ -6,7 +6,7 @@ use nom::*;
 use rusticata_macros::custom_check;
 use std::convert::TryFrom;
 
-pub use crate::ber::MAX_RECURSION;
+use crate::ber::MAX_RECURSION;
 
 /// Parse DER object recursively
 ///

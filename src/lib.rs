@@ -127,7 +127,9 @@
 
 #![deny(/*missing_docs,*/
         unstable_features,
-        unused_import_braces, unused_qualifications)]
+        unused_import_braces,
+        unused_qualifications,
+        unreachable_pub)]
 #![forbid(unsafe_code)]
 // pragmas for doc
 #![deny(intra_doc_link_resolution_failure)]
