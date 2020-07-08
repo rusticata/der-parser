@@ -5,7 +5,7 @@ use std::str;
 
 use rusticata_macros::debug;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PrettyPrinterFlag {
     ShowHeader,
 }

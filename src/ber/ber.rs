@@ -585,6 +585,7 @@ impl<'a> IntoIterator for BerObject<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct BerObjectIntoIterator<'a> {
     val: BerObject<'a>,
     idx: usize,
@@ -622,6 +623,7 @@ impl<'a> Iterator for BerObjectIntoIterator<'a> {
 //     }
 // }
 
+#[derive(Debug)]
 pub struct BerObjectRefIterator<'a> {
     obj: &'a BerObject<'a>,
     idx: usize,

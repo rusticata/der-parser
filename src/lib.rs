@@ -131,6 +131,11 @@
         unused_qualifications,
         unreachable_pub)]
 #![forbid(unsafe_code)]
+#![warn(
+    /* missing_docs,
+    rust_2018_idioms,*/
+    missing_debug_implementations,
+)]
 // pragmas for doc
 #![deny(intra_doc_link_resolution_failure)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
