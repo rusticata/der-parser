@@ -550,23 +550,21 @@ impl<'a> BerObjectContent<'a> {
 }
 
 #[cfg(feature = "bigint")]
-mod bigint {
-    use super::{BerObject, BerObjectContent};
-    use num_bigint::{BigInt, BigUint, Sign};
+pub use num_bigint::{BigInt, BigUint, Sign};
 
-    impl<'a> BerObject<'a> {
-        pub fn as_bigint(&self) -> Option<BigInt> {
-            match self.content {
-                BerObjectContent::Integer(s) => Some(BigInt::from_bytes_be(Sign::Plus, s)),
-                _ => None,
-            }
+#[cfg(feature = "bigint")]
+impl<'a> BerObject<'a> {
+    pub fn as_bigint(&self) -> Option<BigInt> {
+        match self.content {
+            BerObjectContent::Integer(s) => Some(BigInt::from_bytes_be(Sign::Plus, s)),
+            _ => None,
         }
+    }
 
-        pub fn as_biguint(&self) -> Option<BigUint> {
-            match self.content {
-                BerObjectContent::Integer(s) => Some(BigUint::from_bytes_be(s)),
-                _ => None,
-            }
+    pub fn as_biguint(&self) -> Option<BigUint> {
+        match self.content {
+            BerObjectContent::Integer(s) => Some(BigUint::from_bytes_be(s)),
+            _ => None,
         }
     }
 }

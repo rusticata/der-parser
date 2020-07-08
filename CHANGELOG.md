@@ -6,6 +6,12 @@
 
 ### Added
 
+## 4.x
+
+### Added/Changed
+
+- Re-export num-bigint so crate users do not have to import it
+
 ## 4.0.2
 
 ### Changed/Fixed
