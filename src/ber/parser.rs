@@ -475,7 +475,42 @@ pub fn ber_read_element_content_as(
         _ => Err(Err::Error(BerError::UnknownTag)),
     }
 }
-//
+
+/// Parse the next bytes as the content of a BER object (combinator)
+///
+/// Content type is *not* checked, caller is reponsible of providing the correct tag
+///
+/// Caller is also responsible to check if parsing function consumed the expected number of
+/// bytes (`header.len`).
+///
+/// The arguments of the parse function are: `(input, ber_object_header, max_recursion)`.
+///
+/// Example: manually parsing header and content
+///
+/// ```
+/// # use der_parser::ber::*;
+/// #
+/// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (i, header) = ber_read_element_header(bytes).expect("parsing failed");
+/// let (rem, content) = parse_ber_content(header.tag)(i, &header, MAX_RECURSION)
+///     .expect("parsing failed");
+/// #
+/// # assert_eq!(header.tag, BerTag::Integer);
+/// ```
+pub fn parse_ber_content<'a>(
+    tag: BerTag,
+) -> impl Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>> {
+    move |i: &[u8], hdr: &BerObjectHeader, max_recursion: usize| {
+        ber_read_element_content_as(
+            i,
+            tag,
+            hdr.len as usize,
+            hdr.is_constructed(),
+            max_recursion,
+        )
+    }
+}
+
 /// Parse a BER object, expecting a value with specified tag
 pub fn parse_ber_with_tag(i: &[u8], tag: BerTag) -> BerResult {
     do_parse! {
