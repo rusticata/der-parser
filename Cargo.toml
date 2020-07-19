@@ -49,7 +49,7 @@ serialize = ["cookie-factory"]
 unstable = []
 
 [dev-dependencies]
-hex-literal = "0.2"
+hex-literal = "0.3"
 pretty_assertions = "0.6"
 
 [badges]
