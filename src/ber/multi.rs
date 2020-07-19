@@ -13,7 +13,6 @@ use nom::Err;
 /// # use der_parser::ber::{parse_ber_integer, parse_ber_sequence_of, BerObject};
 /// # use der_parser::error::BerResult;
 /// #
-/// # fn main() {
 /// /// Read a SEQUENCE OF INTEGER
 /// fn parser(i:&[u8]) -> BerResult<BerObject> {
 ///     parse_ber_sequence_of(parse_ber_integer)(i)
@@ -30,13 +29,12 @@ use nom::Err;
 /// # ]);
 /// # assert_eq!(parser(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
-/// # }
 /// ```
 pub fn parse_ber_sequence_of<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult,
 {
-    map(parse_ber_sequence_of_v(f), |v| BerObject::from_seq(v))
+    map(parse_ber_sequence_of_v(f), BerObject::from_seq)
 }
 
 /// Parse a SEQUENCE OF object (returning a vec)
@@ -49,7 +47,6 @@ where
 /// # use der_parser::ber::{parse_ber_integer, parse_ber_sequence_of_v, BerObject};
 /// # use der_parser::error::BerResult;
 /// #
-/// # fn main() {
 /// /// Read a SEQUENCE OF INTEGER
 /// fn parser(i:&[u8]) -> BerResult<Vec<BerObject>> {
 ///     parse_ber_sequence_of_v(parse_ber_integer)(i)
@@ -66,7 +63,6 @@ where
 /// # ];
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
 /// # assert_eq!(v, expected);
-/// # }
 /// ```
 pub fn parse_ber_sequence_of_v<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<Vec<T>>
 where
@@ -89,7 +85,6 @@ where
 /// use nom::combinator::complete;
 /// use nom::multi::many1;
 ///
-/// # fn main() {
 /// fn localparse_seq(i:&[u8]) -> BerResult {
 ///     parse_ber_sequence_defined(
 ///         many1(complete(parse_ber_integer))
@@ -107,7 +102,6 @@ where
 /// # ]);
 /// # assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
 /// let (rem, v) = localparse_seq(&bytes).expect("parsing failed");
-/// # }
 /// ```
 ///
 /// Parsing a defined sequence with different types:
@@ -118,7 +112,6 @@ where
 /// use nom::combinator::map;
 /// use nom::sequence::tuple;
 ///
-/// # fn main() {
 /// /// Read a DER-encoded object:
 /// /// SEQUENCE {
 /// ///     a INTEGER,
@@ -146,13 +139,12 @@ where
 /// # ]);
 /// # assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
 /// let (rem, v) = localparse_seq(&bytes).expect("parsing failed");
-/// # }
 /// ```
 pub fn parse_ber_sequence_defined<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult<Vec<BerObject>>,
 {
-    map(parse_ber_sequence_defined_g(f), |v| BerObject::from_seq(v))
+    map(parse_ber_sequence_defined_g(f), BerObject::from_seq)
 }
 
 /// Parse a defined SEQUENCE object (returning a generic object)
@@ -173,7 +165,6 @@ where
 ///     b: &'a [u8],
 /// }
 ///
-/// # fn main() {
 /// /// Read a DER-encoded object:
 /// /// SEQUENCE {
 /// ///     a INTEGER (0..4294967295),
@@ -201,7 +192,6 @@ where
 /// # };
 /// # assert_eq!(parse_myobject(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parse_myobject(&bytes).expect("parsing failed");
-/// # }
 /// ```
 pub fn parse_ber_sequence_defined_g<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<T>
 where
@@ -226,7 +216,6 @@ where
 /// # use der_parser::ber::{parse_ber_integer, parse_ber_set_of, BerObject};
 /// # use der_parser::error::BerResult;
 /// #
-/// # fn main() {
 /// /// Read a SET OF INTEGER
 /// fn parser(i:&[u8]) -> BerResult<BerObject> {
 ///     parse_ber_set_of(parse_ber_integer)(i)
@@ -243,13 +232,12 @@ where
 /// # ]);
 /// # assert_eq!(parser(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
-/// # }
 /// ```
 pub fn parse_ber_set_of<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult,
 {
-    map(parse_ber_set_of_v(f), |v| BerObject::from_set(v))
+    map(parse_ber_set_of_v(f), BerObject::from_set)
 }
 
 /// Parse a SET OF object (returning a vec)
@@ -262,7 +250,6 @@ where
 /// # use der_parser::ber::{parse_ber_integer, parse_ber_set_of_v, BerObject};
 /// # use der_parser::error::BerResult;
 /// #
-/// # fn main() {
 /// /// Read a SET OF INTEGER
 /// fn parser(i:&[u8]) -> BerResult<Vec<BerObject>> {
 ///     parse_ber_set_of_v(parse_ber_integer)(i)
@@ -279,7 +266,6 @@ where
 /// # ];
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
 /// # assert_eq!(v, expected);
-/// # }
 /// ```
 pub fn parse_ber_set_of_v<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<Vec<T>>
 where
@@ -302,7 +288,6 @@ where
 /// use nom::combinator::complete;
 /// use nom::multi::many1;
 ///
-/// # fn main() {
 /// fn localparse_seq(i:&[u8]) -> BerResult {
 ///     parse_ber_set_defined(
 ///         many1(complete(parse_ber_integer))
@@ -320,7 +305,6 @@ where
 /// # ]);
 /// # assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
 /// let (rem, v) = localparse_seq(&bytes).expect("parsing failed");
-/// # }
 /// ```
 ///
 /// Parsing a defined set with different types:
@@ -331,7 +315,6 @@ where
 /// use nom::combinator::map;
 /// use nom::sequence::tuple;
 ///
-/// # fn main() {
 /// /// Read a DER-encoded object:
 /// /// SET {
 /// ///     a INTEGER,
@@ -359,13 +342,12 @@ where
 /// # ]);
 /// # assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
 /// let (rem, v) = localparse_set(&bytes).expect("parsing failed");
-/// # }
 /// ```
 pub fn parse_ber_set_defined<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult<Vec<BerObject>>,
 {
-    map(parse_ber_set_defined_g(f), |v| BerObject::from_set(v))
+    map(parse_ber_set_defined_g(f), BerObject::from_set)
 }
 
 /// Parse a defined SET object (returning a generic object)
@@ -386,7 +368,6 @@ where
 ///     b: &'a [u8],
 /// }
 ///
-/// # fn main() {
 /// /// Read a DER-encoded object:
 /// /// SET {
 /// ///     a INTEGER (0..4294967295),
@@ -414,7 +395,6 @@ where
 /// # };
 /// # assert_eq!(parse_myobject(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parse_myobject(&bytes).expect("parsing failed");
-/// # }
 /// ```
 pub fn parse_ber_set_defined_g<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<T>
 where
