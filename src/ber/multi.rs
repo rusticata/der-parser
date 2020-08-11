@@ -3,7 +3,7 @@ use crate::error::*;
 use nom::bytes::complete::take;
 use nom::combinator::{complete, map};
 use nom::multi::many0;
-use nom::Err;
+use nom::{Err, IResult};
 
 /// Parse a SEQUENCE OF object
 ///
@@ -193,14 +193,17 @@ where
 /// # assert_eq!(parse_myobject(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parse_myobject(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_ber_sequence_defined_g<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<T>
+pub fn parse_ber_sequence_defined_g<'a, T, F, E>(
+    f: F,
+) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], T, E>
 where
-    F: Fn(&'a [u8]) -> BerResult<T>,
+    F: Fn(&'a [u8]) -> IResult<&'a [u8], T, E>,
+    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {
-        let (i, hdr) = ber_read_element_header(i)?;
+        let (i, hdr) = ber_read_element_header(i).map_err(|e| nom::Err::convert(e))?;
         if hdr.tag != BerTag::Sequence {
-            return Err(Err::Error(BerError::BerTypeError));
+            return Err(Err::Error(BerError::BerTypeError.into()));
         }
         let (i, data) = take(hdr.len as usize)(i)?;
         let (_rest, v) = f(data)?;
@@ -396,14 +399,15 @@ where
 /// # assert_eq!(parse_myobject(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parse_myobject(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_ber_set_defined_g<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<T>
+pub fn parse_ber_set_defined_g<'a, T, F, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], T, E>
 where
-    F: Fn(&'a [u8]) -> BerResult<T>,
+    F: Fn(&'a [u8]) -> IResult<&'a [u8], T, E>,
+    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {
-        let (i, hdr) = ber_read_element_header(i)?;
+        let (i, hdr) = ber_read_element_header(i).map_err(|e| nom::Err::convert(e))?;
         if hdr.tag != BerTag::Set {
-            return Err(Err::Error(BerError::BerTypeError));
+            return Err(Err::Error(BerError::BerTypeError.into()));
         }
         let (i, data) = take(hdr.len as usize)(i)?;
         let (_rest, v) = f(data)?;
