@@ -21,7 +21,8 @@ pub enum BerClass {
     Private = 0b11,
 }
 
-/// Defined in X.680 section 8.4
+/// BER/DER Tag as defined in X.680 section 8.4
+///
 /// X.690 doesn't specify the maxmimum tag size so we're assuming that people
 /// aren't going to need anything more than a u32.
 #[derive(Clone, Copy, PartialEq, Eq)]
