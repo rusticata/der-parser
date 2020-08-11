@@ -38,7 +38,7 @@ where
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {
-        let (i, hdr) = ber_read_element_header(i).map_err(|e| nom::Err::convert(e))?;
+        let (i, hdr) = ber_read_element_header(i).map_err(nom::Err::convert)?;
         if hdr.tag.0 != tag {
             return Err(Err::Error(BerError::InvalidTag.into()));
         }
