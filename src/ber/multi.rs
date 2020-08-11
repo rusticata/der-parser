@@ -73,7 +73,11 @@ where
 
 /// Parse a defined sequence of DER elements (function version)
 ///
-/// Given a list of expected parsers, apply them to build a DER sequence.
+/// Given a list of expected parsers, apply them to build a DER sequence and
+/// return the remaining bytes and the built object.
+///
+/// The remaining bytes point *after* the sequence: any bytes that are part of the sequence but not
+/// parsed are ignored.
 ///
 /// # Examples
 ///
@@ -149,7 +153,11 @@ where
 
 /// Parse a defined SEQUENCE object (returning a generic object)
 ///
-/// Given a parser for sequence content, apply it to build a DER sequence.
+/// Given a parser for sequence content, apply it to build a DER sequence and
+/// return the remaining bytes and the built object.
+///
+/// The remaining bytes point *after* the sequence: any bytes that are part of the sequence but not
+/// parsed are ignored.
 ///
 /// # Examples
 ///
@@ -279,7 +287,11 @@ where
 
 /// Parse a defined set of DER elements (function version)
 ///
-/// Given a list of expected parsers, apply them to build a DER set.
+/// Given a list of expected parsers, apply them to build a DER set and
+/// return the remaining bytes and the built object.
+///
+/// The remaining bytes point *after* the set: any bytes that are part of the sequence but not
+/// parsed are ignored.
 ///
 /// # Examples
 ///
@@ -355,7 +367,11 @@ where
 
 /// Parse a defined SET object (returning a generic object)
 ///
-/// Given a parser for set content, apply it to build a DER set.
+/// Given a parser for set content, apply it to build a DER set and
+/// return the remaining bytes and the built object.
+///
+/// The remaining bytes point *after* the set: any bytes that are part of the sequence but not
+/// parsed are ignored.
 ///
 /// # Examples
 ///
