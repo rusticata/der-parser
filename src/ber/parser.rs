@@ -148,7 +148,6 @@ fn ber_read_content_null(i: &[u8]) -> BerResult<BerObjectContent> {
     Ok((i, BerObjectContent::Null))
 }
 
-#[inline]
 fn ber_read_content_oid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     custom_check!(i, len == 0, BerError::InvalidLength)?;
 
@@ -163,7 +162,6 @@ fn ber_read_content_enum(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     parse_hex_to_u64!(i, len).map(|(rem, i)| (rem, BerObjectContent::Enum(i)))
 }
 
-#[inline]
 fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map_res(take(len), |bytes| {
         std::str::from_utf8(bytes)
@@ -172,7 +170,6 @@ fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectConte
     })(i)
 }
 
-#[inline]
 fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     custom_check!(i, len == 0, BerError::InvalidLength)?;
 
@@ -182,7 +179,6 @@ fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<BerObjectCont
     Ok((i1, obj))
 }
 
-#[inline]
 fn ber_read_content_sequence(
     i: &[u8],
     len: usize,
@@ -215,7 +211,6 @@ fn ber_read_content_sequence(
     }
 }
 
-#[inline]
 fn ber_read_content_set(i: &[u8], len: usize, max_depth: usize) -> BerResult<BerObjectContent> {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     if len == 0 {
@@ -244,7 +239,6 @@ fn ber_read_content_set(i: &[u8], len: usize, max_depth: usize) -> BerResult<Ber
     }
 }
 
-#[inline]
 fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
     // Argument must be a reference, because of the .iter().all(F) call below
     #[allow(clippy::trivially_copy_pass_by_ref)]
@@ -264,7 +258,6 @@ fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     })
 }
 
-#[inline]
 fn ber_read_content_printablestring<'a>(
     i: &'a [u8],
     len: usize,
@@ -306,7 +299,6 @@ fn ber_read_content_t61string(i: &[u8], len: usize) -> BerResult<BerObjectConten
     map(take(len), BerObjectContent::T61String)(i)
 }
 
-#[inline]
 fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
     map_res(take(len), |bytes: &'a [u8]| {
         if !bytes.iter().all(u8::is_ascii) {
