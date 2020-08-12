@@ -6,11 +6,16 @@
 
 ### Added
 
-## 4.x
+## 4.1.0
 
 ### Added/Changed
 
 - Re-export num-bigint so crate users do not have to import it
+- Add function versions to parse BER sequences/sets (#20)
+- Add function versions to parse BER tagged objects (#20)
+- Add generic error type to structured parsing functions
+- Add function to parse a generic BER container object
+- Document that trailing bytes from SEQUENCE/SET are ignored
 
 ## 4.0.2
 
