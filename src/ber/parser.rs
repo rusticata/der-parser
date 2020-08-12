@@ -109,12 +109,12 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
 }
 
 #[inline]
-pub(crate) fn ber_read_content_eoc(i: &[u8]) -> BerResult<BerObjectContent> {
+fn ber_read_content_eoc(i: &[u8]) -> BerResult<BerObjectContent> {
     Ok((i, BerObjectContent::EndOfContent))
 }
 
 #[inline]
-pub(crate) fn ber_read_content_bool(i: &[u8]) -> BerResult<BerObjectContent> {
+fn ber_read_content_bool(i: &[u8]) -> BerResult<BerObjectContent> {
     match be_u8(i) {
         Ok((rem, 0)) => Ok((rem, BerObjectContent::Boolean(false))),
         Ok((rem, _)) => Ok((rem, BerObjectContent::Boolean(true))),
@@ -123,13 +123,13 @@ pub(crate) fn ber_read_content_bool(i: &[u8]) -> BerResult<BerObjectContent> {
 }
 
 #[inline]
-pub(crate) fn ber_read_content_integer(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_integer(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::Integer)(i)
 }
 
 // XXX check if constructed (8.6.3)
 #[inline]
-pub(crate) fn ber_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     do_parse! {
         i,
         ignored_bits: be_u8 >>
@@ -141,18 +141,18 @@ pub(crate) fn ber_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerO
 
 // XXX check if constructed (8.7)
 #[inline]
-pub(crate) fn ber_read_content_octetstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_octetstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::OctetString)(i)
 }
 
 #[inline]
-pub(crate) fn ber_read_content_null(i: &[u8]) -> BerResult<BerObjectContent> {
+fn ber_read_content_null(i: &[u8]) -> BerResult<BerObjectContent> {
     Ok((i, BerObjectContent::Null))
 }
 
 // XXX check if primitive (8.19.1)
 #[inline]
-pub(crate) fn ber_read_content_oid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_oid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     custom_check!(i, len == 0, BerError::InvalidLength)?;
 
     let (i1, oid) = verify(take(len), |os: &[u8]| os.last().unwrap() >> 7 == 0u8)(i)?;
@@ -163,13 +163,13 @@ pub(crate) fn ber_read_content_oid(i: &[u8], len: usize) -> BerResult<BerObjectC
 
 // XXX check if primitive (8.4)
 #[inline]
-pub(crate) fn ber_read_content_enum(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_enum(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     parse_hex_to_u64!(i, len).map(|(rem, i)| (rem, BerObjectContent::Enum(i)))
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map_res(take(len), |bytes| {
         std::str::from_utf8(bytes)
             .map(|s| BerObjectContent::UTF8String(s))
@@ -178,7 +178,7 @@ pub(crate) fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<Ber
 }
 
 #[inline]
-pub(crate) fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     custom_check!(i, len == 0, BerError::InvalidLength)?;
 
     let (i1, oid) = verify(take(len), |os: &[u8]| os.last().unwrap() >> 7 == 0u8)(i)?;
@@ -188,7 +188,7 @@ pub(crate) fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<Be
 }
 
 #[inline]
-pub(crate) fn ber_read_content_sequence(
+fn ber_read_content_sequence(
     i: &[u8],
     len: usize,
     max_depth: usize,
@@ -221,11 +221,7 @@ pub(crate) fn ber_read_content_sequence(
 }
 
 #[inline]
-pub(crate) fn ber_read_content_set(
-    i: &[u8],
-    len: usize,
-    max_depth: usize,
-) -> BerResult<BerObjectContent> {
+fn ber_read_content_set(i: &[u8], len: usize, max_depth: usize) -> BerResult<BerObjectContent> {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     if len == 0 {
         if i.is_empty() {
@@ -255,10 +251,7 @@ pub(crate) fn ber_read_content_set(
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_numericstring<'a>(
-    i: &'a [u8],
-    len: usize,
-) -> BerResult<BerObjectContent<'a>> {
+fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
     // Argument must be a reference, because of the .iter().all(F) call below
     #[allow(clippy::trivially_copy_pass_by_ref)]
     fn is_numeric(b: &u8) -> bool {
@@ -279,7 +272,7 @@ pub(crate) fn ber_read_content_numericstring<'a>(
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_printablestring<'a>(
+fn ber_read_content_printablestring<'a>(
     i: &'a [u8],
     len: usize,
 ) -> BerResult<BerObjectContent<'a>> {
@@ -317,16 +310,13 @@ pub(crate) fn ber_read_content_printablestring<'a>(
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_t61string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_t61string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::T61String)(i)
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_ia5string<'a>(
-    i: &'a [u8],
-    len: usize,
-) -> BerResult<BerObjectContent<'a>> {
+fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
     map_res(take(len), |bytes: &'a [u8]| {
         if !bytes.iter().all(u8::is_ascii) {
             return Err(BerError::BerValueError);
@@ -338,27 +328,24 @@ pub(crate) fn ber_read_content_ia5string<'a>(
 }
 
 #[inline]
-pub(crate) fn ber_read_content_utctime(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_utctime(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::UTCTime)(i)
 }
 
 #[inline]
-pub(crate) fn ber_read_content_generalizedtime(
-    i: &[u8],
-    len: usize,
-) -> BerResult<BerObjectContent> {
+fn ber_read_content_generalizedtime(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::GeneralizedTime)(i)
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_generalstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_generalstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::GeneralString)(i)
 }
 
 // XXX check if constructed, or indefinite length (8.21)
 #[inline]
-pub(crate) fn ber_read_content_bmpstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_bmpstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::BmpString)(i)
 }
 
