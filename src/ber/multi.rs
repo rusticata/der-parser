@@ -201,22 +201,19 @@ where
 /// # assert_eq!(parse_myobject(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parse_myobject(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_ber_sequence_defined_g<'a, T, F, E>(
+pub fn parse_ber_sequence_defined_g<'a, O, F, E>(
     f: F,
-) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], T, E>
+) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], T, E>,
+    F: Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
-    move |i: &[u8]| {
-        let (i, hdr) = ber_read_element_header(i).map_err(nom::Err::convert)?;
+    parse_ber_container(move |hdr, i| {
         if hdr.tag != BerTag::Sequence {
             return Err(Err::Error(BerError::BerTypeError.into()));
         }
-        let (i, data) = take(hdr.len as usize)(i)?;
-        let (_rest, v) = f(data)?;
-        Ok((i, v))
-    }
+        f(i)
+    })
 }
 
 /// Parse a SET OF object
@@ -415,18 +412,84 @@ where
 /// # assert_eq!(parse_myobject(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parse_myobject(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_ber_set_defined_g<'a, T, F, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], T, E>
+pub fn parse_ber_set_defined_g<'a, O, F, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], T, E>,
+    F: Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
+    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
+{
+    parse_ber_container(move |hdr, i| {
+        if hdr.tag != BerTag::Set {
+            return Err(Err::Error(BerError::BerTypeError.into()));
+        }
+        f(i)
+    })
+}
+
+/// Parse a BER object and apply provided function to content
+///
+/// Given a parser for content, read BER object header and apply parser to
+/// return the remaining bytes and the parser result.
+///
+/// The remaining bytes point *after* the content: any bytes that are part of the content but not
+/// parsed are ignored.
+///
+/// This function is mostly intended for structured objects, but can be used for any valid BER
+/// object.
+///
+/// # Examples
+///
+/// Parsing a defined sequence with different types:
+///
+/// ```rust
+/// # use der_parser::ber::*;
+/// # use der_parser::error::{BerError, BerResult};
+/// #
+/// # #[derive(Debug, PartialEq)]
+/// pub struct MyObject<'a> {
+///     a: u32,
+///     b: &'a [u8],
+/// }
+///
+/// /// Read a DER-encoded object:
+/// /// SEQUENCE {
+/// ///     a INTEGER (0..4294967295),
+/// ///     b OCTETSTRING
+/// /// }
+/// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
+///     parse_ber_container(
+///         |hdr: &BerObjectHeader, i:&[u8]| {
+///             if hdr.tag != BerTag::Sequence {
+///                 return Err(nom::Err::Error(BerError::BerTypeError.into()));
+///             }
+///             let (i, a) = parse_ber_u32(i)?;
+///             let (i, obj) = parse_ber_octetstring(i)?;
+///             let b = obj.as_slice().unwrap();
+///             Ok((i, MyObject{ a, b }))
+///         }
+///     )(i)
+/// }
+///
+/// # let empty = &b""[..];
+/// # let bytes = [ 0x30, 0x0a,
+/// #               0x02, 0x03, 0x01, 0x00, 0x01,
+/// #               0x04, 0x03, 0x01, 0x00, 0x00,
+/// # ];
+/// # let expected  = MyObject {
+/// #   a: 0x010001,
+/// #   b: &[01, 00, 00]
+/// # };
+/// # assert_eq!(parse_myobject(&bytes), Ok((empty, expected)));
+/// let (rem, v) = parse_myobject(&bytes).expect("parsing failed");
+/// ```
+pub fn parse_ber_container<'a, O, F, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
+where
+    F: Fn(&BerObjectHeader, &'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {
         let (i, hdr) = ber_read_element_header(i).map_err(nom::Err::convert)?;
-        if hdr.tag != BerTag::Set {
-            return Err(Err::Error(BerError::BerTypeError.into()));
-        }
         let (i, data) = take(hdr.len as usize)(i)?;
-        let (_rest, v) = f(data)?;
+        let (_rest, v) = f(&hdr, data)?;
         Ok((i, v))
     }
 }
