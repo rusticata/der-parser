@@ -127,7 +127,6 @@ fn ber_read_content_integer(i: &[u8], len: usize) -> BerResult<BerObjectContent>
     map(take(len), BerObjectContent::Integer)(i)
 }
 
-// XXX check if constructed (8.6.3)
 #[inline]
 fn ber_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     do_parse! {
@@ -139,7 +138,6 @@ fn ber_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectConten
     }
 }
 
-// XXX check if constructed (8.7)
 #[inline]
 fn ber_read_content_octetstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::OctetString)(i)
@@ -150,7 +148,6 @@ fn ber_read_content_null(i: &[u8]) -> BerResult<BerObjectContent> {
     Ok((i, BerObjectContent::Null))
 }
 
-// XXX check if primitive (8.19.1)
 #[inline]
 fn ber_read_content_oid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     custom_check!(i, len == 0, BerError::InvalidLength)?;
@@ -161,13 +158,11 @@ fn ber_read_content_oid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     Ok((i1, obj))
 }
 
-// XXX check if primitive (8.4)
 #[inline]
 fn ber_read_content_enum(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     parse_hex_to_u64!(i, len).map(|(rem, i)| (rem, BerObjectContent::Enum(i)))
 }
 
-// XXX check if constructed, or indefinite length (8.21)
 #[inline]
 fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map_res(take(len), |bytes| {
@@ -249,7 +244,6 @@ fn ber_read_content_set(i: &[u8], len: usize, max_depth: usize) -> BerResult<Ber
     }
 }
 
-// XXX check if constructed, or indefinite length (8.21)
 #[inline]
 fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
     // Argument must be a reference, because of the .iter().all(F) call below
@@ -270,7 +264,6 @@ fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     })
 }
 
-// XXX check if constructed, or indefinite length (8.21)
 #[inline]
 fn ber_read_content_printablestring<'a>(
     i: &'a [u8],
@@ -308,13 +301,11 @@ fn ber_read_content_printablestring<'a>(
     })
 }
 
-// XXX check if constructed, or indefinite length (8.21)
 #[inline]
 fn ber_read_content_t61string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::T61String)(i)
 }
 
-// XXX check if constructed, or indefinite length (8.21)
 #[inline]
 fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
     map_res(take(len), |bytes: &'a [u8]| {
@@ -337,13 +328,11 @@ fn ber_read_content_generalizedtime(i: &[u8], len: usize) -> BerResult<BerObject
     map(take(len), BerObjectContent::GeneralizedTime)(i)
 }
 
-// XXX check if constructed, or indefinite length (8.21)
 #[inline]
 fn ber_read_content_generalstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::GeneralString)(i)
 }
 
-// XXX check if constructed, or indefinite length (8.21)
 #[inline]
 fn ber_read_content_bmpstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::BmpString)(i)
@@ -380,12 +369,12 @@ pub fn ber_read_element_content_as(
         }
         // 0x03: bitstring
         BerTag::BitString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.6.3)
             ber_read_content_bitstring(i, len)
         }
         // 0x04: octetstring
         BerTag::OctetString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.7.1)
             ber_read_content_octetstring(i, len)
         }
         // 0x05: null
@@ -396,17 +385,17 @@ pub fn ber_read_element_content_as(
         }
         // 0x06: object identified
         BerTag::Oid => {
-            custom_check!(i, constructed, BerError::ConstructUnexpected)?;
+            custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.19.1
             ber_read_content_oid(i, len)
         }
         // 0x0a: enumerated
         BerTag::Enumerated => {
-            custom_check!(i, constructed, BerError::ConstructUnexpected)?;
+            custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.4
             ber_read_content_enum(i, len)
         }
         // 0x0c: UTF8String
         BerTag::Utf8String => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_utf8string(i, len)
         }
         // 0x0d: relative object identified
@@ -426,22 +415,22 @@ pub fn ber_read_element_content_as(
         }
         // 0x12: numericstring
         BerTag::NumericString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_numericstring(i, len)
         }
         // 0x13: printablestring
         BerTag::PrintableString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_printablestring(i, len)
         }
         // 0x14: t61string
         BerTag::T61String => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_t61string(i, len)
         }
         // 0x16: ia5string
         BerTag::Ia5String => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_ia5string(i, len)
         }
         // 0x17: utctime
@@ -450,12 +439,12 @@ pub fn ber_read_element_content_as(
         BerTag::GeneralizedTime => ber_read_content_generalizedtime(i, len),
         // 0x1b: generalstring
         BerTag::GeneralString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_generalstring(i, len)
         }
         // 0x1e: bmpstring
         BerTag::BmpString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_bmpstring(i, len)
         }
         // all unknown values
