@@ -63,6 +63,12 @@ pub enum BerError {
     NomError(ErrorKind),
 }
 
+impl From<BerError> for nom::Err<BerError> {
+    fn from(e: BerError) -> nom::Err<BerError> {
+        nom::Err::Error(e)
+    }
+}
+
 impl<I> ParseError<I> for BerError {
     fn from_error_kind(_input: I, kind: ErrorKind) -> Self {
         BerError::NomError(kind)
