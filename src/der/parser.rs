@@ -388,7 +388,6 @@ fn der_read_element_content_recursive<'a>(
     }
 }
 
-#[inline]
 fn der_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     do_parse! {
         i,
