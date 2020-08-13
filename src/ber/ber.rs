@@ -127,6 +127,29 @@ impl TryFrom<u8> for BerClass {
 }
 
 impl<'a> BerObjectHeader<'a> {
+    /// Build a new BER header
+    pub fn new(class: BerClass, structured: u8, tag: BerTag, len: u64) -> Self {
+        BerObjectHeader {
+            tag,
+            structured,
+            class,
+            len,
+            raw_tag: None,
+        }
+    }
+
+    /// Update header length
+    #[inline]
+    pub fn with_len(self, len: u64) -> Self {
+        BerObjectHeader { len, ..self }
+    }
+
+    /// Update header to add reference to raw tag
+    #[inline]
+    pub fn with_raw_tag(self, raw_tag: Option<&'a [u8]>) -> Self {
+        BerObjectHeader { raw_tag, ..self }
+    }
+
     /// Test if object class is Universal
     #[inline]
     pub fn is_universal(&self) -> bool {
@@ -179,25 +202,13 @@ impl<'a> BerObject<'a> {
             BerTag::Sequence | BerTag::Set => 1,
             _ => 0,
         };
-        let header = BerObjectHeader {
-            class,
-            structured,
-            tag,
-            len: 0,
-            raw_tag: None,
-        };
+        let header = BerObjectHeader::new(class, structured, tag, 0);
         BerObject { header, content: c }
     }
 
     /// Build a DER integer object from a slice containing an encoded integer
     pub fn from_int_slice(i: &'a [u8]) -> BerObject<'a> {
-        let header = BerObjectHeader {
-            class: BerClass::Universal,
-            structured: 0,
-            tag: BerTag::Integer,
-            len: 0,
-            raw_tag: None,
-        };
+        let header = BerObjectHeader::new(BerClass::Universal, 0, BerTag::Integer, 0);
         BerObject {
             header,
             content: BerObjectContent::Integer(i),

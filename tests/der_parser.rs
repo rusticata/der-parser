@@ -268,13 +268,8 @@ fn test_der_contextspecific() {
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let empty = &b""[..];
     let expected = DerObject {
-        header: BerObjectHeader {
-            class: BerClass::ContextSpecific,
-            structured: 1,
-            tag: BerTag(0),
-            len: 3,
-            raw_tag: Some(&[0xa0]),
-        },
+        header: BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3)
+            .with_raw_tag(Some(&[0xa0])),
         content: BerObjectContent::Unknown(BerTag(0), &bytes[2..]),
     };
     assert_eq!(parse_der(&bytes), Ok((empty, expected)));
@@ -285,13 +280,8 @@ fn test_der_explicit() {
     let empty = &b""[..];
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let expected = DerObject {
-        header: BerObjectHeader {
-            class: BerClass::ContextSpecific,
-            structured: 1,
-            tag: BerTag(0),
-            len: 3,
-            raw_tag: Some(&[0xa0]),
-        },
+        header: BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3)
+            .with_raw_tag(Some(&[0xa0])),
         content: BerObjectContent::ContextSpecific(
             BerTag(0),
             Some(Box::new(DerObject::from_int_slice(b"\x02"))),
@@ -314,13 +304,8 @@ fn test_der_implicit() {
     let bytes = [0x81, 0x04, 0x70, 0x61, 0x73, 0x73];
     let pass = DerObject::from_obj(BerObjectContent::IA5String("pass"));
     let expected = DerObject {
-        header: BerObjectHeader {
-            class: BerClass::ContextSpecific,
-            structured: 0,
-            tag: BerTag(1),
-            len: 4,
-            raw_tag: Some(&[0x81]),
-        },
+        header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(1), 4)
+            .with_raw_tag(Some(&[0x81])),
         content: BerObjectContent::ContextSpecific(BerTag(1), Some(Box::new(pass))),
     };
     fn der_read_ia5string_content(
@@ -347,13 +332,8 @@ fn test_der_implicit_long_tag() {
     let bytes = [0x5f, 0x52, 0x04, 0x70, 0x61, 0x73, 0x73];
     let pass = DerObject::from_obj(BerObjectContent::IA5String("pass"));
     let expected = DerObject {
-        header: BerObjectHeader {
-            class: BerClass::Application,
-            structured: 0,
-            tag: BerTag(0x52),
-            len: 4,
-            raw_tag: Some(&[0x5f, 0x52]),
-        },
+        header: BerObjectHeader::new(BerClass::Application, 0, BerTag(0x52), 4)
+            .with_raw_tag(Some(&[0x5f, 0x52])),
         content: BerObjectContent::ContextSpecific(BerTag(0x52), Some(Box::new(pass))),
     };
     fn der_read_ia5string_content(

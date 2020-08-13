@@ -74,14 +74,9 @@ pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     move |out| {
         // encode inner object
         let v = gen_simple(ber_encode_object(&obj), W::default())?;
+        let len = v.as_ref().len() as u64;
         // encode the application header, using the tag
-        let hdr = BerObjectHeader {
-            class,
-            structured: 1, // X.690 8.14.2
-            tag,
-            len: v.as_ref().len() as u64,
-            raw_tag: None,
-        };
+        let hdr = BerObjectHeader::new(class, 1 /* X.690 8.14.2 */, tag, len);
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -100,12 +95,8 @@ pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         // encode inner object content
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
         // but replace the tag (keep structured attribute)
-        let hdr = BerObjectHeader {
-            class,
-            tag,
-            len: v.as_ref().len() as u64,
-            ..obj.header
-        };
+        let len = v.as_ref().len() as u64;
+        let hdr = BerObjectHeader::new(class, obj.header.structured, tag, len);
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -189,10 +180,8 @@ pub fn ber_encode_object<'a, 'b: 'a, W: Write + Default + AsRef<[u8]> + 'a>(
     move |out| {
         // XXX should we make an exception for tagged values here ?
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
-        let hdr = BerObjectHeader {
-            len: v.as_ref().len() as u64,
-            ..obj.header
-        };
+        let len = v.as_ref().len() as u64;
+        let hdr = obj.header.clone().with_len(len);
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }

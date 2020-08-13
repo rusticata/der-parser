@@ -96,16 +96,8 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
             }
         }
     };
-    Ok((
-        i3,
-        BerObjectHeader {
-            class,
-            structured: el.1,
-            tag: BerTag(el.2),
-            len,
-            raw_tag: Some(el.3),
-        },
-    ))
+    let hdr = BerObjectHeader::new(class, el.1, BerTag(el.2), len).with_raw_tag(Some(el.3));
+    Ok((i3, hdr))
 }
 
 #[inline]
@@ -129,13 +121,14 @@ fn ber_read_content_integer(i: &[u8], len: usize) -> BerResult<BerObjectContent>
 
 #[inline]
 fn ber_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    do_parse! {
+    custom_check!(i, len == 0, BerError::InvalidLength)?;
+
+    let (i, ignored_bits) = be_u8(i)?;
+    let (i, data) = take(len - 1)(i)?;
+    Ok((
         i,
-        ignored_bits: be_u8 >>
-                      custom_check!(len == 0, BerError::InvalidLength) >>
-        s:            take!(len - 1) >>
-        ( BerObjectContent::BitString(ignored_bits,BitStringObject{ data:s }) )
-    }
+        BerObjectContent::BitString(ignored_bits, BitStringObject { data }),
+    ))
 }
 
 #[inline]

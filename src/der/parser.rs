@@ -445,13 +445,7 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
                     }
                 },
             };
-            BerObjectHeader {
-                class,
-                structured: el.1,
-                tag: BerTag(el.2),
-                len,
-                raw_tag: Some(el.3),
-            }
+            BerObjectHeader::new(class, el.1, BerTag(el.2), len).with_raw_tag(Some(el.3))
         } )
     }
 }

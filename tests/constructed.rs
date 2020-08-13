@@ -68,13 +68,8 @@ fn struct01() {
     ];
     let empty = &b""[..];
     let expected = (
-        BerObjectHeader {
-            class: BerClass::Universal,
-            structured: 1,
-            tag: BerTag::Sequence,
-            len: 0xa,
-            raw_tag: Some(&[0x30]),
-        },
+        BerObjectHeader::new(BerClass::Universal, 1, BerTag::Sequence, 0xa)
+            .with_raw_tag(Some(&[0x30])),
         MyStruct {
             a: BerObject::from_int_slice(b"\x01\x00\x01"),
             b: BerObject::from_int_slice(b"\x01\x00\x00"),
@@ -171,13 +166,8 @@ fn struct_with_garbage() {
     ];
     let empty = &b""[..];
     let expected = (
-        BerObjectHeader {
-            class: BerClass::Universal,
-            structured: 1,
-            tag: BerTag::Sequence,
-            len: 0xc,
-            raw_tag: Some(&[0x30]),
-        },
+        BerObjectHeader::new(BerClass::Universal, 1, BerTag::Sequence, 0xc)
+            .with_raw_tag(Some(&[0x30])),
         MyStruct {
             a: BerObject::from_int_slice(b"\x01\x00\x01"),
             b: BerObject::from_int_slice(b"\x01\x00\x00"),
@@ -197,13 +187,8 @@ fn struct_verify_tag() {
     ];
     let empty = &b""[..];
     let expected = (
-        BerObjectHeader {
-            class: BerClass::Universal,
-            structured: 1,
-            tag: BerTag::Sequence,
-            len: 0xa,
-            raw_tag: Some(&[0x30]),
-        },
+        BerObjectHeader::new(BerClass::Universal, 1, BerTag::Sequence, 0xa)
+            .with_raw_tag(Some(&[0x30])),
         MyStruct {
             a: BerObject::from_int_slice(b"\x01\x00\x01"),
             b: BerObject::from_int_slice(b"\x01\x00\x00"),
