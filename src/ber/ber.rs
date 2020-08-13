@@ -138,6 +138,18 @@ impl<'a> BerObjectHeader<'a> {
         }
     }
 
+    /// Update header class
+    #[inline]
+    pub fn with_class(self, class: BerClass) -> Self {
+        BerObjectHeader { class, ..self }
+    }
+
+    /// Update header tag
+    #[inline]
+    pub fn with_tag(self, tag: BerTag) -> Self {
+        BerObjectHeader { tag, ..self }
+    }
+
     /// Update header length
     #[inline]
     pub fn with_len(self, len: u64) -> Self {
