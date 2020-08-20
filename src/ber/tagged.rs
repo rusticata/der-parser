@@ -77,14 +77,18 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_implicit<'a, T, F>(tag: u32, f: F) -> impl Fn(&'a [u8]) -> BerResult<T>
+pub fn parse_ber_tagged_implicit<'a, T, F, E>(
+    tag: u32,
+    f: F,
+) -> impl Fn(&'a [u8]) -> IResult<&[u8], T, E>
 where
-    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, T>,
+    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> IResult<&'a [u8], T, E>,
+    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {
-        let (i, hdr) = ber_read_element_header(i)?;
+        let (i, hdr) = ber_read_element_header(i).map_err(nom::Err::convert)?;
         if hdr.tag.0 != tag {
-            return Err(Err::Error(BerError::InvalidTag));
+            return Err(Err::Error(BerError::InvalidTag.into()));
         }
         let (i, data) = take(hdr.len as usize)(i)?;
         let (_rest, item) = f(data, &hdr, MAX_RECURSION)?;
