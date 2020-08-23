@@ -28,16 +28,18 @@ use nom::{Err, IResult};
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_explicit<'a, T, F, E>(
-    tag: u32,
+pub fn parse_ber_tagged_explicit<'a, Tag, Output, F, E>(
+    tag: Tag,
     f: F,
-) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], T, E>
+) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Output, E>
 where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], T, E>,
+    F: Fn(&'a [u8]) -> IResult<&'a [u8], Output, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
+    Tag: Into<BerTag>,
 {
+    let tag = tag.into();
     parse_ber_container(move |hdr, i| {
-        if hdr.tag.0 != tag {
+        if hdr.tag != tag {
             return Err(Err::Error(BerError::InvalidTag.into()));
         }
         // X.690 8.14.2: if implificit tagging was not used, the encoding shall be constructed
@@ -78,16 +80,18 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_implicit<'a, T, F, E>(
-    tag: u32,
+pub fn parse_ber_tagged_implicit<'a, Tag, Output, F, E>(
+    tag: Tag,
     f: F,
-) -> impl Fn(&'a [u8]) -> IResult<&[u8], T, E>
+) -> impl Fn(&'a [u8]) -> IResult<&[u8], Output, E>
 where
-    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> IResult<&'a [u8], T, E>,
+    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> IResult<&'a [u8], Output, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
+    Tag: Into<BerTag>,
 {
+    let tag = tag.into();
     parse_ber_container(move |hdr, i| {
-        if hdr.tag.0 != tag {
+        if hdr.tag != tag {
             return Err(Err::Error(BerError::InvalidTag.into()));
         }
         // XXX MAX_RECURSION should not be used, it resets the depth counter

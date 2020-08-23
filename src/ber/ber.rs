@@ -123,6 +123,12 @@ pub enum BerObjectContent<'a> {
     Unknown(BerTag, &'a [u8]),
 }
 
+impl From<u32> for BerTag {
+    fn from(v: u32) -> Self {
+        BerTag(v)
+    }
+}
+
 impl BerSize {
     /// Return true if length is definite and equal to 0
     pub fn is_null(&self) -> bool {
