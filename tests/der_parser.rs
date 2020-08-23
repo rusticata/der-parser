@@ -267,7 +267,7 @@ fn test_der_contextspecific() {
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let empty = &b""[..];
     let expected = DerObject {
-        header: BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3.into())
+        header: BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3)
             .with_raw_tag(Some(&[0xa0])),
         content: BerObjectContent::Unknown(BerTag(0), &bytes[2..]),
     };
@@ -279,7 +279,7 @@ fn test_der_explicit() {
     let empty = &b""[..];
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let expected = DerObject {
-        header: BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3.into())
+        header: BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3)
             .with_raw_tag(Some(&[0xa0])),
         content: BerObjectContent::ContextSpecific(
             BerTag(0),
@@ -303,7 +303,7 @@ fn test_der_implicit() {
     let bytes = [0x81, 0x04, 0x70, 0x61, 0x73, 0x73];
     let pass = DerObject::from_obj(BerObjectContent::IA5String("pass"));
     let expected = DerObject {
-        header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(1), 4.into())
+        header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(1), 4)
             .with_raw_tag(Some(&[0x81])),
         content: BerObjectContent::ContextSpecific(BerTag(1), Some(Box::new(pass))),
     };
@@ -331,7 +331,7 @@ fn test_der_implicit_long_tag() {
     let bytes = [0x5f, 0x52, 0x04, 0x70, 0x61, 0x73, 0x73];
     let pass = DerObject::from_obj(BerObjectContent::IA5String("pass"));
     let expected = DerObject {
-        header: BerObjectHeader::new(BerClass::Application, 0, BerTag(0x52), 4.into())
+        header: BerObjectHeader::new(BerClass::Application, 0, BerTag(0x52), 4)
             .with_raw_tag(Some(&[0x5f, 0x52])),
         content: BerObjectContent::ContextSpecific(BerTag(0x52), Some(Box::new(pass))),
     };

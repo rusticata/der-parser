@@ -183,12 +183,12 @@ impl TryFrom<u8> for BerClass {
 
 impl<'a> BerObjectHeader<'a> {
     /// Build a new BER header
-    pub fn new(class: BerClass, structured: u8, tag: BerTag, len: BerSize) -> Self {
+    pub fn new<Len: Into<BerSize>>(class: BerClass, structured: u8, tag: BerTag, len: Len) -> Self {
         BerObjectHeader {
             tag,
             structured,
             class,
-            len,
+            len: len.into(),
             raw_tag: None,
         }
     }

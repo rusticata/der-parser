@@ -82,7 +82,7 @@ pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         let v = gen_simple(ber_encode_object(&obj), W::default())?;
         let len = v.as_ref().len();
         // encode the application header, using the tag
-        let hdr = BerObjectHeader::new(class, 1 /* X.690 8.14.2 */, tag, len.into());
+        let hdr = BerObjectHeader::new(class, 1 /* X.690 8.14.2 */, tag, len);
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -102,7 +102,7 @@ pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
         // but replace the tag (keep structured attribute)
         let len = v.as_ref().len();
-        let hdr = BerObjectHeader::new(class, obj.header.structured, tag, len.into());
+        let hdr = BerObjectHeader::new(class, obj.header.structured, tag, len);
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
