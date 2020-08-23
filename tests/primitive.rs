@@ -17,11 +17,11 @@ fn test_flat_take() {
         Ok((empty, BerObject::from_obj(BerObjectContent::Boolean(false))))
     );
     assert_eq!(
-        ber_read_element_content_as(&[0xff], BerTag::Boolean, 0x01, false, MAX_RECURSION),
+        ber_read_element_content_as(&[0xff], BerTag::Boolean, 0x01.into(), false, MAX_RECURSION),
         Ok((empty, BerObjectContent::Boolean(true)))
     );
     assert_eq!(
-        ber_read_element_content_as(&[0x00], BerTag::Boolean, 0x01, false, MAX_RECURSION),
+        ber_read_element_content_as(&[0x00], BerTag::Boolean, 0x01.into(), false, MAX_RECURSION),
         Ok((empty, BerObjectContent::Boolean(false)))
     );
 }
@@ -105,7 +105,7 @@ fn test_unknown_context_specific() {
     assert_eq!(
         res.1,
         BerObject {
-            header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(0), 1)
+            header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(0), 1.into())
                 .with_raw_tag(Some(&[0x80])),
             content: BerObjectContent::Unknown(BerTag(0x0), &bytes[2..]),
         }
@@ -120,7 +120,7 @@ fn test_unknown_long_tag() {
     assert_eq!(
         res.1,
         BerObject {
-            header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(0x22), 1)
+            header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(0x22), 1.into())
                 .with_raw_tag(Some(&[0x9f, 0x22])),
             content: BerObjectContent::Unknown(BerTag(0x22), &bytes[3..]),
         }
@@ -135,7 +135,7 @@ fn test_unknown_longer_tag() {
     assert_eq!(
         res.1,
         BerObject {
-            header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(0x1122), 1)
+            header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(0x1122), 1.into())
                 .with_raw_tag(Some(&[0x9f, 0xa2, 0x22])),
             content: BerObjectContent::Unknown(BerTag(0x1122), &bytes[4..]),
         }
@@ -190,7 +190,7 @@ fn test_invalid_length() {
         Err::Error(e) => {
             assert_eq!(e, BerError::InvalidLength);
         }
-        _ => panic!("not the expected nom error kind"),
+        _ => panic!("not the expected nom error kind {:?}", res),
     }
     let bytes = hex!("02 02 00");
     let res = parse_der(&bytes).err().expect("expected error");

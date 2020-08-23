@@ -1,6 +1,5 @@
 use crate::ber::*;
 use crate::error::*;
-use nom::bytes::complete::take;
 use nom::{Err, IResult};
 
 /// Read a TAGGED EXPLICIT value (function version)
@@ -37,15 +36,17 @@ where
     F: Fn(&'a [u8]) -> IResult<&'a [u8], T, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
-    move |i: &[u8]| {
-        let (i, hdr) = ber_read_element_header(i).map_err(nom::Err::convert)?;
+    parse_ber_container(move |hdr, i| {
         if hdr.tag.0 != tag {
             return Err(Err::Error(BerError::InvalidTag.into()));
         }
-        let (i, data) = take(hdr.len as usize)(i)?;
-        let (_rest, item) = f(data)?;
-        Ok((i, item))
-    }
+        // X.690 8.14.2: if implificit tagging was not used, the encoding shall be constructed
+        if !hdr.is_constructed() {
+            return Err(Err::Error(BerError::ConstructExpected.into()));
+        }
+        f(i)
+        // trailing bytes are ignored
+    })
 }
 
 /// Read a TAGGED IMPLICIT value (function version)
@@ -85,14 +86,12 @@ where
     F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> IResult<&'a [u8], T, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
-    move |i: &[u8]| {
-        let (i, hdr) = ber_read_element_header(i).map_err(nom::Err::convert)?;
+    parse_ber_container(move |hdr, i| {
         if hdr.tag.0 != tag {
             return Err(Err::Error(BerError::InvalidTag.into()));
         }
-        let (i, data) = take(hdr.len as usize)(i)?;
-        let (_rest, item) = f(data, &hdr, MAX_RECURSION)?;
-        // XXX DER: check that _rest.is_empty()?
-        Ok((i, item))
-    }
+        // XXX MAX_RECURSION should not be used, it resets the depth counter
+        f(i, &hdr, MAX_RECURSION)
+        // trailing bytes are ignored
+    })
 }

@@ -11,6 +11,9 @@ use std::vec::Vec;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct BerClassFromIntError(pub(crate) ());
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct BerSizeError(pub(crate) ());
+
 /// BER Object class of tag
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
@@ -21,9 +24,18 @@ pub enum BerClass {
     Private = 0b11,
 }
 
+/// Ber Object Length
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum BerSize {
+    /// Definite form (X.690 8.1.3.3)
+    Definite(usize),
+    /// Indefinite form (X.690 8.1.3.6)
+    Indefinite,
+}
+
 /// BER/DER Tag as defined in X.680 section 8.4
 ///
-/// X.690 doesn't specify the maxmimum tag size so we're assuming that people
+/// X.690 doesn't specify the maximum tag size so we're assuming that people
 /// aren't going to need anything more than a u32.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct BerTag(pub u32);
@@ -75,7 +87,7 @@ pub struct BerObjectHeader<'a> {
     pub class: BerClass,
     pub structured: u8,
     pub tag: BerTag,
-    pub len: u64,
+    pub len: BerSize,
 
     pub raw_tag: Option<&'a [u8]>,
 }
@@ -111,6 +123,49 @@ pub enum BerObjectContent<'a> {
     Unknown(BerTag, &'a [u8]),
 }
 
+impl BerSize {
+    /// Return true if length is definite and equal to 0
+    pub fn is_null(&self) -> bool {
+        *self == BerSize::Definite(0)
+    }
+
+    /// Get length of primitive object
+    #[inline]
+    pub fn primitive(&self) -> Result<usize, BerError> {
+        match self {
+            BerSize::Definite(sz) => Ok(*sz),
+            BerSize::Indefinite => Err(BerError::IndefiniteLengthUnexpected),
+        }
+    }
+}
+
+impl From<usize> for BerSize {
+    fn from(v: usize) -> Self {
+        BerSize::Definite(v)
+    }
+}
+
+impl TryFrom<u64> for BerSize {
+    type Error = BerSizeError;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        let v = usize::try_from(value).or(Err(BerSizeError(())))?;
+        Ok(BerSize::Definite(v))
+    }
+}
+
+impl TryFrom<BerSize> for usize {
+    type Error = BerSizeError;
+
+    #[inline]
+    fn try_from(value: BerSize) -> Result<Self, Self::Error> {
+        match value {
+            BerSize::Definite(sz) => Ok(sz),
+            BerSize::Indefinite => Err(BerSizeError(())),
+        }
+    }
+}
+
 impl TryFrom<u8> for BerClass {
     type Error = BerClassFromIntError;
 
@@ -128,7 +183,7 @@ impl TryFrom<u8> for BerClass {
 
 impl<'a> BerObjectHeader<'a> {
     /// Build a new BER header
-    pub fn new(class: BerClass, structured: u8, tag: BerTag, len: u64) -> Self {
+    pub fn new(class: BerClass, structured: u8, tag: BerTag, len: BerSize) -> Self {
         BerObjectHeader {
             tag,
             structured,
@@ -152,7 +207,7 @@ impl<'a> BerObjectHeader<'a> {
 
     /// Update header length
     #[inline]
-    pub fn with_len(self, len: u64) -> Self {
+    pub fn with_len(self, len: BerSize) -> Self {
         BerObjectHeader { len, ..self }
     }
 
@@ -214,13 +269,18 @@ impl<'a> BerObject<'a> {
             BerTag::Sequence | BerTag::Set => 1,
             _ => 0,
         };
-        let header = BerObjectHeader::new(class, structured, tag, 0);
+        let header = BerObjectHeader::new(class, structured, tag, BerSize::Definite(0));
         BerObject { header, content: c }
     }
 
     /// Build a DER integer object from a slice containing an encoded integer
     pub fn from_int_slice(i: &'a [u8]) -> BerObject<'a> {
-        let header = BerObjectHeader::new(BerClass::Universal, 0, BerTag::Integer, 0);
+        let header = BerObjectHeader::new(
+            BerClass::Universal,
+            0,
+            BerTag::Integer,
+            BerSize::Definite(0),
+        );
         BerObject {
             header,
             content: BerObjectContent::Integer(i),
@@ -415,7 +475,7 @@ impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
             && self.tag == other.tag
             && self.structured == other.structured
             && {
-                if self.len != 0 && other.len != 0 {
+                if self.len.is_null() && other.len.is_null() {
                     self.len == other.len
                 } else {
                     true

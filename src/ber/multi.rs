@@ -457,7 +457,7 @@ where
 /// /// }
 /// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
 ///     parse_ber_container(
-///         |hdr: &BerObjectHeader, i:&[u8]| {
+///         |hdr: BerObjectHeader, i:&[u8]| {
 ///             if hdr.tag != BerTag::Sequence {
 ///                 return Err(nom::Err::Error(BerError::BerTypeError.into()));
 ///             }
@@ -483,13 +483,20 @@ where
 /// ```
 pub fn parse_ber_container<'a, O, F, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: Fn(&BerObjectHeader, &'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: Fn(BerObjectHeader, &'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {
         let (i, hdr) = ber_read_element_header(i).map_err(nom::Err::convert)?;
-        let (i, data) = take(hdr.len as usize)(i)?;
-        let (_rest, v) = f(&hdr, data)?;
+        let (i, data) = match hdr.len {
+            BerSize::Definite(len) => take(len)(i)?,
+            BerSize::Indefinite => {
+                let (_, len) =
+                    ber_skip_object_content_get_size(i, &hdr).map_err(nom::Err::convert)?;
+                take(len)(i)?
+            }
+        };
+        let (_rest, v) = f(hdr, data)?;
         Ok((i, v))
     }
 }

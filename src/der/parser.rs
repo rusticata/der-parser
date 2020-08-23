@@ -46,14 +46,12 @@ pub fn parse_der(i: &[u8]) -> DerResult {
 /// assert_eq!(obj.header.tag, BerTag::Integer);
 /// ```
 pub fn parse_der_recursive(i: &[u8], max_depth: usize) -> DerResult {
-    do_parse! {
-        i,
-        hdr:     der_read_element_header >>
-                 // XXX safety check: length cannot be more than 2^32 bytes
-                 custom_check!(hdr.len > u64::from(::std::u32::MAX), BerError::InvalidLength) >>
-        content: call!(der_read_element_content_recursive, hdr, max_depth) >>
-        ( content )
+    let (i, hdr) = der_read_element_header(i)?;
+    // safety check: length cannot be more than 2^32 bytes
+    if let BerSize::Definite(l) = hdr.len {
+        custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
     }
+    der_read_element_content_recursive(i, hdr, max_depth)
 }
 
 #[doc(hidden)]
@@ -68,13 +66,14 @@ macro_rules! der_constraint_fail_if(
     );
 );
 
-/// Parse a DER object, expecting a value with specificed tag
+/// Parse a DER object, expecting a value with specified tag
 pub fn parse_der_with_tag(i: &[u8], tag: BerTag) -> DerResult {
     do_parse! {
         i,
         hdr: der_read_element_header >>
              custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
-        o:   call!(der_read_element_content_as, hdr.tag, hdr.len as usize, hdr.is_constructed(), MAX_RECURSION) >>
+             // XXX MAX_RECURSION should not be used, it resets the depth counter
+        o:   call!(der_read_element_content_as, hdr.tag, hdr.len, hdr.is_constructed(), MAX_RECURSION) >>
         ( BerObject::from_header_and_content(hdr, o) )
     }
 }
@@ -130,15 +129,9 @@ pub fn parse_der_integer(i: &[u8]) -> DerResult {
 }
 
 /// Read an bitstring value
+#[inline]
 pub fn parse_der_bitstring(i: &[u8]) -> DerResult {
-    do_parse! {
-        i,
-        hdr: der_read_element_header >>
-             custom_check!(hdr.tag != BerTag::BitString, BerError::InvalidTag) >>
-             custom_check!(hdr.is_constructed(), BerError::DerConstraintFailed) >>
-        b:   call!(der_read_content_bitstring, hdr.len as usize) >>
-        ( DerObject::from_header_and_content(hdr, b) )
-    }
+    parse_der_with_tag(i, BerTag::BitString)
 }
 
 /// Read an octetstring value
@@ -264,7 +257,7 @@ where
 #[inline]
 pub fn parse_der_implicit<F>(i: &[u8], tag: BerTag, f: F) -> DerResult
 where
-    F: Fn(&[u8], BerTag, usize) -> BerResult<BerObjectContent>,
+    F: Fn(&[u8], BerTag, BerSize) -> BerResult<BerObjectContent>,
 {
     parse_ber_implicit(i, tag, f)
 }
@@ -317,20 +310,24 @@ pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
 pub fn der_read_element_content_as(
     i: &[u8],
     tag: BerTag,
-    len: usize,
+    len: BerSize,
     constructed: bool,
     max_depth: usize,
 ) -> BerResult<BerObjectContent> {
-    if i.len() < len {
-        return Err(Err::Incomplete(Needed::Size(len)));
+    if let BerSize::Definite(l) = len {
+        if i.len() < l {
+            return Err(Err::Incomplete(Needed::Size(l)));
+        }
     }
     match tag {
         BerTag::Boolean => {
+            let len = len.primitive()?;
             custom_check!(i, len != 1, BerError::InvalidLength)?;
             der_constraint_fail_if!(i, i[0] != 0 && i[0] != 0xff);
         }
         BerTag::BitString => {
             der_constraint_fail_if!(i, constructed);
+            let len = len.primitive()?;
             // exception: read and verify padding bits
             return der_read_content_bitstring(i, len);
         }
@@ -344,6 +341,7 @@ pub fn der_read_element_content_as(
             der_constraint_fail_if!(i, constructed);
         }
         BerTag::UtcTime | BerTag::GeneralizedTime => {
+            let len = len.primitive()?;
             if len == 0 || i.get(len - 1).cloned() != Some(b'Z') {
                 return Err(Err::Error(BerError::DerConstraintFailed));
             }
@@ -368,22 +366,24 @@ fn der_read_element_content_recursive<'a>(
     match hdr.class {
         BerClass::Universal | BerClass::Private => (),
         _ => {
-            return map!(i, take!(hdr.len), |b| {
-                DerObject::from_header_and_content(hdr, BerObjectContent::Unknown(hdr.tag, b))
-            })
+            let (i, content) = ber_get_object_content(i, &hdr)?;
+            let obj = BerObject::from_header_and_content(
+                hdr,
+                BerObjectContent::Unknown(hdr.tag, content),
+            );
+            return Ok((i, obj));
         }
     }
-    match der_read_element_content_as(
-        i,
-        hdr.tag,
-        hdr.len as usize,
-        hdr.is_constructed(),
-        max_depth,
-    ) {
+    match der_read_element_content_as(i, hdr.tag, hdr.len, hdr.is_constructed(), max_depth) {
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
-        Err(Err::Error(BerError::UnknownTag)) => map!(i, take!(hdr.len), |b| {
-            DerObject::from_header_and_content(hdr, BerObjectContent::Unknown(hdr.tag, b))
-        }),
+        Err(Err::Error(BerError::UnknownTag)) => {
+            let (rem, content) = ber_get_object_content(i, &hdr)?;
+            let obj = BerObject::from_header_and_content(
+                hdr,
+                BerObjectContent::Unknown(hdr.tag, content),
+            );
+            Ok((rem, obj))
+        }
         Err(e) => Err(e),
     }
 }
@@ -421,8 +421,8 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
                 Ok(c) => c,
                 Err(_) => unreachable!(), // Cannot fail, we read only 2 bits
             };
-            let len : u64 = match len.0 {
-                0 => u64::from(len.1),
+            let len : usize = match len.0 {
+                0 => usize::from(len.1),
                 _ => {
                     // if len is 0xff -> error (8.1.3.5)
                     custom_check!(&i[1..], len.1 == 0b0111_1111, BerError::InvalidLength)?;
@@ -439,13 +439,13 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
                         Ok(l)  => {
                             // DER: should have been encoded in short form (< 127)
                             der_constraint_fail_if!(i, l < 127);
-                            l
+                            usize::try_from(l).or(Err(nom::Err::Error(BerError::InvalidLength)))?
                         },
                         Err(_) => { return Err(::nom::Err::Error(BerError::InvalidTag)); },
                     }
                 },
             };
-            BerObjectHeader::new(class, el.1, BerTag(el.2), len).with_raw_tag(Some(el.3))
+            BerObjectHeader::new(class, el.1, BerTag(el.2), len.into()).with_raw_tag(Some(el.3))
         } )
     }
 }

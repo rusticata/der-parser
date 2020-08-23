@@ -13,14 +13,14 @@ struct MyStruct<'a> {
     b: BerObject<'a>,
 }
 
-fn parse_struct01(i: &[u8]) -> BerResult<(BerObjectHeader, MyStruct)> {
+fn parse_struct01(i: &[u8]) -> BerResult<MyStruct> {
     parse_der_struct!(
         i,
         a: parse_ber_integer >> b: parse_ber_integer >> (MyStruct { a, b })
     )
 }
 
-fn parse_struct01_complete(i: &[u8]) -> BerResult<(BerObjectHeader, MyStruct)> {
+fn parse_struct01_complete(i: &[u8]) -> BerResult<MyStruct> {
     parse_der_struct!(
         i,
         a: parse_ber_integer >> b: parse_ber_integer >> eof!() >> (MyStruct { a, b })
@@ -29,13 +29,13 @@ fn parse_struct01_complete(i: &[u8]) -> BerResult<(BerObjectHeader, MyStruct)> {
 
 // calling user function
 #[allow(dead_code)]
-fn parse_struct02(i: &[u8]) -> BerResult<(BerObjectHeader, ())> {
+fn parse_struct02(i: &[u8]) -> BerResult<()> {
     parse_der_struct!(i, _a: parse_ber_integer >> _b: parse_struct01 >> (()))
 }
 
 // embedded DER structs
 #[allow(dead_code)]
-fn parse_struct03(i: &[u8]) -> BerResult<(BerObjectHeader, ())> {
+fn parse_struct03(i: &[u8]) -> BerResult<()> {
     parse_der_struct!(
         i,
         _a: parse_ber_integer >> _b: parse_der_struct!(parse_ber_integer >> (())) >> (())
@@ -43,7 +43,7 @@ fn parse_struct03(i: &[u8]) -> BerResult<(BerObjectHeader, ())> {
 }
 
 // verifying tag
-fn parse_struct04(i: &[u8], tag: BerTag) -> BerResult<(BerObjectHeader, MyStruct)> {
+fn parse_struct04(i: &[u8], tag: BerTag) -> BerResult<MyStruct> {
     parse_der_struct!(
         i,
         TAG tag,
@@ -67,14 +67,10 @@ fn struct01() {
         0x30, 0x0a, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00,
     ];
     let empty = &b""[..];
-    let expected = (
-        BerObjectHeader::new(BerClass::Universal, 1, BerTag::Sequence, 0xa)
-            .with_raw_tag(Some(&[0x30])),
-        MyStruct {
-            a: BerObject::from_int_slice(b"\x01\x00\x01"),
-            b: BerObject::from_int_slice(b"\x01\x00\x00"),
-        },
-    );
+    let expected = MyStruct {
+        a: BerObject::from_int_slice(b"\x01\x00\x01"),
+        b: BerObject::from_int_slice(b"\x01\x00\x00"),
+    };
     let res = parse_struct01(&bytes);
     assert_eq!(res, Ok((empty, expected)));
 }
@@ -142,14 +138,12 @@ fn struct02() {
                 >> s: parse_directory_string
                 >> (Attr { oid: o, val: s })
         )
-        .map(|(rem, x)| (rem, x.1))
     };
     fn parse_rdn(i: &[u8]) -> BerResult<Rdn> {
-        parse_der_struct!(i, a: parse_attr_type_and_value >> (Rdn { a })).map(|(rem, x)| (rem, x.1))
+        parse_der_struct!(i, a: parse_attr_type_and_value >> (Rdn { a }))
     }
     fn parse_name(i: &[u8]) -> BerResult<Name> {
         parse_der_struct!(i, l: many0!(complete!(parse_rdn)) >> (Name { l }))
-            .map(|(rem, x)| (rem, x.1))
     }
     let parsed = parse_name(&bytes).unwrap();
     assert_eq!(parsed, (empty, expected));
@@ -165,14 +159,10 @@ fn struct_with_garbage() {
         0x30, 0x0c, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00, 0xff, 0xff,
     ];
     let empty = &b""[..];
-    let expected = (
-        BerObjectHeader::new(BerClass::Universal, 1, BerTag::Sequence, 0xc)
-            .with_raw_tag(Some(&[0x30])),
-        MyStruct {
-            a: BerObject::from_int_slice(b"\x01\x00\x01"),
-            b: BerObject::from_int_slice(b"\x01\x00\x00"),
-        },
-    );
+    let expected = MyStruct {
+        a: BerObject::from_int_slice(b"\x01\x00\x01"),
+        b: BerObject::from_int_slice(b"\x01\x00\x00"),
+    };
     assert_eq!(parse_struct01(&bytes), Ok((empty, expected)));
     assert_eq!(
         parse_struct01_complete(&bytes),
@@ -186,21 +176,14 @@ fn struct_verify_tag() {
         0x30, 0x0a, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00,
     ];
     let empty = &b""[..];
-    let expected = (
-        BerObjectHeader::new(BerClass::Universal, 1, BerTag::Sequence, 0xa)
-            .with_raw_tag(Some(&[0x30])),
-        MyStruct {
-            a: BerObject::from_int_slice(b"\x01\x00\x01"),
-            b: BerObject::from_int_slice(b"\x01\x00\x00"),
-        },
-    );
+    let expected = MyStruct {
+        a: BerObject::from_int_slice(b"\x01\x00\x01"),
+        b: BerObject::from_int_slice(b"\x01\x00\x00"),
+    };
     let res = parse_struct04(&bytes, BerTag::Sequence);
     assert_eq!(res, Ok((empty, expected)));
     let res = parse_struct04(&bytes, BerTag::Set);
-    assert_eq!(
-        res,
-        Err(Err::Error(error_position!(&bytes[..], ErrorKind::Verify)))
-    );
+    assert_eq!(res, Err(Err::Error(BerError::InvalidTag)));
 }
 
 #[test]
@@ -231,10 +214,7 @@ fn tagged_explicit() {
     // wrong tag
     assert_eq!(
         parse_der_tagged!(bytes as &[u8], 3, parse_ber_integer),
-        Err(Err::Error(error_position!(
-            bytes as &[u8],
-            ErrorKind::Verify
-        )))
+        Err(Err::Error(BerError::InvalidTag))
     );
     // wrong type
     assert_eq!(
@@ -260,10 +240,7 @@ fn tagged_implicit() {
     // wrong tag
     assert_eq!(
         parse_der_tagged!(bytes as &[u8],IMPLICIT 3,BerTag::Integer),
-        Err(Err::Error(error_position!(
-            bytes as &[u8],
-            ErrorKind::Verify
-        )))
+        Err(Err::Error(BerError::InvalidTag))
     );
 }
 
@@ -273,7 +250,7 @@ fn application() {
     struct SimpleStruct {
         a: u32,
     };
-    fn parse_app01(i: &[u8]) -> BerResult<(BerObjectHeader, SimpleStruct)> {
+    fn parse_app01(i: &[u8]) -> BerResult<SimpleStruct> {
         parse_der_application!(
             i,
             APPLICATION 2,
@@ -282,10 +259,7 @@ fn application() {
         )
     }
     let bytes = &[0x62, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
-    let (rem, (hdr, app)) = parse_app01(bytes).expect("could not parse application");
+    let (rem, app) = parse_app01(bytes).expect("could not parse application");
     assert!(rem.is_empty());
-    assert_eq!(hdr.tag, BerTag::Integer);
-    assert!(hdr.is_application());
-    assert_eq!(hdr.structured, 1);
     assert_eq!(app, SimpleStruct { a: 0x10001 });
 }

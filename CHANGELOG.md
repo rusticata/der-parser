@@ -2,9 +2,25 @@
 
 ## [Unreleased][unreleased]
 
-### Thanks
+### Changed/Fixed
 
 ### Added
+
+### Thanks
+
+## XXX (5.x?)
+
+### Changed/Fixed
+
+- Change representation of size (new type `BerSize`) to support BER indefinite lengths
+- Rewrite BER/DER parsing macros to use functional parsing combinators
+- The constructed bit is now tested for explicit tagged structures
+- Some checks (for ex. tags in constructed objects) now return specific errors (`InvalidTag`)
+  instead of generic errors (`Verify`)
+
+### Added
+
+### Thanks
 
 ## 4.1.0
 

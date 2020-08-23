@@ -1,6 +1,6 @@
 #![allow(deprecated)]
 
-use der_parser::ber::{parse_ber_integer, BerObject, BerObjectHeader};
+use der_parser::ber::{parse_ber_integer, BerObject};
 use der_parser::der::{parse_der_enum, parse_der_integer};
 use der_parser::error::{BerResult, DerResult};
 use der_parser::*;
@@ -68,7 +68,7 @@ fn parse_optional_enum(i: &[u8]) -> DerResult {
 }
 
 #[allow(dead_code)]
-fn parse_struct01(i: &[u8]) -> BerResult<(BerObjectHeader, MyStruct)> {
+fn parse_struct01(i: &[u8]) -> BerResult<MyStruct> {
     parse_der_struct!(
         i,
         a: parse_ber_integer >> b: parse_ber_integer >> (MyStruct { a, b })
@@ -86,7 +86,7 @@ struct SimpleStruct {
 }
 
 #[allow(dead_code)]
-fn parse_app_int(i: &[u8]) -> BerResult<(BerObjectHeader, SimpleStruct)> {
+fn parse_app_int(i: &[u8]) -> BerResult<SimpleStruct> {
     parse_der_application!(
         i,
         APPLICATION 2,

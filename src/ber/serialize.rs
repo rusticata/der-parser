@@ -10,21 +10,27 @@ use std::io::Write;
 
 // we do not use .copied() for compatibility with 1.34
 #[allow(clippy::map_clone)]
-fn encode_length<'a, W: Write + 'a>(len: u64) -> impl SerializeFn<W> + 'a {
+fn encode_length<'a, W: Write + 'a, Len: Into<BerSize>>(len: Len) -> impl SerializeFn<W> + 'a {
+    let l = len.into();
     move |out| {
-        if len <= 127 {
-            // definite, short form
-            be_u8(len as u8)(out)
-        } else {
-            // definite, long form
-            let v: Vec<u8> = len
-                .to_be_bytes()
-                .iter()
-                .map(|&x| x)
-                .skip_while(|&b| b == 0)
-                .collect();
-            let b0 = 0b1000_0000 | (v.len() as u8);
-            tuple((be_u8(b0 as u8), slice(v)))(out)
+        match l {
+            BerSize::Definite(sz) => {
+                if sz <= 128 {
+                    // definite, short form
+                    be_u8(sz as u8)(out)
+                } else {
+                    // definite, long form
+                    let v: Vec<u8> = sz
+                        .to_be_bytes()
+                        .iter()
+                        .map(|&x| x)
+                        .skip_while(|&b| b == 0)
+                        .collect();
+                    let b0 = 0b1000_0000 | (v.len() as u8);
+                    tuple((be_u8(b0 as u8), slice(v)))(out)
+                }
+            }
+            BerSize::Indefinite => be_u8(0b1000_0000)(out),
         }
     }
 }
@@ -74,9 +80,9 @@ pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     move |out| {
         // encode inner object
         let v = gen_simple(ber_encode_object(&obj), W::default())?;
-        let len = v.as_ref().len() as u64;
+        let len = v.as_ref().len();
         // encode the application header, using the tag
-        let hdr = BerObjectHeader::new(class, 1 /* X.690 8.14.2 */, tag, len);
+        let hdr = BerObjectHeader::new(class, 1 /* X.690 8.14.2 */, tag, len.into());
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -95,8 +101,8 @@ pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         // encode inner object content
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
         // but replace the tag (keep structured attribute)
-        let len = v.as_ref().len() as u64;
-        let hdr = BerObjectHeader::new(class, obj.header.structured, tag, len);
+        let len = v.as_ref().len();
+        let hdr = BerObjectHeader::new(class, obj.header.structured, tag, len.into());
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -180,8 +186,8 @@ pub fn ber_encode_object<'a, 'b: 'a, W: Write + Default + AsRef<[u8]> + 'a>(
     move |out| {
         // XXX should we make an exception for tagged values here ?
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
-        let len = v.as_ref().len() as u64;
-        let hdr = obj.header.clone().with_len(len);
+        let len = v.as_ref().len();
+        let hdr = obj.header.clone().with_len(len.into());
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -354,7 +360,7 @@ mod test {
         fn der_read_integer_content(
             i: &[u8],
             _tag: BerTag,
-            len: usize,
+            len: BerSize,
         ) -> BerResult<BerObjectContent> {
             ber_read_element_content_as(i, BerTag::Integer, len, false, MAX_RECURSION)
         }

@@ -33,6 +33,8 @@ pub enum BerError {
     InvalidClass,
     InvalidLength,
 
+    IndefiniteLengthUnexpected,
+
     /// DER object was expected to be constructed (and found to be primitive)
     ConstructExpected,
     /// DER object was expected to be primitive (and found to be constructed)

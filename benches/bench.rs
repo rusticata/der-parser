@@ -23,7 +23,7 @@ fn bench_der_read_element_header(b: &mut Bencher) {
             Ok((_rem, hdr)) => {
                 assert_eq!(
                     hdr,
-                    BerObjectHeader::new(BerClass::Universal, 0, BerTag(12), 10)
+                    BerObjectHeader::new(BerClass::Universal, 0, BerTag(12), 10.into())
                         .with_raw_tag(Some(&[0xc]))
                 );
             }
