@@ -51,18 +51,18 @@ macro_rules! fold_der_defined_m(
 macro_rules! parse_ber_defined_m(
     ($i:expr, $tag:expr, $($args:tt)*) => (
         {
-            use $crate::ber::ber_read_element_header;
-            use $crate::fold_der_defined_m;
-            use std::convert::TryFrom;
-            do_parse!(
-                $i,
-                hdr:     ber_read_element_header >>
-                         custom_check!(hdr.class != $crate::ber::BerClass::Universal, $crate::error::BerError::InvalidClass) >>
-                         custom_check!(hdr.structured != 0b1, $crate::error::BerError::ConstructExpected) >>
-                         custom_check!(hdr.tag != $tag, $crate::error::BerError::InvalidTag) >>
-                content: flat_take!(usize::try_from(hdr.len).unwrap(), fold_der_defined_m!( $($args)* )) >>
-                (hdr,content)
-            )
+            use $crate::ber::parse_ber_container;
+            use $crate::error::BerError;
+            parse_ber_container(|hdr, content| {
+                if !hdr.is_constructed() {
+                    return Err(nom::Err::Error(BerError::ConstructExpected.into()));
+                }
+                if hdr.tag != $tag {
+                    return Err(nom::Err::Error(BerError::InvalidTag.into()));
+                }
+                let (rem, content) = fold_der_defined_m!(content, $($args)* )?;
+                Ok((rem, (hdr, content)))
+            })($i)
         }
     );
 );
