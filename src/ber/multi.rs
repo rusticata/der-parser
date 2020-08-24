@@ -68,7 +68,9 @@ pub fn parse_ber_sequence_of_v<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult<T>,
 {
-    parse_ber_sequence_defined_g(many0(complete(f)))
+    parse_ber_sequence_defined_g(move |_, data| {
+        many0(complete(|i| f(i)))(data)
+    })
 }
 
 /// Parse a defined sequence of DER elements (function version)
@@ -78,6 +80,11 @@ where
 ///
 /// The remaining bytes point *after* the sequence: any bytes that are part of the sequence but not
 /// parsed are ignored.
+///
+/// The object header is not available to the parsing function, and the returned type is always a
+/// `BerObject`.
+/// For a generic version, see
+/// [`parse_ber_sequence_defined_g`](fn.parse_ber_sequence_defined_g.html).
 ///
 /// # Examples
 ///
@@ -148,16 +155,22 @@ pub fn parse_ber_sequence_defined<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult<Vec<BerObject>>,
 {
-    map(parse_ber_sequence_defined_g(f), BerObject::from_seq)
+    map(
+        parse_ber_sequence_defined_g(move |_, data| f(data)),
+        BerObject::from_seq,
+    )
 }
 
-/// Parse a defined SEQUENCE object (returning a generic object)
+/// Parse a defined SEQUENCE object (generic function)
 ///
 /// Given a parser for sequence content, apply it to build a DER sequence and
 /// return the remaining bytes and the built object.
 ///
 /// The remaining bytes point *after* the sequence: any bytes that are part of the sequence but not
 /// parsed are ignored.
+///
+/// Unlike `parse_ber_sequence_defined`, this function allows returning any object or error type,
+/// and also passes the object header to the callback.
 ///
 /// # Examples
 ///
@@ -180,7 +193,7 @@ where
 /// /// }
 /// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
 ///     parse_ber_sequence_defined_g(
-///         |i:&[u8]| {
+///         |_, i:&[u8]| {
 ///             let (i, a) = parse_ber_u32(i)?;
 ///             let (i, obj) = parse_ber_octetstring(i)?;
 ///             let b = obj.as_slice().unwrap();
@@ -205,14 +218,14 @@ pub fn parse_ber_sequence_defined_g<'a, O, F, E>(
     f: F,
 ) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: Fn(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     parse_ber_container(move |hdr, i| {
         if hdr.tag != BerTag::Sequence {
             return Err(Err::Error(BerError::BerTypeError.into()));
         }
-        f(i)
+        f(hdr, i)
     })
 }
 
@@ -279,7 +292,9 @@ pub fn parse_ber_set_of_v<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<Vec<
 where
     F: Fn(&'a [u8]) -> BerResult<T>,
 {
-    parse_ber_set_defined_g(many0(complete(f)))
+    parse_ber_set_defined_g(move |_, data| {
+        many0(complete(|i| f(i)))(data)
+    })
 }
 
 /// Parse a defined set of DER elements (function version)
@@ -289,6 +304,10 @@ where
 ///
 /// The remaining bytes point *after* the set: any bytes that are part of the sequence but not
 /// parsed are ignored.
+///
+/// The object header is not available to the parsing function, and the returned type is always a
+/// `BerObject`.
+/// For a generic version, see [`parse_ber_set_defined_g`](fn.parse_ber_set_defined_g.html).
 ///
 /// # Examples
 ///
@@ -359,16 +378,22 @@ pub fn parse_ber_set_defined<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult<Vec<BerObject>>,
 {
-    map(parse_ber_set_defined_g(f), BerObject::from_set)
+    map(
+        parse_ber_set_defined_g(move |_, data| f(data)),
+        BerObject::from_set,
+    )
 }
 
-/// Parse a defined SET object (returning a generic object)
+/// Parse a defined SET object (generic version)
 ///
 /// Given a parser for set content, apply it to build a DER set and
 /// return the remaining bytes and the built object.
 ///
 /// The remaining bytes point *after* the set: any bytes that are part of the sequence but not
 /// parsed are ignored.
+///
+/// Unlike `parse_ber_set_defined`, this function allows returning any object or error type,
+/// and also passes the object header to the callback.
 ///
 /// # Examples
 ///
@@ -391,7 +416,7 @@ where
 /// /// }
 /// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
 ///     parse_ber_set_defined_g(
-///         |i:&[u8]| {
+///         |_, i:&[u8]| {
 ///             let (i, a) = parse_ber_u32(i)?;
 ///             let (i, obj) = parse_ber_octetstring(i)?;
 ///             let b = obj.as_slice().unwrap();
@@ -414,14 +439,14 @@ where
 /// ```
 pub fn parse_ber_set_defined_g<'a, O, F, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: Fn(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     parse_ber_container(move |hdr, i| {
         if hdr.tag != BerTag::Set {
             return Err(Err::Error(BerError::BerTypeError.into()));
         }
-        f(i)
+        f(hdr, i)
     })
 }
 
