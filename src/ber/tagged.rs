@@ -76,7 +76,35 @@ where
 
 /// Read a TAGGED IMPLICIT value (function version)
 ///
-/// The following parses `[2] IMPLICIT INTEGER`:
+/// # Examples
+///
+/// The following parses `[2] IMPLICIT INTEGER` into a `BerObject`:
+///
+/// ```rust
+/// # use der_parser::ber::*;
+/// # use der_parser::error::BerResult;
+/// use nom::combinator::map_res;
+/// #
+/// fn parse_int_implicit(i:&[u8]) -> BerResult<BerObjectContent> {
+///     parse_ber_tagged_implicit(
+///         2,
+///         parse_ber_content(BerTag::Integer),
+///     )(i)
+/// }
+///
+/// # let bytes = &[0x82, 0x03, 0x01, 0x00, 0x01];
+/// let res = parse_int_implicit(bytes);
+/// # match res {
+/// #     Ok((rem, content)) => {
+/// #         assert!(rem.is_empty());
+/// #         assert_eq!(content.as_u32(), Ok(0x10001));
+/// #     },
+/// #     _ => assert!(false)
+/// # }
+/// ```
+///
+/// The following parses `[2] IMPLICIT INTEGER` into an `u32`, raising an error if the integer is
+/// too large:
 ///
 /// ```rust
 /// # use der_parser::ber::*;
@@ -96,7 +124,7 @@ where
 /// # let bytes = &[0x82, 0x03, 0x01, 0x00, 0x01];
 /// let res = parse_int_implicit(bytes);
 /// # match res {
-/// #     Ok((rem,val)) => {
+/// #     Ok((rem, val)) => {
 /// #         assert!(rem.is_empty());
 /// #         assert_eq!(val, 0x10001);
 /// #     },

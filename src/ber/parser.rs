@@ -144,6 +144,19 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
 }
 
 /// Read an object header
+///
+/// ### Example
+///
+/// ```
+/// # use der_parser::ber::{ber_read_element_header, BerClass, BerSize, BerTag};
+/// #
+/// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
+///
+/// assert_eq!(hdr.class, BerClass::Universal);
+/// assert_eq!(hdr.tag, BerTag::Integer);
+/// assert_eq!(hdr.len, BerSize::Definite(3));
+/// ```
 pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
     let (i1, el) = parse_identifier(i)?;
     let class = match BerClass::try_from(el.0) {
@@ -385,9 +398,29 @@ fn ber_read_content_bmpstring(i: &[u8], len: usize) -> BerResult<BerObjectConten
     map(take(len), BerObjectContent::BmpString)(i)
 }
 
-/// Parse the next bytes as the content of a BER object.
+/// Parse the next bytes as the *content* of a BER object.
 ///
 /// Content type is *not* checked to match tag, caller is responsible of providing the correct tag
+///
+/// This function is mostly used when parsing implicit tagged objects, when reading primitive
+/// types.
+///
+/// `max_depth` is the maximum allowed recursion for objects.
+///
+/// ### Example
+///
+/// ```
+/// # use der_parser::ber::{ber_read_element_content_as, ber_read_element_header, BerTag};
+/// #
+/// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
+/// let (_, content) = ber_read_element_content_as(
+///     i, hdr.tag, hdr.len, hdr.is_constructed(), 5
+/// ).expect("parsing failed");
+/// #
+/// # assert_eq!(hdr.tag, BerTag::Integer);
+/// # assert_eq!(content.as_u32(), Ok(0x10001));
+/// ```
 pub fn ber_read_element_content_as(
     i: &[u8],
     tag: BerTag,
@@ -731,6 +764,7 @@ pub fn parse_ber_bmpstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::BmpString)
 }
 
+/// XXX should this function be exposed?? FIXME
 #[inline]
 pub fn parse_ber_explicit_failed(i: &[u8], tag: BerTag) -> BerResult {
     Ok((
@@ -873,7 +907,7 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
 ///
 /// Return a tuple containing the remaining (unparsed) bytes and the BER Object, or an error.
 ///
-/// *Note: this is the same as calling `parse_ber_recursive` with `MAX_RECURSION`.
+/// *Note*: this is the same as calling `parse_ber_recursive` with `MAX_RECURSION`.
 ///
 /// ### Example
 ///

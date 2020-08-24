@@ -45,9 +45,12 @@
 //! ```
 //!
 //! The second (and preferred) parsing method is to specify the expected objects recursively. The
-//! following macros can be used:
-//! [`parse_der_sequence_defined`](macro.parse_der_sequence_defined.html) and similar functions,
-//! [`parse_der_struct`](macro.parse_der_struct.html), etc.
+//! following functions can be used:
+//! - [`parse_ber_sequence_defined`](ber/fn.parse_ber_sequence_defined.html) and similar functions
+//! for sequences and sets variants
+//! - [`parse_ber_tagged_explicit`](ber/fn.parse_ber_tagged_explicit.html) for tagged explicit
+//! - [`parse_ber_tagged_implicit`](ber/fn.parse_ber_tagged_implicit.html) for tagged implicit
+//! - [`parse_ber_container`](ber/fn.parse_ber_container.html) for generic parsing, etc.
 //!
 //! For example, to read a sequence containing two integers:
 //!
@@ -57,10 +60,11 @@
 //! use der_parser::error::BerResult;
 //!
 //! fn localparse_seq(i:&[u8]) -> BerResult {
-//!     parse_der_sequence_defined!(i,
-//!         parse_ber_integer >>
-//!         parse_ber_integer
-//!     )
+//!     parse_ber_sequence_defined(|data| {
+//!         let (data, a) = parse_ber_integer(data)?;
+//!         let (data, b) = parse_ber_integer(data)?;
+//!         Ok((data, vec![a, b]))
+//!     })(i)
 //! }
 //!
 //! let bytes = [ 0x30, 0x0a,
