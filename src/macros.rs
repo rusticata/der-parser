@@ -67,87 +67,29 @@ macro_rules! parse_ber_defined_m(
     );
 );
 
-/// Parse a defined sequence of DER elements (macro version)
+/// Parse a defined sequence of DER elements (deprecated)
 ///
 /// Given a list of expected parsers, apply them to build a DER sequence.
 ///
-/// ```rust
-/// # #[macro_use] extern crate der_parser;
-/// # use der_parser::ber::{parse_ber_integer, BerObject};
-/// # use der_parser::error::BerResult;
-/// #
-/// # fn main() {
-/// fn localparse_seq(i:&[u8]) -> BerResult {
-///     parse_der_sequence_defined_m!(i,
-///         parse_ber_integer >>
-///         // macros can also be called
-///         call!(parse_ber_integer)
-///     )
-/// }
-///
-/// let empty = &b""[..];
-/// let bytes = [ 0x30, 0x0a,
-///               0x02, 0x03, 0x01, 0x00, 0x01,
-///               0x02, 0x03, 0x01, 0x00, 0x00,
-/// ];
-/// let expected  = BerObject::from_seq(vec![
-///     BerObject::from_int_slice(b"\x01\x00\x01"),
-///     BerObject::from_int_slice(b"\x01\x00\x00"),
-/// ]);
-/// assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
-/// # }
-/// ```
+/// Deprecated, use [`parse_der_sequence_defined`](macro.parse_der_sequence_defined.html) instead.
 #[macro_export]
 #[deprecated(since = "3.0.0", note = "Use parse_der_sequence_defined")]
 macro_rules! parse_der_sequence_defined_m(
     ($i:expr, $($args:tt)*) => ({
-        map!(
-            $i,
-            parse_ber_defined_m!($crate::ber::BerTag::Sequence, $($args)*),
-            |(hdr,o)| $crate::ber::BerObject::from_header_and_content(hdr,$crate::ber::BerObjectContent::Sequence(o))
-        )
+        parse_der_sequence_defined!($i, $($args)*)
     });
 );
 
-/// Parse a defined set of DER elements
+/// Parse a defined set of DER elements (deprecated)
 ///
 /// Given a list of expected parsers, apply them to build a DER set.
 ///
-/// ```rust
-/// # #[macro_use] extern crate der_parser;
-/// # use der_parser::ber::{parse_ber_integer, BerObject};
-/// # use der_parser::error::BerResult;
-/// #
-/// # fn main() {
-/// fn localparse_set(i:&[u8]) -> BerResult {
-///     parse_der_set_defined_m!(i,
-///         parse_ber_integer >>
-///         // macros can also be called
-///         call!(parse_ber_integer)
-///     )
-/// }
-///
-/// let empty = &b""[..];
-/// let bytes = [ 0x31, 0x0a,
-///               0x02, 0x03, 0x01, 0x00, 0x01,
-///               0x02, 0x03, 0x01, 0x00, 0x00,
-/// ];
-/// let expected  = BerObject::from_set(vec![
-///     BerObject::from_int_slice(b"\x01\x00\x01").set_raw_tag(Some(&[0x2])),
-///     BerObject::from_int_slice(b"\x01\x00\x00").set_raw_tag(Some(&[0x2])),
-/// ]).set_raw_tag(Some(&[0x31]));
-/// assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
-/// # }
-/// ```
+/// Deprecated, use [`parse_der_set_defined`](macro.parse_der_set_defined.html) instead.
 #[macro_export]
 #[deprecated(since = "3.0.0", note = "Use parse_der_set_defined")]
 macro_rules! parse_der_set_defined_m(
     ($i:expr, $($args:tt)*) => ({
-        map!(
-            $i,
-            parse_ber_defined_m!($crate::ber::BerTag::Set, $($args)*),
-            |(hdr,o)| $crate::ber::BerObject::from_header_and_content(hdr,$crate::ber::BerObjectContent::Set(o))
-        )
+        parse_der_set_defined!($i, $($args)*)
     });
 );
 
@@ -389,7 +331,7 @@ macro_rules! parse_der_set_of(
 ///     parse_der_optional!(i, parse_ber_enum)
 /// }
 /// fn parser(i:&[u8]) -> BerResult {
-///     parse_der_sequence_defined_m!(i,
+///     parse_der_sequence_defined!(i,
 ///         parse_optional_enum >>
 ///         parse_ber_integer
 ///     )

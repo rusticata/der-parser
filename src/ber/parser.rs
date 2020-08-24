@@ -558,7 +558,7 @@ pub fn ber_read_element_content_as(
 
 /// Parse the next bytes as the content of a BER object (combinator)
 ///
-/// Content type is *not* checked, caller is responsible of providing the correct tag
+/// Content type is *not* checked to match tag, caller is responsible of providing the correct tag
 ///
 /// Caller is also responsible to check if parsing function consumed the expected number of
 /// bytes (`header.len`).
