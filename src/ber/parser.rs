@@ -387,7 +387,7 @@ fn ber_read_content_bmpstring(i: &[u8], len: usize) -> BerResult<BerObjectConten
 
 /// Parse the next bytes as the content of a BER object.
 ///
-/// Content type is *not* checked, caller is responsible of providing the correct tag
+/// Content type is *not* checked to match tag, caller is responsible of providing the correct tag
 pub fn ber_read_element_content_as(
     i: &[u8],
     tag: BerTag,
@@ -781,8 +781,10 @@ where
     parse_ber_explicit_optional(i, tag, f)
 }
 
-/// call der *content* parsing function
-/// XXX rewrite documentation FIXME
+/// Parse an implicit tagged object, applying function to read content
+///
+/// Note: unlike explicit tagged functions, the callback must be a *content* parsing function
+/// (not an object)
 pub fn parse_ber_implicit<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
 where
     F: Fn(&[u8], BerTag, BerSize) -> BerResult<BerObjectContent>,
