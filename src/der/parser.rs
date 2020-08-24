@@ -247,11 +247,23 @@ pub fn parse_der_bmpstring(i: &[u8]) -> DerResult {
 }
 
 #[inline]
-pub fn parse_der_explicit<F>(i: &[u8], tag: BerTag, f: F) -> DerResult
+pub fn parse_der_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> DerResult
 where
     F: Fn(&[u8]) -> DerResult,
 {
-    parse_ber_explicit(i, tag, f)
+    parse_ber_explicit_optional(i, tag, f)
+}
+
+#[deprecated(
+    since = "5.0",
+    note = "Please use `parse_der_explicit_optional` instead"
+)]
+#[inline]
+pub fn parse_der_explicit<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
+where
+    F: Fn(&[u8]) -> BerResult,
+{
+    parse_der_explicit_optional(i, tag, f)
 }
 
 #[inline]

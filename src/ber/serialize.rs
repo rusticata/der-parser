@@ -336,7 +336,7 @@ mod test {
     #[test]
     fn test_encode_tagged_explicit() {
         fn local_parse(i: &[u8]) -> BerResult<BerObject> {
-            parse_ber_explicit(i, BerTag(0), parse_ber_integer)
+            parse_ber_explicit_optional(i, BerTag(0), parse_ber_integer)
         }
         let bytes = hex!("a0 03 02 01 02");
         let obj = BerObject::from_int_slice(b"\x02");
@@ -386,7 +386,7 @@ mod test {
     #[test]
     fn test_encode_tagged_application() {
         fn local_parse(i: &[u8]) -> BerResult<BerObject> {
-            parse_ber_explicit(i, BerTag(2), parse_ber_integer)
+            parse_ber_explicit_optional(i, BerTag(2), parse_ber_integer)
         }
         let obj = BerObject::from_int_slice(b"\x02");
         let v = gen_simple(

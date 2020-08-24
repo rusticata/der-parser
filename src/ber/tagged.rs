@@ -51,6 +51,29 @@ where
     })
 }
 
+pub(crate) fn parse_ber_tagged_explicit_with_header<'a, Tag, Output, F, E>(
+    tag: Tag,
+    f: F,
+) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Output, E>
+where
+    F: Fn(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], Output, E>,
+    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
+    Tag: Into<BerTag>,
+{
+    let tag = tag.into();
+    parse_ber_container(move |hdr, i| {
+        if hdr.tag != tag {
+            return Err(Err::Error(BerError::InvalidTag.into()));
+        }
+        // X.690 8.14.2: if implificit tagging was not used, the encoding shall be constructed
+        if !hdr.is_constructed() {
+            return Err(Err::Error(BerError::ConstructExpected.into()));
+        }
+        f(hdr, i)
+        // trailing bytes are ignored
+    })
+}
+
 /// Read a TAGGED IMPLICIT value (function version)
 ///
 /// The following parses `[2] IMPLICIT INTEGER`:

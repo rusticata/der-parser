@@ -731,6 +731,7 @@ pub fn parse_ber_bmpstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::BmpString)
 }
 
+#[inline]
 pub fn parse_ber_explicit_failed(i: &[u8], tag: BerTag) -> BerResult {
     Ok((
         i,
@@ -738,28 +739,50 @@ pub fn parse_ber_explicit_failed(i: &[u8], tag: BerTag) -> BerResult {
     ))
 }
 
+/// Parse an optional tagged object, applying function to get content
+///
+/// This function returns a `BerObject`, trying to read content as generic BER objects.
+/// If parsing failed, return a tagged object containing `None`.
+///
+/// To support other return or error types, use
+/// [parse_ber_tagged_explicit](fn.parse_ber_tagged_explicit.html)
+pub fn parse_ber_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
+where
+    F: Fn(&[u8]) -> BerResult,
+{
+    let res = parse_ber_tagged_explicit_with_header(tag, |hdr, content| {
+        let (rem, obj) = f(content)?;
+        let obj2 = BerObject::from_header_and_content(
+            hdr,
+            BerObjectContent::ContextSpecific(tag, Some(Box::new(obj))),
+        );
+        Ok((rem, obj2))
+    })(i);
+
+    res.or_else(|_| parse_ber_explicit_failed(i, tag))
+}
+
+/// Parse a tagged object, applying function to get content
+///
+/// This function returns a `BerObject`, trying to read content as generic BER objects.
+/// If parsing failed, return a tagged object containing `None`.
+///
+/// To support other return or error types, use
+/// [parse_ber_tagged_explicit](fn.parse_ber_tagged_explicit.html)
+#[deprecated(
+    since = "5.0",
+    note = "Please use `parse_ber_explicit_optional` instead"
+)]
+#[inline]
 pub fn parse_ber_explicit<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
 where
     F: Fn(&[u8]) -> BerResult,
 {
-    alt! {
-        i,
-        complete!(do_parse!(
-            hdr:     ber_read_element_header >>
-                     custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
-            content: f >>
-            (
-                BerObject::from_header_and_content(
-                    hdr,
-                    BerObjectContent::ContextSpecific(tag,Some(Box::new(content)))
-                )
-            )
-        )) |
-        complete!(call!(parse_ber_explicit_failed, tag))
-    }
+    parse_ber_explicit_optional(i, tag, f)
 }
 
 /// call der *content* parsing function
+/// XXX rewrite documentation FIXME
 pub fn parse_ber_implicit<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
 where
     F: Fn(&[u8], BerTag, BerSize) -> BerResult<BerObjectContent>,
