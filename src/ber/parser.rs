@@ -858,6 +858,45 @@ where
     // }
 }
 
+/// Combinator for building optional BER values
+///
+/// To read optional BER values, it is to use the nom `opt()` combinator. However, this results in
+/// a `Option<BerObject>` and prevents using some functions from this crate (the generic functions
+/// can still be used).
+///
+/// This combinator is used when parsing BER values, while keeping `BerObject` output only.
+///
+/// ### Example
+///
+/// ```
+/// # use der_parser::ber::*;
+/// #
+/// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let parser = parse_ber_optional(parse_ber_integer);
+/// let (_, obj) = parser(bytes).expect("parsing failed");
+///
+/// assert_eq!(obj.header.tag, BerTag::Integer);
+/// assert!(obj.as_optional().is_ok());
+/// ```
+pub fn parse_ber_optional<F>(f: F) -> impl Fn(&[u8]) -> BerResult
+where
+    F: Fn(&[u8]) -> BerResult,
+{
+    move |i: &[u8]| {
+        let res = f(i);
+        match res {
+            Ok((rem, inner)) => {
+                let opt = BerObject::from_header_and_content(
+                    inner.header.clone(),
+                    BerObjectContent::Optional(Some(Box::new(inner))),
+                );
+                Ok((rem, opt))
+            }
+            Err(_) => Ok((i, BerObject::from_obj(BerObjectContent::Optional(None)))),
+        }
+    }
+}
+
 /// Parse BER object and try to decode it as a 32-bits unsigned integer
 #[inline]
 pub fn parse_ber_u32(i: &[u8]) -> BerResult<u32> {
