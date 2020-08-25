@@ -17,8 +17,11 @@
 - The constructed bit is now tested for explicit tagged structures
 - Some checks (for ex. tags in constructed objects) now return specific errors (`InvalidTag`)
   instead of generic errors (`Verify`)
+- Refactor BerObject for parsing of tagged and optional values
 
 ### Added
+
+- Add combinator `parse_ber_optional`
 
 ### Thanks
 

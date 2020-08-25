@@ -771,46 +771,18 @@ pub fn parse_ber_bmpstring(i: &[u8]) -> BerResult {
 ///
 /// To support other return or error types, use
 /// [parse_ber_tagged_explicit_g](fn.parse_ber_tagged_explicit_g.html)
-pub fn parse_ber_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
+pub fn parse_ber_explicit_optional<'a, F>(i: &'a [u8], tag: BerTag, f: F) -> BerResult<'a>
 where
     F: Fn(&[u8]) -> BerResult,
 {
-    let res = parse_ber_tagged_explicit_g(tag, |hdr, content| {
+    parse_ber_optional(parse_ber_tagged_explicit_g(tag, |hdr, content| {
         let (rem, obj) = f(content)?;
         let tagged = BerObject::from_header_and_content(
             hdr,
             BerObjectContent::Tagged(hdr.class, hdr.tag, Box::new(obj)),
         );
         Ok((rem, tagged))
-    })(i);
-    match res {
-        Ok((rem, tagged)) => {
-            let opt = BerObject::from_header_and_content(
-                tagged.header.clone(),
-                BerObjectContent::Optional(Some(Box::new(tagged))),
-            );
-            Ok((rem, opt))
-        }
-        Err(_) => Ok((i, BerObject::from_obj(BerObjectContent::Optional(None)))),
-    }
-
-    // parse_ber_tagged_explicit_g(tag, |hdr, content| match f(content) {
-    //     Ok((rem, obj)) => {
-    //         let tagged = BerObject::from_header_and_content(
-    //             hdr,
-    //             BerObjectContent::Tagged(hdr.class, hdr.tag, Box::new(obj)),
-    //         );
-    //         let opt = BerObject::from_header_and_content(
-    //             hdr,
-    //             BerObjectContent::Optional(Some(Box::new(tagged))),
-    //         );
-    //         Ok((rem, opt))
-    //     }
-    //     Err(_) => Ok((
-    //         content,
-    //         BerObject::from_obj(BerObjectContent::Optional(None)),
-    //     )),
-    // })(i)
+    }))(i)
 }
 
 /// Parse a tagged object, applying function to get content
@@ -878,9 +850,9 @@ where
 /// assert_eq!(obj.header.tag, BerTag::Integer);
 /// assert!(obj.as_optional().is_ok());
 /// ```
-pub fn parse_ber_optional<F>(f: F) -> impl Fn(&[u8]) -> BerResult
+pub fn parse_ber_optional<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<'a>
 where
-    F: Fn(&[u8]) -> BerResult,
+    F: Fn(&'a [u8]) -> BerResult<'a>,
 {
     move |i: &[u8]| {
         let res = f(i);
