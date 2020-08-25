@@ -1,8 +1,8 @@
 #![allow(deprecated)]
 
 use der_parser::ber::{
-    ber_read_element_content_as, BerClass, BerObjectContent, BerObjectHeader, BerSize, BerTag,
-    BitStringObject, MAX_RECURSION,
+    ber_read_element_content_as, BerClass, BerObject, BerObjectContent, BerObjectHeader, BerTag,
+    BitStringObject,
 };
 use der_parser::der::*;
 use der_parser::error::*;
@@ -278,19 +278,24 @@ fn test_der_contextspecific() {
 fn test_der_explicit() {
     let empty = &b""[..];
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
+    let header = BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3)
+        .with_raw_tag(Some(&[0xa0]));
     let expected = DerObject {
-        header: BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3)
-            .with_raw_tag(Some(&[0xa0])),
-        content: BerObjectContent::ContextSpecific(
-            BerTag(0),
-            Some(Box::new(DerObject::from_int_slice(b"\x02"))),
-        ),
+        header,
+        content: BerObjectContent::Optional(Some(Box::new(BerObject::from_header_and_content(
+            header,
+            BerObjectContent::Tagged(
+                BerClass::ContextSpecific,
+                BerTag(0),
+                Box::new(DerObject::from_int_slice(b"\x02")),
+            ),
+        )))),
     };
     assert_eq!(
         parse_der_explicit(&bytes, BerTag(0), parse_der_integer),
         Ok((empty, expected))
     );
-    let expected2 = DerObject::from_obj(BerObjectContent::ContextSpecific(BerTag(1), None));
+    let expected2 = DerObject::from_obj(BerObjectContent::Optional(None));
     assert_eq!(
         parse_der_explicit(&bytes, BerTag(1), parse_der_integer),
         Ok((&bytes[..], expected2))
@@ -301,27 +306,25 @@ fn test_der_explicit() {
 fn test_der_implicit() {
     let empty = &b""[..];
     let bytes = [0x81, 0x04, 0x70, 0x61, 0x73, 0x73];
-    let pass = DerObject::from_obj(BerObjectContent::IA5String("pass"));
     let expected = DerObject {
         header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(1), 4)
             .with_raw_tag(Some(&[0x81])),
-        content: BerObjectContent::ContextSpecific(BerTag(1), Some(Box::new(pass))),
+        content: BerObjectContent::IA5String("pass"),
     };
-    fn der_read_ia5string_content(
-        i: &[u8],
-        _tag: BerTag,
-        len: BerSize,
-    ) -> BerResult<BerObjectContent> {
-        ber_read_element_content_as(i, DerTag::Ia5String, len, false, MAX_RECURSION)
+    fn der_read_ia5string_content<'a>(
+        i: &'a [u8],
+        hdr: &BerObjectHeader,
+        depth: usize,
+    ) -> BerResult<'a, BerObjectContent<'a>> {
+        ber_read_element_content_as(i, DerTag::Ia5String, hdr.len, hdr.is_constructed(), depth)
     }
     assert_eq!(
         parse_der_implicit(&bytes, BerTag(1), der_read_ia5string_content),
         Ok((empty, expected))
     );
-    let expected2 = DerObject::from_obj(BerObjectContent::ContextSpecific(BerTag(2), None));
     assert_eq!(
         parse_der_implicit(&bytes, BerTag(2), der_read_ia5string_content),
-        Ok((&bytes[..], expected2))
+        Err(Err::Error(BerError::InvalidTag))
     );
 }
 
@@ -329,27 +332,25 @@ fn test_der_implicit() {
 fn test_der_implicit_long_tag() {
     let empty = &b""[..];
     let bytes = [0x5f, 0x52, 0x04, 0x70, 0x61, 0x73, 0x73];
-    let pass = DerObject::from_obj(BerObjectContent::IA5String("pass"));
     let expected = DerObject {
         header: BerObjectHeader::new(BerClass::Application, 0, BerTag(0x52), 4)
             .with_raw_tag(Some(&[0x5f, 0x52])),
-        content: BerObjectContent::ContextSpecific(BerTag(0x52), Some(Box::new(pass))),
+        content: BerObjectContent::IA5String("pass"),
     };
-    fn der_read_ia5string_content(
-        i: &[u8],
-        _tag: BerTag,
-        len: BerSize,
-    ) -> BerResult<BerObjectContent> {
-        ber_read_element_content_as(i, DerTag::Ia5String, len, false, MAX_RECURSION)
+    fn der_read_ia5string_content<'a>(
+        i: &'a [u8],
+        hdr: &BerObjectHeader,
+        depth: usize,
+    ) -> BerResult<'a, BerObjectContent<'a>> {
+        ber_read_element_content_as(i, DerTag::Ia5String, hdr.len, hdr.is_constructed(), depth)
     }
     assert_eq!(
         parse_der_implicit(&bytes, BerTag(0x52), der_read_ia5string_content),
         Ok((empty, expected))
     );
-    let expected2 = DerObject::from_obj(BerObjectContent::ContextSpecific(BerTag(2), None));
     assert_eq!(
         parse_der_implicit(&bytes, BerTag(2), der_read_ia5string_content),
-        Ok((&bytes[..], expected2))
+        Err(Err::Error(BerError::InvalidTag))
     );
 }
 
@@ -361,14 +362,13 @@ fn test_der_optional() {
     ];
     let bytes2 = [0x30, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
     let expected1 = DerObject::from_seq(vec![
-        DerObject::from_obj(BerObjectContent::ContextSpecific(
-            BerTag(0),
-            Some(Box::new(DerObject::from_obj(BerObjectContent::Enum(1)))),
-        )),
+        DerObject::from_obj(BerObjectContent::Optional(Some(Box::new(
+            DerObject::from_obj(BerObjectContent::Enum(1)),
+        )))),
         DerObject::from_int_slice(b"\x01\x00\x01"),
     ]);
     let expected2 = DerObject::from_seq(vec![
-        DerObject::from_obj(BerObjectContent::ContextSpecific(BerTag(0), None)),
+        DerObject::from_obj(BerObjectContent::Optional(None)),
         DerObject::from_int_slice(b"\x01\x00\x01"),
     ]);
     fn parse_optional_enum(i: &[u8]) -> DerResult {

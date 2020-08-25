@@ -68,9 +68,7 @@ pub fn parse_ber_sequence_of_v<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult<T>,
 {
-    parse_ber_sequence_defined_g(move |_, data| {
-        many0(complete(|i| f(i)))(data)
-    })
+    parse_ber_sequence_defined_g(move |_, data| many0(complete(|i| f(i)))(data))
 }
 
 /// Parse a defined sequence of DER elements (function version)
@@ -292,9 +290,7 @@ pub fn parse_ber_set_of_v<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<Vec<
 where
     F: Fn(&'a [u8]) -> BerResult<T>,
 {
-    parse_ber_set_defined_g(move |_, data| {
-        many0(complete(|i| f(i)))(data)
-    })
+    parse_ber_set_defined_g(move |_, data| many0(complete(|i| f(i)))(data))
 }
 
 /// Parse a defined set of DER elements (function version)

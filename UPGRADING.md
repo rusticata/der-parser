@@ -1,5 +1,14 @@
 ## Upgrading from 4.x to 5.0
 
+### BER variants: ContextSpecific, Optional, Tagged
+
+The variant `ContextSpecific` has been removed from `BerObject`, and 2 new variants have been added:
+- `Tagged` for explicit tagged objects,
+- `Optional` to simplify writing subparsers with only `BerObject`
+
+This is also used to clarify parsing of tagged values, and the API now clearly says if trying to parse an
+optional value or not.
+
 ### Ber Size
 
 The `len` field of `BerObjectHeader` is now an enum, to represent definite and indefinite lengths.

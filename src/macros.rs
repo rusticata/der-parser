@@ -313,16 +313,15 @@ macro_rules! parse_der_set_of(
 ///                0x02, 0x03, 0x01, 0x00, 0x01];
 /// let bytes2 = [ 0x30, 0x05,
 ///                0x02, 0x03, 0x01, 0x00, 0x01];
-/// let expected1  = BerObject::from_seq(vec![
-///     BerObject::from_obj(
-///         BerObjectContent::ContextSpecific(BerTag(0),
-///             Some(Box::new(BerObject::from_obj(BerObjectContent::Enum(1)))))
-///     ),
+/// let expected1 = BerObject::from_seq(vec![
+///     BerObject::from_obj(BerObjectContent::Optional(Some(Box::new(
+///         BerObject::from_obj(BerObjectContent::Enum(1)),
+///     )))),
 ///     BerObject::from_int_slice(b"\x01\x00\x01"),
 /// ]);
 /// let expected2  = BerObject::from_seq(vec![
 ///     BerObject::from_obj(
-///         BerObjectContent::ContextSpecific(BerTag(0), None),
+///         BerObjectContent::Optional(None),
 ///     ),
 ///     BerObject::from_int_slice(b"\x01\x00\x01"),
 /// ]);
@@ -344,18 +343,34 @@ macro_rules! parse_der_set_of(
 #[macro_export]
 macro_rules! parse_der_optional(
     ($i:expr, $f:ident) => (
-        alt!(
-            $i,
-            complete!(do_parse!(
-                content: call!($f) >>
-                (
-                    $crate::ber::BerObject::from_obj(
-                        $crate::ber::BerObjectContent::ContextSpecific($crate::ber::BerTag(0) /* XXX */,Some(Box::new(content)))
-                    )
-                )
-            )) |
-            complete!(call!($crate::ber::parse_ber_explicit_failed,$crate::ber::BerTag(0) /* XXX */))
-        )
+        match $f($i) {
+            Ok((rem, obj)) => {
+                let opt =
+                    $crate::ber::BerObject::from_header_and_content(
+                        obj.header.clone(),
+                        $crate::ber::BerObjectContent::Optional(Some(Box::new(obj)))
+                    );
+                Ok((rem, opt))
+            }
+            Err(_) => {
+                let opt = $crate::ber::BerObject::from_obj(
+                    $crate::ber::BerObjectContent::Optional(None)
+                );
+                Ok(($i, opt))
+            }
+        }
+        // alt!(
+        //     $i,
+        //     complete!(do_parse!(
+        //         content: call!($f) >>
+        //         (
+        //             $crate::ber::BerObject::from_obj(
+        //                 $crate::ber::BerObjectContent::ContextSpecific($crate::ber::BerTag(0) /* XXX */,Some(Box::new(content)))
+        //             )
+        //         )
+        //     )) |
+        //     complete!(call!($crate::ber::parse_ber_explicit_failed,$crate::ber::BerTag(0) /* XXX */))
+        // )
     )
 );
 
@@ -502,7 +517,7 @@ macro_rules! parse_der_struct(
 ///     map_res!(
 ///         i,
 ///         parse_der_tagged!(EXPLICIT 2, parse_ber_integer),
-///         |x: BerObject| x.as_u32()
+///         |x: BerObject| x.as_tagged()?.2.as_u32()
 ///     )
 /// }
 ///
@@ -513,7 +528,7 @@ macro_rules! parse_der_struct(
 ///         assert!(rem.is_empty());
 ///         assert_eq!(val, 0x10001);
 ///     },
-///     _ => assert!(false)
+///     Err(e) => panic!("parse_int_explicit failed: {:?}", e),
 /// }
 /// # }
 /// ```
@@ -568,8 +583,7 @@ macro_rules! parse_der_tagged(
         parse_ber_tagged_implicit(
             $tag,
             |content, hdr, max_size| {
-                let (i, obj) = ber_read_element_content_as(content, $type, hdr.len, hdr.is_constructed(), max_size)?;
-                Ok((i, BerObject::from_obj(obj)))
+                ber_read_element_content_as(content, $type, hdr.len, hdr.is_constructed(), max_size)
             }
         )($i)
     });

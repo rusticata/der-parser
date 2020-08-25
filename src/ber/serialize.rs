@@ -146,12 +146,17 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         | BerObjectContent::GeneralizedTime(s) => slice(s)(out),
         BerObjectContent::Sequence(v) | BerObjectContent::Set(v) => ber_encode_sequence(&v)(out),
         // best we can do is tagged-explicit, but we don't know
-        BerObjectContent::ContextSpecific(_tag, opt_inner) => {
+        BerObjectContent::Optional(inner) => {
             // directly encode inner object
-            match opt_inner {
-                Some(o) => ber_encode_object(o)(out),
-                None => Ok(out),
+            match inner {
+                Some(obj) => ber_encode_object_content(&obj.content)(out),
+                None => slice(&[])(out), // XXX encode NOP ?
             }
+        }
+        BerObjectContent::Tagged(_class, _tag, inner) => {
+            // directly encode inner object
+            // XXX wrong, we should wrap it!
+            ber_encode_object(inner)(out)
         }
         BerObjectContent::Unknown(_tag, s) => slice(s)(out),
     }
@@ -335,7 +340,7 @@ mod test {
 
     #[test]
     fn test_encode_tagged_explicit() {
-        fn local_parse(i: &[u8]) -> BerResult<BerObject> {
+        fn local_parse(i: &[u8]) -> BerResult {
             parse_ber_explicit_optional(i, BerTag(0), parse_ber_integer)
         }
         let bytes = hex!("a0 03 02 01 02");
@@ -346,46 +351,43 @@ mod test {
         )
         .expect("could not encode");
         let (_, obj2) = local_parse(&v).expect("could not re-parse");
-        let (tag, opt_inner) = obj2
-            .as_context_specific()
-            .expect("not a context-specific object");
-        let inner = opt_inner.expect("empty context-specific object");
+        let obj2 = obj2
+            .as_optional()
+            .expect("tagged object not found")
+            .expect("optional object empty");
+        let (_class, tag, inner) = obj2.as_tagged().expect("not a tagged object");
         assert_eq!(tag, BerTag(0));
-        assert_eq!(&obj, inner.as_ref());
+        assert_eq!(&obj, inner);
         assert_eq!(&v[..], bytes);
     }
 
     #[test]
     fn test_encode_tagged_implicit() {
-        fn der_read_integer_content(
-            i: &[u8],
-            _tag: BerTag,
-            len: BerSize,
-        ) -> BerResult<BerObjectContent> {
-            ber_read_element_content_as(i, BerTag::Integer, len, false, MAX_RECURSION)
+        fn der_read_integer_content<'a>(
+            i: &'a [u8],
+            hdr: &BerObjectHeader,
+            depth: usize,
+        ) -> BerResult<'a, BerObjectContent<'a>> {
+            ber_read_element_content_as(i, BerTag::Integer, hdr.len, false, depth)
         }
         fn local_parse(i: &[u8]) -> BerResult<BerObject> {
-            parse_ber_implicit(i, BerTag(2), der_read_integer_content)
+            parse_ber_implicit(i, BerTag(3), der_read_integer_content)
         }
         let obj = BerObject::from_int_slice(b"\x02");
         let v = gen_simple(
-            ber_encode_tagged_implicit(BerTag(2), BerClass::ContextSpecific, &obj),
+            ber_encode_tagged_implicit(BerTag(3), BerClass::ContextSpecific, &obj),
             Vec::new(),
         )
         .expect("could not encode");
         let (_, obj2) = local_parse(&v).expect("could not re-parse");
-        let (tag, opt_inner) = obj2
-            .as_context_specific()
-            .expect("not a context-specific object");
-        let inner = opt_inner.expect("empty context-specific object");
-        assert_eq!(tag, BerTag(2));
-        assert_eq!(&obj, inner.as_ref());
-        let bytes = hex!("82 01 02");
+        assert_eq!(obj2.header.tag, BerTag(3));
+        assert_eq!(&obj.content, &obj2.content);
+        let bytes = hex!("83 01 02");
         assert_eq!(&v[..], bytes);
     }
     #[test]
     fn test_encode_tagged_application() {
-        fn local_parse(i: &[u8]) -> BerResult<BerObject> {
+        fn local_parse(i: &[u8]) -> BerResult {
             parse_ber_explicit_optional(i, BerTag(2), parse_ber_integer)
         }
         let obj = BerObject::from_int_slice(b"\x02");
@@ -395,12 +397,13 @@ mod test {
         )
         .expect("could not encode");
         let (_, obj2) = local_parse(&v).expect("could not re-parse");
-        let (tag, opt_inner) = obj2
-            .as_context_specific()
-            .expect("not a context-specific object");
-        let inner = opt_inner.expect("empty context-specific object");
+        let obj2 = obj2
+            .as_optional()
+            .expect("tagged object not found")
+            .expect("optional object empty");
+        let (_class, tag, inner) = obj2.as_tagged().expect("not a tagged object");
         assert_eq!(tag, BerTag(2));
-        assert_eq!(&obj, inner.as_ref());
+        assert_eq!(&obj, inner);
         let bytes = hex!("62 03 02 01 02");
         assert_eq!(&v[..], bytes);
     }

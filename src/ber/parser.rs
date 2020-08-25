@@ -590,9 +590,9 @@ pub fn parse_ber_with_tag(i: &[u8], tag: BerTag) -> BerResult {
     do_parse! {
         i,
         hdr: ber_read_element_header >>
-             custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
-        o:   call!(ber_read_element_content_as, hdr.tag, hdr.len, hdr.is_constructed(), MAX_RECURSION) >>
-        ( BerObject::from_header_and_content(hdr, o) )
+            custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
+            o:   call!(ber_read_element_content_as, hdr.tag, hdr.len, hdr.is_constructed(), MAX_RECURSION) >>
+            ( BerObject::from_header_and_content(hdr, o) )
     }
 }
 
@@ -764,36 +764,53 @@ pub fn parse_ber_bmpstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::BmpString)
 }
 
-/// XXX should this function be exposed?? FIXME
-#[inline]
-pub fn parse_ber_explicit_failed(i: &[u8], tag: BerTag) -> BerResult {
-    Ok((
-        i,
-        BerObject::from_obj(BerObjectContent::ContextSpecific(tag, None)),
-    ))
-}
-
 /// Parse an optional tagged object, applying function to get content
 ///
 /// This function returns a `BerObject`, trying to read content as generic BER objects.
-/// If parsing failed, return a tagged object containing `None`.
+/// If parsing failed, return an optional object containing `None`.
 ///
 /// To support other return or error types, use
-/// [parse_ber_tagged_explicit](fn.parse_ber_tagged_explicit.html)
+/// [parse_ber_tagged_explicit_g](fn.parse_ber_tagged_explicit_g.html)
 pub fn parse_ber_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
 where
     F: Fn(&[u8]) -> BerResult,
 {
-    let res = parse_ber_tagged_explicit_with_header(tag, |hdr, content| {
+    let res = parse_ber_tagged_explicit_g(tag, |hdr, content| {
         let (rem, obj) = f(content)?;
-        let obj2 = BerObject::from_header_and_content(
+        let tagged = BerObject::from_header_and_content(
             hdr,
-            BerObjectContent::ContextSpecific(tag, Some(Box::new(obj))),
+            BerObjectContent::Tagged(hdr.class, hdr.tag, Box::new(obj)),
         );
-        Ok((rem, obj2))
+        Ok((rem, tagged))
     })(i);
+    match res {
+        Ok((rem, tagged)) => {
+            let opt = BerObject::from_header_and_content(
+                tagged.header.clone(),
+                BerObjectContent::Optional(Some(Box::new(tagged))),
+            );
+            Ok((rem, opt))
+        }
+        Err(_) => Ok((i, BerObject::from_obj(BerObjectContent::Optional(None)))),
+    }
 
-    res.or_else(|_| parse_ber_explicit_failed(i, tag))
+    // parse_ber_tagged_explicit_g(tag, |hdr, content| match f(content) {
+    //     Ok((rem, obj)) => {
+    //         let tagged = BerObject::from_header_and_content(
+    //             hdr,
+    //             BerObjectContent::Tagged(hdr.class, hdr.tag, Box::new(obj)),
+    //         );
+    //         let opt = BerObject::from_header_and_content(
+    //             hdr,
+    //             BerObjectContent::Optional(Some(Box::new(tagged))),
+    //         );
+    //         Ok((rem, opt))
+    //     }
+    //     Err(_) => Ok((
+    //         content,
+    //         BerObject::from_obj(BerObjectContent::Optional(None)),
+    //     )),
+    // })(i)
 }
 
 /// Parse a tagged object, applying function to get content
@@ -819,25 +836,26 @@ where
 ///
 /// Note: unlike explicit tagged functions, the callback must be a *content* parsing function
 /// (not an object)
-pub fn parse_ber_implicit<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
+pub fn parse_ber_implicit<'a, F>(i: &'a [u8], tag: BerTag, f: F) -> BerResult<'a>
 where
-    F: Fn(&[u8], BerTag, BerSize) -> BerResult<BerObjectContent>,
+    F: for<'i> Fn(&'i [u8], &'_ BerObjectHeader, usize) -> BerResult<'i, BerObjectContent<'i>>,
 {
-    alt! {
-        i,
-        complete!(do_parse!(
-            hdr:     ber_read_element_header >>
-                     custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
-            content: call!(f, tag, hdr.len) >>
-            (
-                BerObject::from_header_and_content(
-                    hdr,
-                    BerObjectContent::ContextSpecific(tag,Some(Box::new(BerObject::from_obj(content))))
-                )
-            )
-        )) |
-        complete!(call!(parse_ber_explicit_failed, tag))
-    }
+    parse_ber_tagged_implicit(tag, f)(i)
+    // alt! {
+    //     i,
+    //     complete!(do_parse!(
+    //         hdr:     ber_read_element_header >>
+    //                  custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
+    //         content: call!(f, tag, hdr.len) >>
+    //         (
+    //             Some(BerObject::from_header_and_content(
+    //                 hdr,
+    //                 BerObjectContent::Tagged(hdr.class,tag,Box::new(BerObject::from_obj(content)))
+    //             )
+    //         ))
+    //     )) |
+    //     value!(Ok((i, None)))
+    // }
 }
 
 /// Parse BER object and try to decode it as a 32-bits unsigned integer

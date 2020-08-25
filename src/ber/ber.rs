@@ -5,6 +5,7 @@ use rusticata_macros::newtype_enum;
 use std::convert::AsRef;
 use std::convert::From;
 use std::convert::TryFrom;
+use std::fmt;
 use std::ops::Index;
 use std::vec::Vec;
 
@@ -128,8 +129,22 @@ pub enum BerObjectContent<'a> {
 
     GeneralString(&'a [u8]),
 
-    ContextSpecific(BerTag, Option<Box<BerObject<'a>>>),
+    Optional(Option<Box<BerObject<'a>>>),
+    Tagged(BerClass, BerTag, Box<BerObject<'a>>),
+
     Unknown(BerTag, &'a [u8]),
+}
+
+impl fmt::Display for BerClass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            BerClass::Universal => "UNIVERSAL",
+            BerClass::Application => "APPLICATION",
+            BerClass::ContextSpecific => "CONTEXT-SPECIFIC",
+            BerClass::Private => "PRIVATE",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 impl From<u32> for BerTag {
@@ -275,6 +290,7 @@ impl<'a> BerObject<'a> {
     ) -> BerObject<'hdr> {
         BerObject { header, content }
     }
+
     /// Build a BerObject from its content, using default flags (no class, correct tag,
     /// and structured flag set only for Set and Sequence)
     pub fn from_obj(c: BerObjectContent) -> BerObject {
@@ -380,12 +396,16 @@ impl<'a> BerObject<'a> {
         self.content.as_oid_val()
     }
 
-    /// Attempt to read the content from a context-specific DER object.
-    /// This can fail if the object is not context-specific.
-    ///
-    /// Note: the object is cloned.
-    pub fn as_context_specific(&self) -> Result<(BerTag, Option<Box<BerObject<'a>>>), BerError> {
-        self.content.as_context_specific()
+    /// Attempt to get a reference on the content from an optional object.
+    /// This can fail if the object is not optional.
+    pub fn as_optional(&'a self) -> Result<Option<&'_ BerObject<'a>>, BerError> {
+        self.content.as_optional()
+    }
+
+    /// Attempt to get a reference on the content from a tagged object.
+    /// This can fail if the object is not tagged.
+    pub fn as_tagged(&'a self) -> Result<(BerClass, BerTag, &'_ BerObject<'a>), BerError> {
+        self.content.as_tagged()
     }
 
     /// Attempt to read a reference to a BitString value from DER object.
@@ -555,9 +575,17 @@ impl<'a> BerObjectContent<'a> {
         self.as_oid().map(|o| o.clone())
     }
 
-    pub fn as_context_specific(&self) -> Result<(BerTag, Option<Box<BerObject<'a>>>), BerError> {
+    pub fn as_optional(&'a self) -> Result<Option<&'_ BerObject<'a>>, BerError> {
         match *self {
-            BerObjectContent::ContextSpecific(u, ref o) => Ok((u, o.clone())),
+            BerObjectContent::Optional(Some(ref o)) => Ok(Some(&o)),
+            BerObjectContent::Optional(None) => Ok(None),
+            _ => Err(BerError::BerTypeError),
+        }
+    }
+
+    pub fn as_tagged(&'a self) -> Result<(BerClass, BerTag, &'_ BerObject<'a>), BerError> {
+        match *self {
+            BerObjectContent::Tagged(class, tag, ref o) => Ok((class, tag, o.as_ref())),
             _ => Err(BerError::BerTypeError),
         }
     }
@@ -620,8 +648,8 @@ impl<'a> BerObjectContent<'a> {
     }
 
     #[rustfmt::skip]
-    pub fn tag(&self) -> BerTag {
-        match *self {
+    fn tag(&self) -> BerTag {
+        match self {
             BerObjectContent::EndOfContent         => BerTag::EndOfContent,
             BerObjectContent::Boolean(_)           => BerTag::Boolean,
             BerObjectContent::Integer(_)           => BerTag::Integer,
@@ -642,8 +670,10 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::UTCTime(_)           => BerTag::UtcTime,
             BerObjectContent::GeneralizedTime(_)   => BerTag::GeneralizedTime,
             BerObjectContent::GeneralString(_)     => BerTag::GeneralString,
-            BerObjectContent::ContextSpecific(x,_) |
-            BerObjectContent::Unknown(x,_)         => x,
+            BerObjectContent::Tagged(_,x,_) |
+            BerObjectContent::Unknown(x,_)         => *x,
+            BerObjectContent::Optional(Some(obj))  => obj.content.tag(),
+            BerObjectContent::Optional(None)       => BerTag(0x00), // XXX invalid !
         }
     }
 }

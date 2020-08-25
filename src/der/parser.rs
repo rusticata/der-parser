@@ -247,7 +247,7 @@ pub fn parse_der_bmpstring(i: &[u8]) -> DerResult {
 }
 
 #[inline]
-pub fn parse_der_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> DerResult
+pub fn parse_der_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
 where
     F: Fn(&[u8]) -> DerResult,
 {
@@ -269,7 +269,7 @@ where
 #[inline]
 pub fn parse_der_implicit<F>(i: &[u8], tag: BerTag, f: F) -> DerResult
 where
-    F: Fn(&[u8], BerTag, BerSize) -> BerResult<BerObjectContent>,
+    F: for<'i> Fn(&'i [u8], &'_ BerObjectHeader, usize) -> BerResult<'i, BerObjectContent<'i>>,
 {
     parse_ber_implicit(i, tag, f)
 }

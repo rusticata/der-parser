@@ -192,14 +192,14 @@ fn tagged_explicit() {
         map_res!(
             i,
             parse_der_tagged!(EXPLICIT 2, parse_ber_integer),
-            |x: BerObject| x.as_u32()
+            |x: BerObject| x.as_tagged()?.2.as_u32()
         )
     }
     fn parse_int_noexplicit(i: &[u8]) -> BerResult<u32> {
         map_res!(
             i,
             parse_der_tagged!(2, parse_ber_integer),
-            |x: BerObject| x.as_u32()
+            |x: BerObject| x.as_tagged()?.2.as_u32()
         )
     }
     let bytes = &[0xa2, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
@@ -239,7 +239,7 @@ fn tagged_implicit() {
     assert_eq!(val, 0x10001);
     // wrong tag
     assert_eq!(
-        parse_der_tagged!(bytes as &[u8],IMPLICIT 3,BerTag::Integer),
+        parse_der_tagged!(bytes as &[u8], IMPLICIT 3, BerTag::Integer),
         Err(Err::Error(BerError::InvalidTag))
     );
 }

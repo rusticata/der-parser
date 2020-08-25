@@ -63,7 +63,7 @@ fn parse_set_of_int(i: &[u8]) -> DerResult {
 }
 
 #[allow(dead_code)]
-fn parse_optional_enum(i: &[u8]) -> DerResult {
+fn parse_optional_enum(i: &[u8]) -> BerResult {
     parse_der_optional!(i, parse_der_enum)
 }
 

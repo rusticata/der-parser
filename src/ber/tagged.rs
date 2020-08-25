@@ -2,7 +2,7 @@ use crate::ber::*;
 use crate::error::*;
 use nom::{Err, IResult};
 
-/// Read a TAGGED EXPLICIT value (function version)
+/// Read a TAGGED EXPLICIT value
 ///
 /// The following parses `[2] EXPLICIT INTEGER`:
 ///
@@ -12,10 +12,10 @@ use nom::{Err, IResult};
 /// use nom::combinator::map_res;
 /// #
 /// fn parse_int_explicit(i:&[u8]) -> BerResult<u32> {
-///     parse_ber_tagged_explicit(
-///         2,
-///         parse_ber_u32
-///     )(i)
+///    map_res(
+///        parse_ber_tagged_explicit(2, parse_ber_integer),
+///        |x: BerObject| x.as_tagged()?.2.as_u32()
+///    )(i)
 /// }
 ///
 /// # let bytes = &[0xa2, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
@@ -28,30 +28,23 @@ use nom::{Err, IResult};
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_explicit<'a, Tag, Output, F, E>(
-    tag: Tag,
-    f: F,
-) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Output, E>
+pub fn parse_ber_tagged_explicit<'a, Tag, F>(tag: Tag, f: F) -> impl Fn(&'a [u8]) -> BerResult
 where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], Output, E>,
-    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
+    F: Fn(&'a [u8]) -> BerResult<BerObject>,
     Tag: Into<BerTag>,
 {
     let tag = tag.into();
-    parse_ber_container(move |hdr, i| {
-        if hdr.tag != tag {
-            return Err(Err::Error(BerError::InvalidTag.into()));
-        }
-        // X.690 8.14.2: if implificit tagging was not used, the encoding shall be constructed
-        if !hdr.is_constructed() {
-            return Err(Err::Error(BerError::ConstructExpected.into()));
-        }
-        f(i)
-        // trailing bytes are ignored
+    parse_ber_tagged_explicit_g(tag, move |hdr, content| {
+        let (rem, obj) = f(content)?;
+        let obj2 = BerObject::from_header_and_content(
+            hdr,
+            BerObjectContent::Tagged(hdr.class, tag, Box::new(obj)),
+        );
+        Ok((rem, obj2))
     })
 }
 
-pub(crate) fn parse_ber_tagged_explicit_with_header<'a, Tag, Output, F, E>(
+pub fn parse_ber_tagged_explicit_g<'a, Tag, Output, F, E>(
     tag: Tag,
     f: F,
 ) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Output, E>
@@ -62,6 +55,9 @@ where
 {
     let tag = tag.into();
     parse_ber_container(move |hdr, i| {
+        if hdr.class == BerClass::Universal {
+            return Err(Err::Error(BerError::InvalidClass.into()));
+        }
         if hdr.tag != tag {
             return Err(Err::Error(BerError::InvalidTag.into()));
         }
@@ -85,7 +81,7 @@ where
 /// # use der_parser::error::BerResult;
 /// use nom::combinator::map_res;
 /// #
-/// fn parse_int_implicit(i:&[u8]) -> BerResult<BerObjectContent> {
+/// fn parse_int_implicit(i:&[u8]) -> BerResult<BerObject> {
 ///     parse_ber_tagged_implicit(
 ///         2,
 ///         parse_ber_content(BerTag::Integer),
@@ -117,7 +113,7 @@ where
 ///             2,
 ///             parse_ber_content(BerTag::Integer),
 ///         ),
-///         |x: BerObjectContent| x.as_u32()
+///         |x: BerObject| x.as_u32()
 ///     )(i)
 /// }
 ///
@@ -131,7 +127,7 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_implicit<'a, Tag, Output, F, E>(
+pub fn parse_ber_tagged_implicit_defined<'a, Tag, Output, F, E>(
     tag: Tag,
     f: F,
 ) -> impl Fn(&'a [u8]) -> IResult<&[u8], Output, E>
@@ -147,6 +143,41 @@ where
         }
         // XXX MAX_RECURSION should not be used, it resets the depth counter
         f(i, &hdr, MAX_RECURSION)
+        // trailing bytes are ignored
+    })
+}
+
+pub fn parse_ber_tagged_implicit<'a, Tag, F>(tag: Tag, f: F) -> impl Fn(&'a [u8]) -> BerResult
+where
+    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>>,
+    Tag: Into<BerTag>,
+{
+    let tag = tag.into();
+    parse_ber_tagged_implicit_g(tag, move |i, hdr, depth| {
+        let (rem, content) = f(i, &hdr, depth)?;
+        // trailing bytes are ignored
+        let obj = BerObject::from_header_and_content(hdr, content);
+        // XXX wrong header here?
+        Ok((rem, obj))
+    })
+}
+
+pub fn parse_ber_tagged_implicit_g<'a, Tag, Output, F, E>(
+    tag: Tag,
+    f: F,
+) -> impl Fn(&'a [u8]) -> IResult<&[u8], Output, E>
+where
+    F: Fn(&'a [u8], BerObjectHeader<'a>, usize) -> IResult<&'a [u8], Output, E>,
+    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
+    Tag: Into<BerTag>,
+{
+    let tag = tag.into();
+    parse_ber_container(move |hdr, i| {
+        if hdr.tag != tag {
+            return Err(Err::Error(BerError::InvalidTag.into()));
+        }
+        // XXX MAX_RECURSION should not be used, it resets the depth counter
+        f(i, hdr, MAX_RECURSION)
         // trailing bytes are ignored
     })
 }

@@ -82,13 +82,15 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
             BerObjectContent::T61String(s)           => print_utf8_string_with_type(f, s, "T61String"),
             BerObjectContent::BmpString(s)           => print_utf8_string_with_type(f, s, "BmpString"),
             BerObjectContent::GeneralString(s)       => print_utf8_string_with_type(f, s, "GeneralString"),
-            BerObjectContent::ContextSpecific(n,ref o) => {
-                let new_indent = self.indent + self.inc;
-                writeln!(f, "ContextSpecific [{}] {{", n)?;
-                match *o {
-                    Some(ref obj) => write!(f, "{:?}", self.next_indent(obj))?,
-                    None          => writeln!(f, "{:1$}None", " ", new_indent)?,
-                };
+            BerObjectContent::Optional(ref o) => {
+                match o {
+                    Some(obj) => writeln!(f, "OPTION {:?}", obj),
+                    None => writeln!(f, "NONE"),
+                }
+            }
+            BerObjectContent::Tagged(class, tag, ref obj) => {
+                writeln!(f, "ContextSpecific [{} {}] {{", class, tag)?;
+                write!(f, "{:?}", self.next_indent(obj))?;
                 if self.indent > 0 {
                     write!(f, "{:1$}", " ", self.indent)?;
                 };
