@@ -808,7 +808,8 @@ where
 
 /// Parse an implicit tagged object, applying function to read content
 ///
-/// Note: unlike explicit tagged functions, the callback must be a *content* parsing function
+/// Note: unlike explicit tagged functions, the callback must be a *content* parsing function,
+/// often based on the [`parse_ber_content`](fn.parse_ber_content.html) combinator.
 ///
 /// The built object will use the original header (and tag), so the content may not match the tag
 /// value.
@@ -844,7 +845,6 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-/// (not an object)
 #[inline]
 pub fn parse_ber_implicit<'a, Tag, F>(i: &'a [u8], tag: Tag, f: F) -> BerResult<'a>
 where

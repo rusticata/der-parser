@@ -274,10 +274,51 @@ where
     parse_der_explicit_optional(i, tag, f)
 }
 
+/// Parse an implicit tagged object, applying function to read content
+///
+/// Note: unlike explicit tagged functions, the callback must be a *content* parsing function,
+/// often based on the [`parse_der_content`](fn.parse_der_content.html) combinator.
+///
+/// The built object will use the original header (and tag), so the content may not match the tag
+/// value.
+///
+/// For a combinator version, see [parse_ber_tagged_implicit](../ber/fn.parse_ber_tagged_implicit.html).
+///
+/// For a generic version (different output and error types), see
+/// [parse_ber_tagged_implicit_g](../ber/fn.parse_ber_tagged_implicit_g.html).
+///
+/// # Examples
+///
+/// The following parses `[3] IMPLICIT INTEGER` into a `DerObject`:
+///
+/// ```rust
+/// # use der_parser::ber::*;
+/// # use der_parser::der::*;
+/// # use der_parser::error::DerResult;
+/// #
+/// fn parse_int_implicit(i:&[u8]) -> DerResult {
+///     parse_der_implicit(
+///         i,
+///         3,
+///         parse_der_content(BerTag::Integer),
+///     )
+/// }
+///
+/// # let bytes = &[0x83, 0x03, 0x01, 0x00, 0x01];
+/// let res = parse_int_implicit(bytes);
+/// # match res {
+/// #     Ok((rem, content)) => {
+/// #         assert!(rem.is_empty());
+/// #         assert_eq!(content.as_u32(), Ok(0x10001));
+/// #     },
+/// #     _ => assert!(false)
+/// # }
+/// ```
 #[inline]
-pub fn parse_der_implicit<F>(i: &[u8], tag: BerTag, f: F) -> DerResult
+pub fn parse_der_implicit<'a, Tag, F>(i: &'a [u8], tag: Tag, f: F) -> DerResult<'a>
 where
-    F: for<'i> Fn(&'i [u8], &'_ BerObjectHeader, usize) -> BerResult<'i, BerObjectContent<'i>>,
+    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>>,
+    Tag: Into<BerTag>,
 {
     parse_ber_implicit(i, tag, f)
 }
@@ -322,6 +363,35 @@ pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
     }
 }
 
+/// Parse the next bytes as the content of a DER object (combinator)
+///
+/// Content type is *not* checked to match tag, caller is responsible of providing the correct tag
+///
+/// Caller is also responsible to check if parsing function consumed the expected number of
+/// bytes (`header.len`).
+///
+/// The arguments of the parse function are: `(input, ber_object_header, max_recursion)`.
+///
+/// Example: manually parsing header and content
+///
+/// ```
+/// # use der_parser::ber::{BerTag, MAX_RECURSION};
+/// # use der_parser::der::*;
+/// #
+/// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (i, header) = der_read_element_header(bytes).expect("parsing failed");
+/// let (rem, content) = parse_der_content(header.tag)(i, &header, MAX_RECURSION)
+///     .expect("parsing failed");
+/// #
+/// # assert_eq!(header.tag, BerTag::Integer);
+/// ```
+pub fn parse_der_content<'a>(
+    tag: BerTag,
+) -> impl Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>> {
+    move |i: &[u8], hdr: &BerObjectHeader, max_recursion: usize| {
+        der_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
+    }
+}
 // --------- end of parse_der_xxx functions ----------
 
 /// Parse the next bytes as the content of a DER object.
