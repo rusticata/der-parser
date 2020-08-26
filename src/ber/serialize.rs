@@ -181,7 +181,7 @@ pub fn ber_encode_object_raw<'a, 'b: 'a, 'c: 'a, W: Write + Default + AsRef<[u8]
 /// Note that the encoding will not check that the values of the `BerObject` fields are correct.
 /// The length is automatically calculated, and the field is ignored.
 ///
-/// `ContextSpecific` objects will be encoded as EXPLICIT.
+/// `Tagged` objects will be encoded as EXPLICIT.
 ///
 /// *This function is only available if the `serialize` feature is enabled.*
 #[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
@@ -204,7 +204,7 @@ impl<'a> BerObject<'a> {
     /// Note that the encoding will not check that the values of the `BerObject` fields are correct.
     /// The length is automatically calculated, and the field is ignored.
     ///
-    /// `ContextSpecific` objects will be encoded as EXPLICIT.
+    /// `Tagged` objects will be encoded as EXPLICIT.
     ///
     /// *This function is only available if the `serialize` feature is enabled.*
     #[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]

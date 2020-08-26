@@ -76,7 +76,13 @@ impl debug BerTag {
 }
 }
 
-/// Representation of a DER-encoded (X.690) object
+/// Representation of a BER-encoded (X.690) object
+///
+/// A BER object is composed of a header describing the object class, type and length,
+/// and the content.
+///
+/// Note that the content may sometimes not match the header tag (for ex when parsing IMPLICIT
+/// tagged values).
 #[derive(Debug, Clone, PartialEq)]
 pub struct BerObject<'a> {
     pub header: BerObjectHeader<'a>,
@@ -102,6 +108,7 @@ pub struct BerObjectHeader<'a> {
     pub raw_tag: Option<&'a [u8]>,
 }
 
+/// BER object content
 #[derive(Debug, Clone, PartialEq)]
 pub enum BerObjectContent<'a> {
     EndOfContent,
@@ -282,12 +289,13 @@ impl<'a> BerObjectHeader<'a> {
 
 impl<'a> BerObject<'a> {
     /// Build a BerObject from a header and content.
+    ///
     /// Note: values are not checked, so the tag can be different from the real content, or flags
     /// can be invalid.
-    pub fn from_header_and_content<'hdr>(
-        header: BerObjectHeader<'hdr>,
-        content: BerObjectContent<'hdr>,
-    ) -> BerObject<'hdr> {
+    pub fn from_header_and_content<'o>(
+        header: BerObjectHeader<'o>,
+        content: BerObjectContent<'o>,
+    ) -> BerObject<'o> {
         BerObject { header, content }
     }
 

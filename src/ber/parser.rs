@@ -770,6 +770,9 @@ pub fn parse_ber_bmpstring(i: &[u8]) -> BerResult {
 ///
 /// To support other return or error types, use
 /// [parse_ber_tagged_explicit_g](fn.parse_ber_tagged_explicit_g.html)
+///
+/// This function will never fail: if parsing content failed, the BER value `Optional(None)` is
+/// returned.
 pub fn parse_ber_explicit_optional<'a, F>(i: &'a [u8], tag: BerTag, f: F) -> BerResult<'a>
 where
     F: Fn(&[u8]) -> BerResult,
@@ -858,6 +861,9 @@ where
 /// can still be used).
 ///
 /// This combinator is used when parsing BER values, while keeping `BerObject` output only.
+///
+/// This function will never fail: if parsing content failed, the BER value `Optional(None)` is
+/// returned.
 ///
 /// ### Example
 ///

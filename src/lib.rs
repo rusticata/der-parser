@@ -17,10 +17,23 @@
 //! to ensure security and safety of this crate, including design (recursion limit, defensive
 //! programming), tests, and fuzzing. It also aims to be panic-free.
 //!
+//! Historically, this parser was intended for DER only, and BER support was added later. This may
+//! still reflect on some naming schemes, but has no other consequence: the `BerObject` and
+//! `DerObject` used in this crate are type aliases, so all functions are compatible.
+//!
+//! DER parsing functions have additional constraints verification, however.
+//!
+//! Serialization has also been added (see [Serialization](#serialization) )
+//!
 //! The code is available on [Github](https://github.com/rusticata/der-parser)
 //! and is part of the [Rusticata](https://github.com/rusticata) project.
 //!
 //! # DER parser design
+//!
+//! Parsing functions are inspired from `nom`, and follow the same interface. The most common
+//! return type is [`BerResult`](error/type.BerResult.html), that stores the remaining bytes and
+//! parsed [`BerObject`](ber/struct.BerObject.html), or an error. Reading the nom documentation may
+//! help understanding how to write parsers and use the output.
 //!
 //! There are two different approaches for parsing DER objects: reading the objects recursively as
 //! long as the tags are known, or specifying a description of the expected objects (generally from
@@ -59,9 +72,9 @@
 //!
 //! fn localparse_seq(i:&[u8]) -> BerResult {
 //!     parse_ber_sequence_defined(|data| {
-//!         let (data, a) = parse_ber_integer(data)?;
-//!         let (data, b) = parse_ber_integer(data)?;
-//!         Ok((data, vec![a, b]))
+//!         let (rem, a) = parse_ber_integer(data)?;
+//!         let (rem, b) = parse_ber_integer(data)?;
+//!         Ok((rem, vec![a, b]))
 //!     })(i)
 //! }
 //!
@@ -99,6 +112,17 @@
 //! ```
 //!
 //! Access to the raw value is possible using the `as_slice` method.
+//!
+//! ## Parsers, combinators, macros
+//!
+//! Some parsing tools (for ex for tagged objects) are available in different forms:
+//! - parsers: (regular) functions that takes input and create an object
+//! - combinators: functions that takes parsers (or combinators) as input, and return a function
+//!   (usually, the parser). They are used (combined) as building blocks to create more complex
+//!   parsers.
+//! - macros: these are generally previous (historic) versions of parsers, kept for compatibility.
+//!   They can sometime reduce the amount of code to write, but are hard to debug.
+//!   Parsers should be preferred when possible.
 //!
 //! ## Misc Notes
 //!
@@ -164,8 +188,9 @@ pub extern crate nom;
 pub extern crate num_bigint;
 
 // re-exports nom macros, so this crate's macros can be used without importing nom
+pub use nom::IResult;
 #[doc(hidden)]
-pub use nom::{alt, call, complete, do_parse, eof, many0, map, map_res, verify, IResult};
+pub use nom::{alt, call, complete, do_parse, eof, many0, map, map_res, verify};
 #[doc(hidden)]
 pub use rusticata_macros::{custom_check, flat_take};
 
