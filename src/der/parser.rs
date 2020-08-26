@@ -262,6 +262,10 @@ where
     parse_ber_explicit_optional(i, tag, f)
 }
 
+/// Parse an optional tagged object, applying function to get content
+///
+/// This function is deprecated, use
+/// [parse_der_explicit_optional](fn.parse_der_explicit_optional.html) instead.
 #[deprecated(
     since = "5.0",
     note = "Please use `parse_der_explicit_optional` instead"

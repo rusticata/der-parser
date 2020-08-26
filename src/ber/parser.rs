@@ -787,13 +787,10 @@ where
     }))(i)
 }
 
-/// Parse a tagged object, applying function to get content
+/// Parse an optional tagged object, applying function to get content
 ///
-/// This function returns a `BerObject`, trying to read content as generic BER objects.
-/// If parsing failed, return a tagged object containing `None`.
-///
-/// To support other return or error types, use
-/// [parse_ber_tagged_explicit](fn.parse_ber_tagged_explicit.html)
+/// This function is deprecated, use
+/// [parse_ber_explicit_optional](fn.parse_ber_explicit_optional.html) instead.
 #[deprecated(
     since = "5.0",
     note = "Please use `parse_ber_explicit_optional` instead"
