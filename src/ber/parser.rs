@@ -586,14 +586,29 @@ pub fn parse_ber_content<'a>(
 }
 
 /// Parse a BER object, expecting a value with specified tag
-pub fn parse_ber_with_tag(i: &[u8], tag: BerTag) -> BerResult {
-    do_parse! {
-        i,
-        hdr: ber_read_element_header >>
-            custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
-            o:   call!(ber_read_element_content_as, hdr.tag, hdr.len, hdr.is_constructed(), MAX_RECURSION) >>
-            ( BerObject::from_header_and_content(hdr, o) )
+///
+/// The object is parsed recursively, with a maximum depth of `MAX_RECURSION`.
+///
+/// ### Example
+///
+/// ```
+/// use der_parser::ber::BerTag;
+/// use der_parser::ber::parse_ber_with_tag;
+///
+/// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (_, obj) = parse_ber_with_tag(bytes, BerTag::Integer).expect("parsing failed");
+///
+/// assert_eq!(obj.header.tag, BerTag::Integer);
+/// ```
+pub fn parse_ber_with_tag<Tag: Into<BerTag>>(i: &[u8], tag: Tag) -> BerResult {
+    let tag = tag.into();
+    let (i, hdr) = ber_read_element_header(i)?;
+    if hdr.tag != tag {
+        return Err(nom::Err::Error(BerError::InvalidTag));
     }
+    let (i, content) =
+        ber_read_element_content_as(i, hdr.tag, hdr.len, hdr.is_constructed(), MAX_RECURSION)?;
+    Ok((i, BerObject::from_header_and_content(hdr, content)))
 }
 
 /// Read end of content marker
