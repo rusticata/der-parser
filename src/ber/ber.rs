@@ -350,8 +350,7 @@ impl<'a> BerObject<'a> {
     /// This can fail if the object is not an integer, or if it is too large.
     ///
     /// ```rust
-    /// # extern crate der_parser;
-    /// # use der_parser::ber::{BerObject,BerObjectContent};
+    /// # use der_parser::ber::BerObject;
     /// let der_int  = BerObject::from_int_slice(b"\x01\x00\x01");
     /// assert_eq!(
     ///     der_int.as_u64(),

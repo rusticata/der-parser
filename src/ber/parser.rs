@@ -629,7 +629,6 @@ pub fn parse_ber_bool(i: &[u8]) -> BerResult {
 /// # Examples
 ///
 /// ```rust
-/// # #[macro_use] extern crate der_parser;
 /// # extern crate nom;
 /// # use der_parser::ber::parse_ber_integer;
 /// # use der_parser::ber::{BerObject,BerObjectContent};
@@ -823,7 +822,6 @@ where
 /// ```rust
 /// # use der_parser::ber::*;
 /// # use der_parser::error::BerResult;
-/// use nom::combinator::map_res;
 /// #
 /// fn parse_int_implicit(i:&[u8]) -> BerResult<BerObject> {
 ///     parse_ber_implicit(

@@ -119,7 +119,6 @@ where
 /// ```rust
 /// # use der_parser::ber::*;
 /// # use der_parser::error::BerResult;
-/// use nom::combinator::map_res;
 /// #
 /// fn parse_int_implicit(i:&[u8]) -> BerResult<BerObject> {
 ///     parse_ber_tagged_implicit(
@@ -193,7 +192,6 @@ where
 /// ```rust
 /// # use der_parser::ber::*;
 /// # use der_parser::error::BerResult;
-/// use nom::combinator::map_res;
 /// #
 /// fn parse_int_implicit(i:&[u8]) -> BerResult<u32> {
 ///     parse_ber_tagged_implicit_g(

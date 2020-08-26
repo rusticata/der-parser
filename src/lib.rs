@@ -33,7 +33,6 @@
 //! DEFINED BY items.
 //!
 //! ```rust
-//! # #[macro_use] extern crate der_parser;
 //! use der_parser::parse_der;
 //!
 //! let bytes = [ 0x30, 0x0a,
@@ -55,7 +54,6 @@
 //! For example, to read a sequence containing two integers:
 //!
 //! ```rust
-//! # #[macro_use] extern crate der_parser;
 //! use der_parser::ber::*;
 //! use der_parser::error::BerResult;
 //!
@@ -93,7 +91,6 @@
 //!
 //! ```rust
 //! use der_parser::ber::*;
-//! use der_parser::error::BerResult;
 //!
 //! let data = &[0x02, 0x03, 0x01, 0x00, 0x01];
 //!
@@ -143,6 +140,10 @@
 // pragmas for doc
 #![deny(intra_doc_link_resolution_failure)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![doc(test(
+    no_crate_inject,
+    attr(deny(warnings/*, rust_2018_idioms*/), allow(dead_code, unused_variables))
+))]
 
 #[macro_use]
 mod macros;

@@ -537,7 +537,7 @@ macro_rules! parse_der_struct(
 ///
 /// ```rust
 /// # #[macro_use] extern crate der_parser;
-/// # use der_parser::ber::{parse_ber_integer, BerObject, BerTag};
+/// # use der_parser::ber::{BerObject, BerTag};
 /// # use der_parser::error::BerResult;
 /// #
 /// # fn main() {

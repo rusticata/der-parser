@@ -111,8 +111,6 @@ pub fn parse_der_bool(i: &[u8]) -> DerResult {
 /// # Examples
 ///
 /// ```rust
-/// # #[macro_use] extern crate der_parser;
-/// # extern crate nom;
 /// # use der_parser::der::{parse_der_integer, DerObject};
 /// # use der_parser::ber::BerObjectContent;
 /// let empty = &b""[..];
