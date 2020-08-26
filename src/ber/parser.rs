@@ -807,27 +807,50 @@ where
 /// Parse an implicit tagged object, applying function to read content
 ///
 /// Note: unlike explicit tagged functions, the callback must be a *content* parsing function
+///
+/// The built object will use the original header (and tag), so the content may not match the tag
+/// value.
+///
+/// For a combinator version, see [parse_ber_tagged_implicit](fn.parse_ber_tagged_implicit.html).
+///
+/// For a generic version (different output and error types), see
+/// [parse_ber_tagged_implicit_g](fn.parse_ber_tagged_implicit_g.html).
+///
+/// # Examples
+///
+/// The following parses `[3] IMPLICIT INTEGER` into a `BerObject`:
+///
+/// ```rust
+/// # use der_parser::ber::*;
+/// # use der_parser::error::BerResult;
+/// use nom::combinator::map_res;
+/// #
+/// fn parse_int_implicit(i:&[u8]) -> BerResult<BerObject> {
+///     parse_ber_implicit(
+///         i,
+///         3,
+///         parse_ber_content(BerTag::Integer),
+///     )
+/// }
+///
+/// # let bytes = &[0x83, 0x03, 0x01, 0x00, 0x01];
+/// let res = parse_int_implicit(bytes);
+/// # match res {
+/// #     Ok((rem, content)) => {
+/// #         assert!(rem.is_empty());
+/// #         assert_eq!(content.as_u32(), Ok(0x10001));
+/// #     },
+/// #     _ => assert!(false)
+/// # }
+/// ```
 /// (not an object)
-pub fn parse_ber_implicit<'a, F>(i: &'a [u8], tag: BerTag, f: F) -> BerResult<'a>
+#[inline]
+pub fn parse_ber_implicit<'a, Tag, F>(i: &'a [u8], tag: Tag, f: F) -> BerResult<'a>
 where
-    F: for<'i> Fn(&'i [u8], &'_ BerObjectHeader, usize) -> BerResult<'i, BerObjectContent<'i>>,
+    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>>,
+    Tag: Into<BerTag>,
 {
     parse_ber_tagged_implicit(tag, f)(i)
-    // alt! {
-    //     i,
-    //     complete!(do_parse!(
-    //         hdr:     ber_read_element_header >>
-    //                  custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
-    //         content: call!(f, tag, hdr.len) >>
-    //         (
-    //             Some(BerObject::from_header_and_content(
-    //                 hdr,
-    //                 BerObjectContent::Tagged(hdr.class,tag,Box::new(BerObject::from_obj(content)))
-    //             )
-    //         ))
-    //     )) |
-    //     value!(Ok((i, None)))
-    // }
 }
 
 /// Combinator for building optional BER values

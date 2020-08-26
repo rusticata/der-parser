@@ -2,7 +2,13 @@ use crate::ber::*;
 use crate::error::*;
 use nom::{Err, IResult};
 
-/// Read a TAGGED EXPLICIT value
+/// Read a TAGGED EXPLICIT value (combinator)
+///
+/// The built object will use the outer header (and tag), and contains a `Tagged` object
+/// with class, value and content.
+///
+/// For a generic version (different output and error types), see
+/// [parse_ber_tagged_explicit_g](fn.parse_ber_tagged_explicit_g.html).
 ///
 /// The following parses `[2] EXPLICIT INTEGER`:
 ///
@@ -44,6 +50,32 @@ where
     })
 }
 
+/// Read a TAGGED EXPLICIT value (generic version)
+///
+/// The following parses `[2] EXPLICIT INTEGER`:
+///
+/// ```rust
+/// # use der_parser::ber::*;
+/// # use der_parser::error::BerResult;
+/// #
+/// fn parse_int_explicit(i:&[u8]) -> BerResult<u32> {
+///     parse_ber_tagged_explicit_g(2, move |hdr, content| {
+///         let (rem, obj) = parse_ber_integer(content)?;
+///         let value = obj.as_u32()?;
+///         Ok((rem, value))
+///    })(i)
+/// }
+///
+/// # let bytes = &[0xa2, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
+/// let res = parse_int_explicit(bytes);
+/// # match res {
+/// #     Ok((rem,val)) => {
+/// #         assert!(rem.is_empty());
+/// #         assert_eq!(val, 0x10001);
+/// #     },
+/// #     _ => assert!(false)
+/// # }
+/// ```
 pub fn parse_ber_tagged_explicit_g<'a, Tag, Output, F, E>(
     tag: Tag,
     f: F,
@@ -70,7 +102,15 @@ where
     })
 }
 
-/// Read a TAGGED IMPLICIT value (function version)
+/// Read a TAGGED IMPLICIT value (combinator)
+///
+/// Parse a TAGGED IMPLICIT value, given the expected tag, and the content parsing function.
+///
+/// The built object will use the original header (and tag), so the content may not match the tag
+/// value.
+///
+/// For a generic version (different output and error types), see
+/// [parse_ber_tagged_implicit_g](fn.parse_ber_tagged_implicit_g.html).
 ///
 /// # Examples
 ///
@@ -127,26 +167,6 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_implicit_defined<'a, Tag, Output, F, E>(
-    tag: Tag,
-    f: F,
-) -> impl Fn(&'a [u8]) -> IResult<&[u8], Output, E>
-where
-    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> IResult<&'a [u8], Output, E>,
-    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
-    Tag: Into<BerTag>,
-{
-    let tag = tag.into();
-    parse_ber_container(move |hdr, i| {
-        if hdr.tag != tag {
-            return Err(Err::Error(BerError::InvalidTag.into()));
-        }
-        // XXX MAX_RECURSION should not be used, it resets the depth counter
-        f(i, &hdr, MAX_RECURSION)
-        // trailing bytes are ignored
-    })
-}
-
 pub fn parse_ber_tagged_implicit<'a, Tag, F>(tag: Tag, f: F) -> impl Fn(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>>,
@@ -157,11 +177,45 @@ where
         let (rem, content) = f(i, &hdr, depth)?;
         // trailing bytes are ignored
         let obj = BerObject::from_header_and_content(hdr, content);
-        // XXX wrong header here?
         Ok((rem, obj))
     })
 }
 
+/// Read a TAGGED IMPLICIT value (generic version)
+///
+/// Parse a TAGGED IMPLICIT value, given the expected tag, and the content parsing function.
+///
+/// # Examples
+///
+/// The following parses `[2] IMPLICIT INTEGER` into an `u32`, raising an error if the integer is
+/// too large:
+///
+/// ```rust
+/// # use der_parser::ber::*;
+/// # use der_parser::error::BerResult;
+/// use nom::combinator::map_res;
+/// #
+/// fn parse_int_implicit(i:&[u8]) -> BerResult<u32> {
+///     parse_ber_tagged_implicit_g(
+///         2,
+///         |content, hdr, depth| {
+///             let (rem, obj_content) = parse_ber_content(BerTag::Integer)(content, &hdr, depth)?;
+///             let value = obj_content.as_u32()?;
+///             Ok((rem, value))
+///         }
+///     )(i)
+/// }
+///
+/// # let bytes = &[0x82, 0x03, 0x01, 0x00, 0x01];
+/// let res = parse_int_implicit(bytes);
+/// # match res {
+/// #     Ok((rem, val)) => {
+/// #         assert!(rem.is_empty());
+/// #         assert_eq!(val, 0x10001);
+/// #     },
+/// #     _ => assert!(false)
+/// # }
+/// ```
 pub fn parse_ber_tagged_implicit_g<'a, Tag, Output, F, E>(
     tag: Tag,
     f: F,
