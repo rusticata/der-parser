@@ -90,7 +90,7 @@ pub struct BerObject<'a> {
 }
 
 /// BER object header (identifier and length)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct BerObjectHeader<'a> {
     /// Object class: universal, application, context-specific, or private
     pub class: BerClass,
@@ -351,7 +351,7 @@ impl<'a> BerObject<'a> {
         note = "please use `obj.header` or `obj.header.clone()` instead"
     )]
     pub fn to_header(&self) -> BerObjectHeader {
-        self.header
+        self.header.clone()
     }
 
     /// Attempt to read integer value from DER object.

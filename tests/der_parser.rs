@@ -281,7 +281,7 @@ fn test_der_explicit() {
     let header = BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3)
         .with_raw_tag(Some(&[0xa0]));
     let expected = DerObject {
-        header,
+        header: header.clone(),
         content: BerObjectContent::Optional(Some(Box::new(BerObject::from_header_and_content(
             header,
             BerObjectContent::Tagged(

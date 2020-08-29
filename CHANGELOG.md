@@ -18,6 +18,7 @@
 - Some checks (for ex. tags in constructed objects) now return specific errors (`InvalidTag`)
   instead of generic errors (`Verify`)
 - Refactor BerObject for parsing of tagged and optional values
+- Remove Copy trait from BerObjectHeader, copy is non-trivial and should be explicit
 
 ### Added
 

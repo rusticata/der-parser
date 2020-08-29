@@ -42,9 +42,10 @@ where
     let tag = tag.into();
     parse_ber_tagged_explicit_g(tag, move |hdr, content| {
         let (rem, obj) = f(content)?;
+        let class = hdr.class;
         let obj2 = BerObject::from_header_and_content(
             hdr,
-            BerObjectContent::Tagged(hdr.class, tag, Box::new(obj)),
+            BerObjectContent::Tagged(class, tag, Box::new(obj)),
         );
         Ok((rem, obj2))
     })
@@ -93,7 +94,7 @@ where
         if hdr.tag != tag {
             return Err(Err::Error(BerError::InvalidTag.into()));
         }
-        // X.690 8.14.2: if implificit tagging was not used, the encoding shall be constructed
+        // X.690 8.14.2: if implicit tagging was not used, the encoding shall be constructed
         if !hdr.is_constructed() {
             return Err(Err::Error(BerError::ConstructExpected.into()));
         }

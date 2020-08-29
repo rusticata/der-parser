@@ -794,10 +794,8 @@ where
 {
     parse_ber_optional(parse_ber_tagged_explicit_g(tag, |hdr, content| {
         let (rem, obj) = f(content)?;
-        let tagged = BerObject::from_header_and_content(
-            hdr,
-            BerObjectContent::Tagged(hdr.class, hdr.tag, Box::new(obj)),
-        );
+        let content = BerObjectContent::Tagged(hdr.class, hdr.tag, Box::new(obj));
+        let tagged = BerObject::from_header_and_content(hdr, content);
         Ok((rem, tagged))
     }))(i)
 }
@@ -950,10 +948,8 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
         BerClass::Universal | BerClass::Private => (),
         _ => {
             let (rem, content) = ber_get_object_content(rem, &hdr)?;
-            let obj = BerObject::from_header_and_content(
-                hdr,
-                BerObjectContent::Unknown(hdr.tag, content),
-            );
+            let content = BerObjectContent::Unknown(hdr.tag, content);
+            let obj = BerObject::from_header_and_content(hdr, content);
             return Ok((rem, obj));
         }
     }
@@ -961,10 +957,8 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => {
             let (rem, content) = ber_get_object_content(rem, &hdr)?;
-            let obj = BerObject::from_header_and_content(
-                hdr,
-                BerObjectContent::Unknown(hdr.tag, content),
-            );
+            let content = BerObjectContent::Unknown(hdr.tag, content);
+            let obj = BerObject::from_header_and_content(hdr, content);
             Ok((rem, obj))
         }
         Err(e) => Err(e),
