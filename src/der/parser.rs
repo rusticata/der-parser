@@ -281,7 +281,7 @@ where
 /// This function is deprecated, use
 /// [parse_der_explicit_optional](fn.parse_der_explicit_optional.html) instead.
 #[deprecated(
-    since = "5.0",
+    since = "5.0.0",
     note = "Please use `parse_der_explicit_optional` instead"
 )]
 #[inline]
