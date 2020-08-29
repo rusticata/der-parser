@@ -788,7 +788,7 @@ pub fn parse_ber_bmpstring(i: &[u8]) -> BerResult {
 ///
 /// This function will never fail: if parsing content failed, the BER value `Optional(None)` is
 /// returned.
-pub fn parse_ber_explicit_optional<'a, F>(i: &'a [u8], tag: BerTag, f: F) -> BerResult<'a>
+pub fn parse_ber_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
 where
     F: Fn(&[u8]) -> BerResult,
 {
