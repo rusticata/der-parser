@@ -73,7 +73,7 @@
 //! fn localparse_seq(i:&[u8]) -> BerResult {
 //!     parse_ber_sequence_defined(|data| {
 //!         let (rem, a) = parse_ber_integer(data)?;
-//!         let (rem, b) = parse_ber_integer(data)?;
+//!         let (rem, b) = parse_ber_integer(rem)?;
 //!         Ok((rem, vec![a, b]))
 //!     })(i)
 //! }
@@ -82,7 +82,11 @@
 //!               0x02, 0x03, 0x01, 0x00, 0x01,
 //!               0x02, 0x03, 0x01, 0x00, 0x00,
 //! ];
-//! let parsed = localparse_seq(&bytes);
+//!
+//! let (_, parsed) = localparse_seq(&bytes).expect("parsing failed");
+//!
+//! assert_eq!(parsed[0].as_u64(), Ok(65537));
+//! assert_eq!(parsed[1].as_u64(), Ok(65536));
 //! ```
 //!
 //! All functions return a [`BerResult`](error/type.BerResult.html) object: the parsed
