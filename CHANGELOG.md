@@ -16,6 +16,7 @@
 - Add generic error type to structured parsing functions
 - Add function to parse a generic BER container object
 - Document that trailing bytes from SEQUENCE/SET are ignored
+- Deprecate functions `parse_{ber,der}_explicit` (use `_optional`)
 
 ## 4.0.2
 

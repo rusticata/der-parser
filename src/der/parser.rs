@@ -253,12 +253,35 @@ pub fn parse_der_bmpstring(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::BmpString)
 }
 
+/// Parse an optional tagged object, applying function to get content
+///
+/// This function returns a `DerObject`, trying to read content as generic DER objects.
+/// If parsing failed, return an optional object containing `None`.
+///
+/// This function will never fail: if parsing content failed, the BER value `Optional(None)` is
+/// returned.
 #[inline]
-pub fn parse_der_explicit<F>(i: &[u8], tag: BerTag, f: F) -> DerResult
+pub fn parse_der_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> DerResult
 where
     F: Fn(&[u8]) -> DerResult,
 {
-    parse_ber_explicit(i, tag, f)
+    parse_ber_explicit_optional(i, tag, f)
+}
+
+/// Parse an optional tagged object, applying function to get content
+///
+/// This function is deprecated, use
+/// [parse_der_explicit_optional](fn.parse_der_explicit_optional.html) instead.
+#[deprecated(
+    since = "4.1.0",
+    note = "Please use `parse_der_explicit_optional` instead"
+)]
+#[inline]
+pub fn parse_der_explicit<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
+where
+    F: Fn(&[u8]) -> BerResult,
+{
+    parse_der_explicit_optional(i, tag, f)
 }
 
 #[inline]
