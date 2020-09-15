@@ -1,4 +1,4 @@
-use crate::ber::{bytes_to_u64, bitstring_to_u64};
+use crate::ber::{bitstring_to_u64, bytes_to_u64};
 use crate::error::BerError;
 use crate::oid::Oid;
 use rusticata_macros::newtype_enum;
@@ -436,7 +436,9 @@ impl<'a> BerObjectContent<'a> {
     pub fn as_u64(&self) -> Result<u64, BerError> {
         match self {
             BerObjectContent::Integer(i) => bytes_to_u64(i),
-            BerObjectContent::BitString(ignored_bits, data) => bitstring_to_u64(*ignored_bits as usize, data),
+            BerObjectContent::BitString(ignored_bits, data) => {
+                bitstring_to_u64(*ignored_bits as usize, data)
+            }
             BerObjectContent::Enum(i) => Ok(*i as u64),
             _ => Err(BerError::BerTypeError),
         }
@@ -451,13 +453,15 @@ impl<'a> BerObjectContent<'a> {
                     Ok(x as u32)
                 }
             }),
-            BerObjectContent::BitString(ignored_bits, data) => bitstring_to_u64(*ignored_bits as usize, data).and_then(|x| {
-                if x > u64::from(std::u32::MAX) {
-                    Err(BerError::IntegerTooLarge)
-                } else {
-                    Ok(x as u32)
-                }
-            }),
+            BerObjectContent::BitString(ignored_bits, data) => {
+                bitstring_to_u64(*ignored_bits as usize, data).and_then(|x| {
+                    if x > u64::from(std::u32::MAX) {
+                        Err(BerError::IntegerTooLarge)
+                    } else {
+                        Ok(x as u32)
+                    }
+                })
+            }
             BerObjectContent::Enum(i) => {
                 if *i > u64::from(std::u32::MAX) {
                     Err(BerError::IntegerTooLarge)
@@ -736,9 +740,13 @@ mod tests {
     fn test_ber_as_u64_bitstring() {
         let (_, ber_obj) = parse_ber_bitstring(b"\x03\x04\x06\x6e\x5d\xc0").unwrap();
         assert_eq!(ber_obj.as_u64(), Ok(0b011011100101110111));
-        
-        let (_, ber_obj_with_nonzero_padding) = parse_ber_bitstring(b"\x03\x04\x06\x6e\x5d\xe0").unwrap();
-        assert_eq!(ber_obj_with_nonzero_padding.as_u64(), Ok(0b011011100101110111));
+
+        let (_, ber_obj_with_nonzero_padding) =
+            parse_ber_bitstring(b"\x03\x04\x06\x6e\x5d\xe0").unwrap();
+        assert_eq!(
+            ber_obj_with_nonzero_padding.as_u64(),
+            Ok(0b011011100101110111)
+        );
     }
 
     #[test]
