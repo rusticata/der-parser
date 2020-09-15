@@ -130,6 +130,21 @@ pub fn parse_der_integer(i: &[u8]) -> DerResult {
 }
 
 /// Read an bitstring value
+///
+/// To access the content as plain bytes, you will have to
+/// interprete the resulting tuple which will contain in
+/// its first item the number of padding bits left at
+/// the end of the bit string, and in its second item
+/// a `BitStringObject` structure which will, in its sole
+/// structure field called `data`, contain a byte slice
+/// representing the value of the bit string which can
+/// be interpreted as a big-endian value with the padding
+/// bits on the right (as in ASN.1 raw BER or DER encoding).
+///
+/// To access the content as an integer, use the [`as_u64`](struct.BerObject.html#method.as_u64)
+/// or [`as_u32`](struct.BerObject.html#method.as_u32) methods.
+/// Remember that a BER bit string has unlimited size, so these methods return `Result` or `Option`
+/// objects.
 pub fn parse_der_bitstring(i: &[u8]) -> DerResult {
     do_parse! {
         i,

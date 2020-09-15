@@ -26,6 +26,27 @@ pub(crate) fn bytes_to_u64(s: &[u8]) -> Result<u64, BerError> {
     Ok(u)
 }
 
+/// Try to parse an input bit string as u64.
+///
+/// Note: this is for the primitive BER/DER encoding only, the
+/// constructed BER encoding for BIT STRING does not seem to be
+/// supported at all by the library currently.
+#[inline]
+pub(crate) fn bitstring_to_u64(padding_bits: usize, data: &BitStringObject) -> Result<u64, BerError> {
+    let raw_bytes = data.data;
+    let bit_size = raw_bytes.len() * 8 - padding_bits;
+    if bit_size > 64 {
+        return Err(BerError::IntegerTooLarge);
+    }
+    let mut resulting_integer: u64 = 0;
+    for &c in raw_bytes {
+        resulting_integer <<= 8;
+        resulting_integer |= c as u64;
+    }
+    Ok(resulting_integer >> padding_bits)
+}
+
+
 pub(crate) fn parse_identifier(i: &[u8]) -> BerResult<(u8, u8, u32, &[u8])> {
     if i.is_empty() {
         Err(Err::Incomplete(Needed::Size(1)))
