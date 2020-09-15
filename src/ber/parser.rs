@@ -32,7 +32,10 @@ pub(crate) fn bytes_to_u64(s: &[u8]) -> Result<u64, BerError> {
 /// constructed BER encoding for BIT STRING does not seem to be
 /// supported at all by the library currently.
 #[inline]
-pub(crate) fn bitstring_to_u64(padding_bits: usize, data: &BitStringObject) -> Result<u64, BerError> {
+pub(crate) fn bitstring_to_u64(
+    padding_bits: usize,
+    data: &BitStringObject,
+) -> Result<u64, BerError> {
     let raw_bytes = data.data;
     let bit_size = raw_bytes.len() * 8 - padding_bits;
     if bit_size > 64 {
@@ -45,7 +48,6 @@ pub(crate) fn bitstring_to_u64(padding_bits: usize, data: &BitStringObject) -> R
     }
     Ok(resulting_integer >> padding_bits)
 }
-
 
 pub(crate) fn parse_identifier(i: &[u8]) -> BerResult<(u8, u8, u32, &[u8])> {
     if i.is_empty() {
