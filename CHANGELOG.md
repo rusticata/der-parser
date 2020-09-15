@@ -2,6 +2,8 @@
 
 ## [Unreleased][unreleased]
 
+- Implement the `as_u64` and `as_u32` methods for BerObjects with contents of type `BerObjectContent::BitString``
+
 ### Thanks
 
 ### Added
