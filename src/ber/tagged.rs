@@ -82,7 +82,7 @@ pub fn parse_ber_tagged_implicit<'a, T, F, E>(
     f: F,
 ) -> impl Fn(&'a [u8]) -> IResult<&[u8], T, E>
 where
-    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> IResult<&'a [u8], T, E>,
+    F: Fn(&'a [u8], &'_ BerObjectHeader<'a>, usize) -> IResult<&'a [u8], T, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {
