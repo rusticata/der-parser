@@ -228,6 +228,13 @@ pub fn parse_der_numericstring(i: &[u8]) -> DerResult {
 /// Read a printable string value. The content is verified to
 /// contain only the allowed characters.
 #[inline]
+pub fn visiblestring(i: &[u8]) -> DerResult {
+    parse_der_with_tag(i, BerTag::VisibleString)
+}
+
+/// Read a printable string value. The content is verified to
+/// contain only the allowed characters.
+#[inline]
 pub fn parse_der_printablestring(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::PrintableString)
 }
@@ -236,6 +243,12 @@ pub fn parse_der_printablestring(i: &[u8]) -> DerResult {
 #[inline]
 pub fn parse_der_t61string(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::T61String)
+}
+
+/// Read a Videotex string value
+#[inline]
+pub fn parse_der_videotexstring(i: &[u8]) -> DerResult {
+    parse_der_with_tag(i, BerTag::VideotexString)
 }
 
 /// Read an IA5 string value. The content is verified to be ASCII.
@@ -256,6 +269,18 @@ pub fn parse_der_generalizedtime(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::GeneralizedTime)
 }
 
+/// Read a ObjectDescriptor value
+#[inline]
+pub fn parse_der_objectdescriptor(i: &[u8]) -> DerResult {
+    parse_der_with_tag(i, BerTag::ObjDescriptor)
+}
+
+/// Read a GraphicString value
+#[inline]
+pub fn parse_der_graphicstring(i: &[u8]) -> DerResult {
+    parse_der_with_tag(i, BerTag::GraphicString)
+}
+
 /// Read a GeneralString value
 #[inline]
 pub fn parse_der_generalstring(i: &[u8]) -> DerResult {
@@ -266,6 +291,12 @@ pub fn parse_der_generalstring(i: &[u8]) -> DerResult {
 #[inline]
 pub fn parse_der_bmpstring(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, BerTag::BmpString)
+}
+
+/// Read a UniversalString value
+#[inline]
+pub fn parse_der_universalstring(i: &[u8]) -> DerResult {
+    parse_der_with_tag(i, BerTag::UniversalString)
 }
 
 /// Parse an optional tagged object, applying function to get content
@@ -373,11 +404,16 @@ pub fn der_read_element_content_as(
             return der_read_content_bitstring(i, len);
         }
         BerTag::NumericString
+        | BerTag::VisibleString
         | BerTag::PrintableString
         | BerTag::Ia5String
         | BerTag::Utf8String
         | BerTag::T61String
+        | BerTag::VideotexString
         | BerTag::BmpString
+        | BerTag::UniversalString
+        | BerTag::ObjDescriptor
+        | BerTag::GraphicString
         | BerTag::GeneralString => {
             der_constraint_fail_if!(i, constructed);
         }

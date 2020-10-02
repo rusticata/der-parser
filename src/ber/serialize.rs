@@ -130,11 +130,16 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         }
         BerObjectContent::OID(oid) | BerObjectContent::RelativeOID(oid) => ber_encode_oid(oid)(out),
         BerObjectContent::NumericString(s)
+        | BerObjectContent::VisibleString(s)
         | BerObjectContent::PrintableString(s)
         | BerObjectContent::IA5String(s)
         | BerObjectContent::UTF8String(s) => slice(s)(out),
         BerObjectContent::T61String(s)
+        | BerObjectContent::VideotexString(s)
         | BerObjectContent::BmpString(s)
+        | BerObjectContent::UniversalString(s)
+        | BerObjectContent::ObjectDescriptor(s)
+        | BerObjectContent::GraphicString(s)
         | BerObjectContent::GeneralString(s)
         | BerObjectContent::UTCTime(s)
         | BerObjectContent::GeneralizedTime(s) => slice(s)(out),

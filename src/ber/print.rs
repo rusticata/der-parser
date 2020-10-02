@@ -1,6 +1,7 @@
 use crate::ber::BitStringObject;
 use crate::ber::{BerObject, BerObjectContent, BerTag};
 use std::fmt;
+use std::iter::FromIterator;
 use std::str;
 
 use rusticata_macros::debug;
@@ -62,6 +63,28 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
                 Err(e) => writeln!(f, "{}({:?}) <error decoding utf8 string: {:?}>", ty, s, e),
             }
         }
+        fn print_utf16_string_with_type(f: &mut fmt::Formatter, s: &[u8], ty: &str) -> fmt::Result {
+            let chars: Vec<u16> = s
+                .chunks_exact(2)
+                .map(|a| u16::from_be_bytes([a[0], a[1]]))
+                .collect();
+
+            match String::from_utf16(&chars) {
+                Ok(b)  => writeln!(f, "{}(\"{}\")", ty, b),
+                Err(e) => writeln!(f, "{}({:?}) <error decoding utf16 string: {:?}>", ty, s, e),
+            }
+        }
+        fn print_utf32_string_with_type(f: &mut fmt::Formatter, s: &[u8], ty: &str) -> fmt::Result {
+            let chars: Option<Vec<char>> = s
+                .chunks_exact(4)
+                .map(|a| std::char::from_u32(u32::from_be_bytes([a[0], a[1], a[2], a[3]])))
+                .collect();
+
+            match chars {
+                Some(b)  => writeln!(f, "{}(\"{}\")", ty, String::from_iter(b)),
+                None => writeln!(f, "{}({:?}) <error decoding utf32 string>", ty, s),
+            }
+        }
         match self.obj.content {
             BerObjectContent::EndOfContent           => writeln!(f, "EndOfContent"),
             BerObjectContent::Boolean(b)             => writeln!(f, "Boolean({:?})", b),
@@ -75,12 +98,17 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
                                                      => writeln!(f, "BitString({},{:?})", u, debug::HexSlice(v)),
             BerObjectContent::GeneralizedTime(s)     => print_utf8_string_with_type(f, s, "GeneralizedTime"),
             BerObjectContent::UTCTime(s)             => print_utf8_string_with_type(f, s, "UTCTime"),
+            BerObjectContent::VisibleString(s)       => writeln!(f, "VisibleString(\"{}\")", s),
             BerObjectContent::PrintableString(s)     => writeln!(f, "PrintableString(\"{}\")", s),
             BerObjectContent::NumericString(s)       => writeln!(f, "NumericString(\"{}\")", s),
             BerObjectContent::UTF8String(s)          => writeln!(f, "UTF8String(\"{}\")", s),
             BerObjectContent::IA5String(s)           => writeln!(f, "IA5String(\"{}\")", s),
-            BerObjectContent::T61String(s)           => print_utf8_string_with_type(f, s, "T61String"),
-            BerObjectContent::BmpString(s)           => print_utf8_string_with_type(f, s, "BmpString"),
+            BerObjectContent::T61String(v)           => writeln!(f, "T61String({:?})", debug::HexSlice(v)),
+            BerObjectContent::VideotexString(v)      => writeln!(f, "VideotexString({:?})", debug::HexSlice(v)),
+            BerObjectContent::BmpString(s)           => print_utf16_string_with_type(f, s, "BmpString"),
+            BerObjectContent::UniversalString(s)     => print_utf32_string_with_type(f, s, "UniversalString"),
+            BerObjectContent::ObjectDescriptor(s)    => print_utf8_string_with_type(f, s, "ObjectDescriptor"),
+            BerObjectContent::GraphicString(s)       => print_utf8_string_with_type(f, s, "GraphicString"),
             BerObjectContent::GeneralString(s)       => print_utf8_string_with_type(f, s, "GeneralString"),
             BerObjectContent::ContextSpecific(n,ref o) => {
                 let new_indent = self.indent + self.inc;
