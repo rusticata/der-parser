@@ -274,10 +274,7 @@ fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     })
 }
 
-fn ber_read_content_visiblestring<'a>(
-    i: &'a [u8],
-    len: usize, 
-) -> BerResult<BerObjectContent<'a>> {
+fn ber_read_content_visiblestring<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
     // Argument must be a reference, because of the .iter().all(F) call below
     #[allow(clippy::trivially_copy_pass_by_ref)]
     fn is_visible(b: &u8) -> bool {
@@ -350,14 +347,39 @@ fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjec
     })(i)
 }
 
-#[inline]
-fn ber_read_content_utctime(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::UTCTime)(i)
+fn ber_read_content_utctime<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
+    // Argument must be a reference, because of the .iter().all(F) call below
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    fn is_visible(b: &u8) -> bool {
+        0x20 <= *b && *b <= 0x7f
+    }
+    map_res!(i, take!(len), |bytes: &'a [u8]| {
+        if !bytes.iter().all(is_visible) {
+            return Err(BerError::BerValueError);
+        }
+        std::str::from_utf8(bytes)
+            .map(|s| BerObjectContent::UTCTime(s))
+            .map_err(|_| BerError::BerValueError)
+    })
 }
 
-#[inline]
-fn ber_read_content_generalizedtime(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::GeneralizedTime)(i)
+fn ber_read_content_generalizedtime<'a>(
+    i: &'a [u8],
+    len: usize,
+) -> BerResult<BerObjectContent<'a>> {
+    // Argument must be a reference, because of the .iter().all(F) call below
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    fn is_visible(b: &u8) -> bool {
+        0x20 <= *b && *b <= 0x7f
+    }
+    map_res!(i, take!(len), |bytes: &'a [u8]| {
+        if !bytes.iter().all(is_visible) {
+            return Err(BerError::BerValueError);
+        }
+        std::str::from_utf8(bytes)
+            .map(|s| BerObjectContent::GeneralizedTime(s))
+            .map_err(|_| BerError::BerValueError)
+    })
 }
 
 #[inline]

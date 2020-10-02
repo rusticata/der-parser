@@ -130,6 +130,8 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         }
         BerObjectContent::OID(oid) | BerObjectContent::RelativeOID(oid) => ber_encode_oid(oid)(out),
         BerObjectContent::NumericString(s)
+        | BerObjectContent::UTCTime(s)
+        | BerObjectContent::GeneralizedTime(s)
         | BerObjectContent::VisibleString(s)
         | BerObjectContent::PrintableString(s)
         | BerObjectContent::IA5String(s)
@@ -140,9 +142,7 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         | BerObjectContent::UniversalString(s)
         | BerObjectContent::ObjectDescriptor(s)
         | BerObjectContent::GraphicString(s)
-        | BerObjectContent::GeneralString(s)
-        | BerObjectContent::UTCTime(s)
-        | BerObjectContent::GeneralizedTime(s) => slice(s)(out),
+        | BerObjectContent::GeneralString(s) => slice(s)(out),
         BerObjectContent::Sequence(v) | BerObjectContent::Set(v) => ber_encode_sequence(&v)(out),
         // best we can do is tagged-explicit, but we don't know
         BerObjectContent::ContextSpecific(_tag, opt_inner) => {

@@ -96,8 +96,8 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
             BerObjectContent::OctetString(v)         => writeln!(f, "OctetString({:?})", debug::HexSlice(v)),
             BerObjectContent::BitString(u,BitStringObject{data:v})
                                                      => writeln!(f, "BitString({},{:?})", u, debug::HexSlice(v)),
-            BerObjectContent::GeneralizedTime(s)     => print_utf8_string_with_type(f, s, "GeneralizedTime"),
-            BerObjectContent::UTCTime(s)             => print_utf8_string_with_type(f, s, "UTCTime"),
+            BerObjectContent::GeneralizedTime(s)     => writeln!(f, "GeneralizedTime(\"{}\")", s),
+            BerObjectContent::UTCTime(s)             => writeln!(f, "UTCTime(\"{}\")", s),
             BerObjectContent::VisibleString(s)       => writeln!(f, "VisibleString(\"{}\")", s),
             BerObjectContent::PrintableString(s)     => writeln!(f, "PrintableString(\"{}\")", s),
             BerObjectContent::NumericString(s)       => writeln!(f, "NumericString(\"{}\")", s),

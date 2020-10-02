@@ -109,8 +109,8 @@ pub enum BerObjectContent<'a> {
     Sequence(Vec<BerObject<'a>>),
     Set(Vec<BerObject<'a>>),
 
-    UTCTime(&'a [u8]),
-    GeneralizedTime(&'a [u8]),
+    UTCTime(&'a str),
+    GeneralizedTime(&'a str),
 
     ObjectDescriptor(&'a [u8]),
     GraphicString(&'a [u8]),
@@ -360,9 +360,9 @@ impl<'a> BerObject<'a> {
     /// Attempt to get the content from a DER object, as a str.
     /// This can fail if the object does not contain a string type.
     ///
-    /// Only NumericString, VisibleString, PrintableString, UTF8String and
-    /// IA5String are considered here. Other string types can be read using
-    /// `as_slice`.
+    /// Only NumericString, VisibleString, UTCTime, GeneralizedTime,
+    /// PrintableString, UTF8String and IA5String are considered here. Other
+    /// string types can be read using `as_slice`.
     pub fn as_str(&self) -> Result<&'a str, BerError> {
         self.content.as_str()
     }
@@ -541,6 +541,8 @@ impl<'a> BerObjectContent<'a> {
     pub fn as_slice(&self) -> Result<&'a [u8],BerError> {
         match *self {
             BerObjectContent::NumericString(s) |
+            BerObjectContent::GeneralizedTime(s) |
+            BerObjectContent::UTCTime(s) |
             BerObjectContent::VisibleString(s) |
             BerObjectContent::PrintableString(s) |
             BerObjectContent::UTF8String(s) |
@@ -564,6 +566,8 @@ impl<'a> BerObjectContent<'a> {
     pub fn as_str(&self) -> Result<&'a str,BerError> {
         match *self {
             BerObjectContent::NumericString(s) |
+            BerObjectContent::GeneralizedTime(s) |
+            BerObjectContent::UTCTime(s) |
             BerObjectContent::VisibleString(s) |
             BerObjectContent::PrintableString(s) |
             BerObjectContent::UTF8String(s) |
