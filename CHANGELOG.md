@@ -3,6 +3,7 @@
 ## [Unreleased][unreleased]
 
 - Implement the `as_u64` and `as_u32` methods for BerObjects with contents of type `BerObjectContent::BitString``
+- Fix the bug that caused OIDs longer than two subidentifiers which started by subidentifiers "0.0" ("itu-t recommenation") not to be decoded correctly
 
 ### Thanks
 
