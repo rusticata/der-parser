@@ -420,7 +420,6 @@ mod tests {
         assert_eq!(oid_ref, oid);
     }
 
-
     /// This test case will test an OID beginning with two zero
     /// subidentifiers (literally: "itu-t recommendation"), as
     /// used for example in the TCAP (Q.773) specification.
