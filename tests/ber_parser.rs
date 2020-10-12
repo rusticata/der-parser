@@ -48,6 +48,46 @@ fn test_seq_indefinite_length() {
 }
 
 #[test]
+fn test_ber_set_of() {
+    let empty = &b""[..];
+    let bytes = [
+        0x31, 0x0a, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00,
+    ];
+    let expected = BerObject::from_set(vec![
+        BerObject::from_int_slice(b"\x01\x00\x01"),
+        BerObject::from_int_slice(b"\x01\x00\x00"),
+    ]);
+    fn parser(i: &[u8]) -> BerResult {
+        parse_ber_set_of(parse_ber_integer)(i)
+    };
+    assert_eq!(parser(&bytes), Ok((empty, expected)));
+    // empty input should raise error (could not read set header)
+    assert!(parser(&[]).is_err());
+    // empty set is ok (returns empty vec)
+    assert!(parser(&[0x31, 0x00]).is_ok());
+}
+
+#[test]
+fn test_ber_set_of_v() {
+    let empty = &b""[..];
+    let bytes = [
+        0x31, 0x0a, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00,
+    ];
+    let expected = vec![
+        BerObject::from_int_slice(b"\x01\x00\x01"),
+        BerObject::from_int_slice(b"\x01\x00\x00"),
+    ];
+    fn parser(i: &[u8]) -> BerResult<Vec<BerObject>> {
+        parse_ber_set_of_v(parse_ber_integer)(i)
+    };
+    assert_eq!(parser(&bytes), Ok((empty, expected)));
+    // empty input should raise error (could not read set header)
+    assert!(parser(&[]).is_err());
+    // empty set is ok (returns empty vec)
+    assert_eq!(parser(&[0x31, 0x00]), Ok((empty, vec![])));
+}
+
+#[test]
 fn test_set_indefinite_length() {
     let data = hex!("31 80 04 03 56 78 90 00 00");
     let res = parse_ber(&data);

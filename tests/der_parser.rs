@@ -1,9 +1,6 @@
 #![allow(deprecated)]
 
-use der_parser::ber::{
-    ber_read_element_content_as, BerClass, BerObjectContent, BerObjectHeader, BerTag,
-    BitStringObject, MAX_RECURSION,
-};
+use der_parser::ber::*;
 use der_parser::der::*;
 use der_parser::error::*;
 use der_parser::oid::*;
@@ -205,7 +202,12 @@ fn test_der_seq_of() {
     fn parser(i: &[u8]) -> DerResult {
         parse_der_sequence_of!(i, parse_der_integer)
     };
-    assert_eq!(parser(&bytes), Ok((empty, expected)));
+    assert_eq!(parser(&bytes), Ok((empty, expected.clone())));
+    //
+    fn parser2(i: &[u8]) -> BerResult {
+        parse_ber_sequence_of(parse_der_integer)(i)
+    }
+    assert_eq!(parser2(&bytes), Ok((empty, expected)));
 }
 
 #[test]
@@ -217,6 +219,18 @@ fn test_der_seq_of_incomplete() {
     assert_eq!(
         parser(&bytes),
         Err(Err::Error(error_position!(&bytes[7..], ErrorKind::Eof)))
+    );
+    //
+    fn parser2(i: &[u8]) -> BerResult<Vec<BerObject>> {
+        parse_ber_sequence_of_v(parse_der_integer)(i)
+    }
+    // eprintln!("trailing data");
+    assert_eq!(parser2(&bytes), Err(Err::Failure(BerError::InvalidTag)));
+    let h = &hex!("30 06 02 03 01 00 01 02");
+    // eprintln!("remaining 02 at end (incomplete)");
+    assert_eq!(
+        parser2(h),
+        Err(Err::Error(BerError::NomError(ErrorKind::Eof)))
     );
 }
 
