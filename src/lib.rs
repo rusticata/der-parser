@@ -137,7 +137,7 @@
     missing_debug_implementations,
 )]
 // pragmas for doc
-#![deny(intra_doc_link_resolution_failure)]
+#![deny(broken_intra_doc_links)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[macro_use]
