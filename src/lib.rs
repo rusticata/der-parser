@@ -136,6 +136,8 @@
     rust_2018_idioms,*/
     missing_debug_implementations,
 )]
+// matches! macro is stable since 1.42 only
+#![allow(clippy::match_like_matches_macro)]
 // pragmas for doc
 #![deny(broken_intra_doc_links)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
