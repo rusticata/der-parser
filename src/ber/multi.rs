@@ -1,7 +1,7 @@
 use crate::ber::*;
 use crate::error::*;
 use nom::bytes::complete::take;
-use nom::combinator::{complete, map};
+use nom::combinator::{all_consuming, complete, cut, map};
 use nom::multi::many0;
 use nom::{Err, IResult};
 
@@ -68,7 +68,7 @@ pub fn parse_ber_sequence_of_v<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult<T>,
 {
-    parse_ber_sequence_defined_g(many0(complete(f)))
+    parse_ber_sequence_defined_g(all_consuming(many0(complete(cut(f)))))
 }
 
 /// Parse a defined sequence of DER elements (function version)
@@ -279,7 +279,7 @@ pub fn parse_ber_set_of_v<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<Vec<
 where
     F: Fn(&'a [u8]) -> BerResult<T>,
 {
-    parse_ber_set_defined_g(many0(complete(f)))
+    parse_ber_set_defined_g(all_consuming(many0(complete(cut(f)))))
 }
 
 /// Parse a defined set of DER elements (function version)
@@ -289,6 +289,7 @@ where
 ///
 /// The remaining bytes point *after* the set: any bytes that are part of the sequence but not
 /// parsed are ignored.
+/// The nom combinator `all_consuming` can be used to ensure all the content is parsed.
 ///
 /// # Examples
 ///
@@ -369,6 +370,7 @@ where
 ///
 /// The remaining bytes point *after* the set: any bytes that are part of the sequence but not
 /// parsed are ignored.
+/// The nom combinator `all_consuming` can be used to ensure all the content is parsed.
 ///
 /// # Examples
 ///
@@ -432,6 +434,7 @@ where
 ///
 /// The remaining bytes point *after* the content: any bytes that are part of the content but not
 /// parsed are ignored.
+/// The nom combinator `all_consuming` can be used to ensure all the content is parsed.
 ///
 /// This function is mostly intended for structured objects, but can be used for any valid BER
 /// object.
@@ -483,7 +486,7 @@ where
 /// ```
 pub fn parse_ber_container<'a, O, F, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: Fn(&BerObjectHeader, &'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: Fn(&'_ BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {

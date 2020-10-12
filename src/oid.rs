@@ -279,7 +279,7 @@ impl<'a, N: Repr> Iterator for SubIdentifierIterator<'a, N> {
                 return Some((self.oid.asn1[0] / 40).into());
             } else if self.pos == 0 {
                 self.pos += 1;
-                if self.oid.asn1[0] == 0 {
+                if self.oid.asn1[0] == 0 && self.oid.asn1.len() == 1 {
                     return None;
                 }
                 return Some((self.oid.asn1[0] % 40).into());
@@ -418,6 +418,17 @@ mod tests {
         let oid = Oid::from_str("1.2.840.113549.1.1.5").unwrap();
         assert_eq!(byte_ref.as_ref(), oid.asn1.as_ref());
         assert_eq!(oid_ref, oid);
+    }
+
+    /// This test case will test an OID beginning with two zero
+    /// subidentifiers (literally: "itu-t recommendation"), as
+    /// used for example in the TCAP (Q.773) specification.
+
+    #[test]
+    fn test_itu_t_rec_oid() {
+        let oid = Oid::from(&[0, 0, 17, 773, 1, 1, 1]).unwrap();
+        assert_eq!(format!("{}", oid), "0.0.17.773.1.1.1".to_owned());
+        assert_eq!(format!("{:?}", oid), "OID(0.0.17.773.1.1.1)".to_owned());
     }
 
     #[test]
