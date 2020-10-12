@@ -486,7 +486,7 @@ where
 /// ```
 pub fn parse_ber_container<'a, O, F, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: Fn(&BerObjectHeader, &'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: Fn(&'_ BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {
