@@ -17,11 +17,11 @@ fn test_flat_take() {
         Ok((empty, BerObject::from_obj(BerObjectContent::Boolean(false))))
     );
     assert_eq!(
-        ber_read_element_content_as(&[0xff], BerTag::Boolean, 0x01, false, MAX_RECURSION),
+        ber_read_element_content_as(&[0xff], BerTag::Boolean, 0x01.into(), false, MAX_RECURSION),
         Ok((empty, BerObjectContent::Boolean(true)))
     );
     assert_eq!(
-        ber_read_element_content_as(&[0x00], BerTag::Boolean, 0x01, false, MAX_RECURSION),
+        ber_read_element_content_as(&[0x00], BerTag::Boolean, 0x01.into(), false, MAX_RECURSION),
         Ok((empty, BerObjectContent::Boolean(false)))
     );
 }
@@ -190,7 +190,7 @@ fn test_invalid_length() {
         Err::Error(e) => {
             assert_eq!(e, BerError::InvalidLength);
         }
-        _ => panic!("not the expected nom error kind"),
+        _ => panic!("not the expected nom error kind {:?}", res),
     }
     let bytes = hex!("02 02 00");
     let res = parse_der(&bytes).err().expect("expected error");

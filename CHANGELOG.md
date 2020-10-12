@@ -2,15 +2,34 @@
 
 ## [Unreleased][unreleased]
 
+### Changed/Fixed
+
+### Added
+
+### Thanks
+
+## XXX (5.x?)
+
+### Changed/Fixed
+
+- Change representation of size (new type `BerSize`) to support BER indefinite lengths
+- Rewrite BER/DER parsing macros to use functional parsing combinators
+- The constructed bit is now tested for explicit tagged structures
+- Some checks (for ex. tags in constructed objects) now return specific errors (`InvalidTag`)
+  instead of generic errors (`Verify`)
+- Refactor BerObject for parsing of tagged and optional values
+- Remove Copy trait from BerObjectHeader, copy is non-trivial and should be explicit
 - Fix the bug that caused OIDs longer than two subidentifiers which started by subidentifiers "0.0" ("itu-t recommenation") not to be decoded correctly
 - Implement the `as_u64` and `as_u32` methods for BerObjects with contents of type `BerObjectContent::BitString`.
 - Implement the `VideotexString`, `ObjectDescriptor` `GraphicString`, and `VisibleString` string types. (Non-breaking changes)
 - Correctly decode `BMPString` as UTF-16 instead of UTF-8 when printing. (Non-breaking change)
 - Turn `UTCTime` and `GeneralizedTime` into a `&str` instead of `&[u8]`, as they inherit from `VisibleString` which is a subset of ASCII. (Breaking change)
 
-### Thanks
-
 ### Added
+
+- Add combinator `parse_ber_optional`
+
+### Thanks
 
 ## 4.1.0
 

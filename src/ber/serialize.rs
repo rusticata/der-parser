@@ -10,21 +10,27 @@ use std::io::Write;
 
 // we do not use .copied() for compatibility with 1.34
 #[allow(clippy::map_clone)]
-fn encode_length<'a, W: Write + 'a>(len: u64) -> impl SerializeFn<W> + 'a {
+fn encode_length<'a, W: Write + 'a, Len: Into<BerSize>>(len: Len) -> impl SerializeFn<W> + 'a {
+    let l = len.into();
     move |out| {
-        if len <= 127 {
-            // definite, short form
-            be_u8(len as u8)(out)
-        } else {
-            // definite, long form
-            let v: Vec<u8> = len
-                .to_be_bytes()
-                .iter()
-                .map(|&x| x)
-                .skip_while(|&b| b == 0)
-                .collect();
-            let b0 = 0b1000_0000 | (v.len() as u8);
-            tuple((be_u8(b0 as u8), slice(v)))(out)
+        match l {
+            BerSize::Definite(sz) => {
+                if sz <= 128 {
+                    // definite, short form
+                    be_u8(sz as u8)(out)
+                } else {
+                    // definite, long form
+                    let v: Vec<u8> = sz
+                        .to_be_bytes()
+                        .iter()
+                        .map(|&x| x)
+                        .skip_while(|&b| b == 0)
+                        .collect();
+                    let b0 = 0b1000_0000 | (v.len() as u8);
+                    tuple((be_u8(b0 as u8), slice(v)))(out)
+                }
+            }
+            BerSize::Indefinite => be_u8(0b1000_0000)(out),
         }
     }
 }
@@ -74,7 +80,7 @@ pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     move |out| {
         // encode inner object
         let v = gen_simple(ber_encode_object(&obj), W::default())?;
-        let len = v.as_ref().len() as u64;
+        let len = v.as_ref().len();
         // encode the application header, using the tag
         let hdr = BerObjectHeader::new(class, 1 /* X.690 8.14.2 */, tag, len);
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
@@ -95,7 +101,7 @@ pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         // encode inner object content
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
         // but replace the tag (keep structured attribute)
-        let len = v.as_ref().len() as u64;
+        let len = v.as_ref().len();
         let hdr = BerObjectHeader::new(class, obj.header.structured, tag, len);
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
@@ -145,12 +151,17 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         | BerObjectContent::GeneralString(s) => slice(s)(out),
         BerObjectContent::Sequence(v) | BerObjectContent::Set(v) => ber_encode_sequence(&v)(out),
         // best we can do is tagged-explicit, but we don't know
-        BerObjectContent::ContextSpecific(_tag, opt_inner) => {
+        BerObjectContent::Optional(inner) => {
             // directly encode inner object
-            match opt_inner {
-                Some(o) => ber_encode_object(o)(out),
-                None => Ok(out),
+            match inner {
+                Some(obj) => ber_encode_object_content(&obj.content)(out),
+                None => slice(&[])(out), // XXX encode NOP ?
             }
+        }
+        BerObjectContent::Tagged(_class, _tag, inner) => {
+            // directly encode inner object
+            // XXX wrong, we should wrap it!
+            ber_encode_object(inner)(out)
         }
         BerObjectContent::Unknown(_tag, s) => slice(s)(out),
     }
@@ -175,7 +186,7 @@ pub fn ber_encode_object_raw<'a, 'b: 'a, 'c: 'a, W: Write + Default + AsRef<[u8]
 /// Note that the encoding will not check that the values of the `BerObject` fields are correct.
 /// The length is automatically calculated, and the field is ignored.
 ///
-/// `ContextSpecific` objects will be encoded as EXPLICIT.
+/// `Tagged` objects will be encoded as EXPLICIT.
 ///
 /// *This function is only available if the `serialize` feature is enabled.*
 #[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
@@ -185,8 +196,8 @@ pub fn ber_encode_object<'a, 'b: 'a, W: Write + Default + AsRef<[u8]> + 'a>(
     move |out| {
         // XXX should we make an exception for tagged values here ?
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
-        let len = v.as_ref().len() as u64;
-        let hdr = obj.header.clone().with_len(len);
+        let len = v.as_ref().len();
+        let hdr = obj.header.clone().with_len(len.into());
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -198,7 +209,7 @@ impl<'a> BerObject<'a> {
     /// Note that the encoding will not check that the values of the `BerObject` fields are correct.
     /// The length is automatically calculated, and the field is ignored.
     ///
-    /// `ContextSpecific` objects will be encoded as EXPLICIT.
+    /// `Tagged` objects will be encoded as EXPLICIT.
     ///
     /// *This function is only available if the `serialize` feature is enabled.*
     #[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
@@ -334,7 +345,7 @@ mod test {
 
     #[test]
     fn test_encode_tagged_explicit() {
-        fn local_parse(i: &[u8]) -> BerResult<BerObject> {
+        fn local_parse(i: &[u8]) -> BerResult {
             parse_ber_explicit_optional(i, BerTag(0), parse_ber_integer)
         }
         let bytes = hex!("a0 03 02 01 02");
@@ -345,46 +356,43 @@ mod test {
         )
         .expect("could not encode");
         let (_, obj2) = local_parse(&v).expect("could not re-parse");
-        let (tag, opt_inner) = obj2
-            .as_context_specific()
-            .expect("not a context-specific object");
-        let inner = opt_inner.expect("empty context-specific object");
+        let obj2 = obj2
+            .as_optional()
+            .expect("tagged object not found")
+            .expect("optional object empty");
+        let (_class, tag, inner) = obj2.as_tagged().expect("not a tagged object");
         assert_eq!(tag, BerTag(0));
-        assert_eq!(&obj, inner.as_ref());
+        assert_eq!(&obj, inner);
         assert_eq!(&v[..], bytes);
     }
 
     #[test]
     fn test_encode_tagged_implicit() {
-        fn der_read_integer_content(
-            i: &[u8],
-            _tag: BerTag,
-            len: usize,
-        ) -> BerResult<BerObjectContent> {
-            ber_read_element_content_as(i, BerTag::Integer, len, false, MAX_RECURSION)
+        fn der_read_integer_content<'a>(
+            i: &'a [u8],
+            hdr: &BerObjectHeader,
+            depth: usize,
+        ) -> BerResult<'a, BerObjectContent<'a>> {
+            ber_read_element_content_as(i, BerTag::Integer, hdr.len, false, depth)
         }
         fn local_parse(i: &[u8]) -> BerResult<BerObject> {
-            parse_ber_implicit(i, BerTag(2), der_read_integer_content)
+            parse_ber_implicit(i, BerTag(3), der_read_integer_content)
         }
         let obj = BerObject::from_int_slice(b"\x02");
         let v = gen_simple(
-            ber_encode_tagged_implicit(BerTag(2), BerClass::ContextSpecific, &obj),
+            ber_encode_tagged_implicit(BerTag(3), BerClass::ContextSpecific, &obj),
             Vec::new(),
         )
         .expect("could not encode");
         let (_, obj2) = local_parse(&v).expect("could not re-parse");
-        let (tag, opt_inner) = obj2
-            .as_context_specific()
-            .expect("not a context-specific object");
-        let inner = opt_inner.expect("empty context-specific object");
-        assert_eq!(tag, BerTag(2));
-        assert_eq!(&obj, inner.as_ref());
-        let bytes = hex!("82 01 02");
+        assert_eq!(obj2.header.tag, BerTag(3));
+        assert_eq!(&obj.content, &obj2.content);
+        let bytes = hex!("83 01 02");
         assert_eq!(&v[..], bytes);
     }
     #[test]
     fn test_encode_tagged_application() {
-        fn local_parse(i: &[u8]) -> BerResult<BerObject> {
+        fn local_parse(i: &[u8]) -> BerResult {
             parse_ber_explicit_optional(i, BerTag(2), parse_ber_integer)
         }
         let obj = BerObject::from_int_slice(b"\x02");
@@ -394,12 +402,13 @@ mod test {
         )
         .expect("could not encode");
         let (_, obj2) = local_parse(&v).expect("could not re-parse");
-        let (tag, opt_inner) = obj2
-            .as_context_specific()
-            .expect("not a context-specific object");
-        let inner = opt_inner.expect("empty context-specific object");
+        let obj2 = obj2
+            .as_optional()
+            .expect("tagged object not found")
+            .expect("optional object empty");
+        let (_class, tag, inner) = obj2.as_tagged().expect("not a tagged object");
         assert_eq!(tag, BerTag(2));
-        assert_eq!(&obj, inner.as_ref());
+        assert_eq!(&obj, inner);
         let bytes = hex!("62 03 02 01 02");
         assert_eq!(&v[..], bytes);
     }

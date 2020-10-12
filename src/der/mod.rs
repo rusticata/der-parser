@@ -1,4 +1,10 @@
-//! Basic Encoding Rules (BER) objects and parser
+//! Distinguished Encoding Rules (DER) objects and parser
+//!
+//! All functions in this crate use BER parsing functions (see the `ber` module)
+//! internally, adding constraints verification where needed.
+//!
+//! The objects `BerObject` and `DerObject` are the same (type alias): all BER functions,
+//! combinators and macros can be used, and provide additional tools for DER parsing.
 
 use crate::ber::{BerObject, BerTag};
 

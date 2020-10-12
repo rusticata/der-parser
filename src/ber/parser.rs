@@ -2,15 +2,86 @@ use crate::ber::*;
 use crate::error::*;
 use crate::oid::*;
 use nom::bytes::streaming::take;
-use nom::combinator::{map, map_res, verify};
+use nom::combinator::{complete, map, map_res, verify};
+use nom::multi::{many0, many_till};
 use nom::number::streaming::be_u8;
 use nom::*;
-use rusticata_macros::{custom_check, flat_take, parse_hex_to_u64};
+use rusticata_macros::{custom_check, parse_hex_to_u64};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 
 /// Default maximum recursion limit
 pub const MAX_RECURSION: usize = 50;
+
+/// Default maximum object size (2^32)
+pub const MAX_OBJECT_SIZE: usize = 4_294_967_295;
+
+/// Skip object content, and return true if object was End-Of-Content
+pub(crate) fn ber_skip_object_content<'a>(
+    i: &'a [u8],
+    hdr: &BerObjectHeader,
+) -> BerResult<'a, bool> {
+    match hdr.len {
+        BerSize::Definite(l) => {
+            if l == 0 && hdr.tag == BerTag::EndOfContent {
+                return Ok((i, true));
+            }
+            let (i, _) = take(l)(i)?;
+            Ok((i, false))
+        }
+        BerSize::Indefinite => {
+            // read objects until EndOfContent (00 00)
+            // this is recursive
+            let mut i = i;
+            loop {
+                let (i2, header2) = ber_read_element_header(i)?;
+                let (i3, eoc) = ber_skip_object_content(i2, &header2)?;
+                if eoc {
+                    // return false, since top object was not EndOfContent
+                    return Ok((i3, false));
+                }
+                i = i3;
+            }
+        }
+    }
+}
+
+// /// Skip object, and return true if object was End-Of-Content
+// pub(crate) fn ber_skip_object(i: &[u8]) -> BerResult<bool> {
+//     let (i, header) = ber_read_element_header(i)?;
+//     ber_skip_object_content(i, &header)
+// }
+
+// /// Skip object, and return size (including header)
+// pub(crate) fn ber_skip_object_get_size(i: &[u8]) -> BerResult<usize> {
+//     let start_i = i;
+//     let (i, _) = ber_skip_object(i)?;
+//     let len = start_i.offset(i);
+//     Ok((i, len))
+// }
+
+/// Skip object content, and return size
+pub(crate) fn ber_skip_object_content_get_size<'a>(
+    i: &'a [u8],
+    hdr: &BerObjectHeader,
+) -> BerResult<'a, usize> {
+    let start_i = i;
+    let (i, _) = ber_skip_object_content(i, hdr)?;
+    let len = start_i.offset(i);
+    Ok((i, len))
+}
+
+/// Read object raw content (bytes)
+pub(crate) fn ber_get_object_content<'a>(
+    i: &'a [u8],
+    hdr: &BerObjectHeader,
+) -> BerResult<'a, &'a [u8]> {
+    let start_i = i;
+    let (i, _) = ber_skip_object_content(i, hdr)?;
+    let len = start_i.offset(i);
+    let (content, i) = start_i.split_at(len);
+    Ok((i, content))
+}
 
 /// Try to parse input bytes as u64
 #[inline]
@@ -84,6 +155,7 @@ pub(crate) fn parse_identifier(i: &[u8]) -> BerResult<(u8, u8, u32, &[u8])> {
     }
 }
 
+/// Return the MSB and the rest of the first byte, or an error
 pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
     if i.is_empty() {
         Err(Err::Incomplete(Needed::Size(1)))
@@ -95,6 +167,19 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
 }
 
 /// Read an object header
+///
+/// ### Example
+///
+/// ```
+/// # use der_parser::ber::{ber_read_element_header, BerClass, BerSize, BerTag};
+/// #
+/// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
+///
+/// assert_eq!(hdr.class, BerClass::Universal);
+/// assert_eq!(hdr.tag, BerTag::Integer);
+/// assert_eq!(hdr.len, BerSize::Definite(3));
+/// ```
 pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
     let (i1, el) = parse_identifier(i)?;
     let class = match BerClass::try_from(el.0) {
@@ -102,17 +187,27 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
         Err(_) => unreachable!(), // Cannot fail, we read only 2 bits
     };
     let (i2, len) = parse_ber_length_byte(i1)?;
-    let (i3, len) = match len.0 {
-        0 => (i2, u64::from(len.1)),
-        _ => {
+    let (i3, len) = match (len.0, len.1) {
+        (0, l1) => {
+            // Short form: MSB is 0, the rest encodes the length (which can be 0) (8.1.3.4)
+            (i2, BerSize::Definite(usize::from(l1)))
+        }
+        (_, 0) => {
+            // Indefinite form: MSB is 1, the rest is 0 (8.1.3.6)
+            (i2, BerSize::Indefinite)
+        }
+        (_, l1) => {
             // if len is 0xff -> error (8.1.3.5)
-            if len.1 == 0b0111_1111 {
+            if l1 == 0b0111_1111 {
                 return Err(::nom::Err::Error(BerError::InvalidTag));
             }
-            let (i3, llen) = take(len.1)(i2)?;
-            // XXX llen: test if 0 (indefinite form), if len is 0xff -> error
+            let (i3, llen) = take(l1)(i2)?;
             match bytes_to_u64(llen) {
-                Ok(l) => (i3, l),
+                Ok(l) => {
+                    let l =
+                        usize::try_from(l).or(Err(::nom::Err::Error(BerError::InvalidLength)))?;
+                    (i3, BerSize::Definite(l))
+                }
                 Err(_) => {
                     return Err(::nom::Err::Error(BerError::InvalidTag));
                 }
@@ -197,61 +292,41 @@ fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<BerObjectCont
 
 fn ber_read_content_sequence(
     i: &[u8],
-    len: usize,
+    len: BerSize,
     max_depth: usize,
 ) -> BerResult<BerObjectContent> {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
-    if len == 0 {
-        if i.is_empty() {
-            return Ok((i, BerObjectContent::Sequence(Vec::new())));
+    match len {
+        BerSize::Definite(len) => {
+            let (i, data) = take(len)(i)?;
+            let (_, l) = many0(complete(r_parse_ber(max_depth - 1)))(data)?;
+            // trailing bytes are ignored
+            Ok((i, BerObjectContent::Sequence(l)))
         }
-        // indefinite form
-        // read until end-of-content
-        map!(
-            i,
-            many_till!(
-                call!(parse_ber_recursive, max_depth - 1),
-                parse_ber_endofcontent
-            ),
-            |(l, _)| { BerObjectContent::Sequence(l) }
-        )
-    } else {
-        map!(
-            i,
-            flat_take!(
-                len,
-                many0!(complete!(call!(parse_ber_recursive, max_depth - 1)))
-            ),
-            |l| { BerObjectContent::Sequence(l) }
-        )
+        BerSize::Indefinite => {
+            // indefinite form
+            // read until end-of-content
+            let (rem, (l, _)) = many_till(r_parse_ber(max_depth - 1), parse_ber_endofcontent)(i)?;
+            Ok((rem, BerObjectContent::Sequence(l)))
+        }
     }
 }
 
-fn ber_read_content_set(i: &[u8], len: usize, max_depth: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_set(i: &[u8], len: BerSize, max_depth: usize) -> BerResult<BerObjectContent> {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
-    if len == 0 {
-        if i.is_empty() {
-            return Ok((i, BerObjectContent::Set(Vec::new())));
+    match len {
+        BerSize::Definite(len) => {
+            let (i, data) = take(len)(i)?;
+            let (_, l) = many0(complete(r_parse_ber(max_depth - 1)))(data)?;
+            // trailing bytes are ignored
+            Ok((i, BerObjectContent::Set(l)))
         }
-        // indefinite form
-        // read until end-of-content
-        map!(
-            i,
-            many_till!(
-                call!(parse_ber_recursive, max_depth - 1),
-                parse_ber_endofcontent
-            ),
-            |(l, _)| { BerObjectContent::Set(l) }
-        )
-    } else {
-        map!(
-            i,
-            flat_take!(
-                len,
-                many0!(complete!(call!(parse_ber_recursive, max_depth - 1)))
-            ),
-            |l| { BerObjectContent::Set(l) }
-        )
+        BerSize::Indefinite => {
+            // indefinite form
+            // read until end-of-content
+            let (rem, (l, _)) = many_till(r_parse_ber(max_depth - 1), parse_ber_endofcontent)(i)?;
+            Ok((rem, BerObjectContent::Set(l)))
+        }
     }
 }
 
@@ -407,76 +482,109 @@ fn ber_read_content_universalstring(i: &[u8], len: usize) -> BerResult<BerObject
     map(take(len), BerObjectContent::UniversalString)(i)
 }
 
-/// Parse the next bytes as the content of a BER object.
+/// Parse the next bytes as the *content* of a BER object.
 ///
-/// Content type is *not* checked, caller is reponsible of providing the correct tag
+/// Content type is *not* checked to match tag, caller is responsible of providing the correct tag
+///
+/// This function is mostly used when parsing implicit tagged objects, when reading primitive
+/// types.
+///
+/// `max_depth` is the maximum allowed recursion for objects.
+///
+/// ### Example
+///
+/// ```
+/// # use der_parser::ber::{ber_read_element_content_as, ber_read_element_header, BerTag};
+/// #
+/// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
+/// let (_, content) = ber_read_element_content_as(
+///     i, hdr.tag, hdr.len, hdr.is_constructed(), 5
+/// ).expect("parsing failed");
+/// #
+/// # assert_eq!(hdr.tag, BerTag::Integer);
+/// # assert_eq!(content.as_u32(), Ok(0x10001));
+/// ```
 pub fn ber_read_element_content_as(
     i: &[u8],
     tag: BerTag,
-    len: usize,
+    len: BerSize,
     constructed: bool,
     max_depth: usize,
 ) -> BerResult<BerObjectContent> {
-    if i.len() < len {
-        return Err(Err::Incomplete(Needed::Size(len)));
+    if let BerSize::Definite(l) = len {
+        custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
+        if i.len() < l {
+            return Err(Err::Incomplete(Needed::Size(l)));
+        }
     }
     match tag {
         // 0x00 end-of-content
         BerTag::EndOfContent => {
-            custom_check!(i, len != 0, BerError::InvalidLength)?;
+            custom_check!(i, len != BerSize::Definite(0), BerError::InvalidLength)?;
             ber_read_content_eoc(i)
         }
         // 0x01 bool
         BerTag::Boolean => {
+            let len = len.primitive()?;
             custom_check!(i, len != 1, BerError::InvalidLength)?;
             ber_read_content_bool(i)
         }
         // 0x02
         BerTag::Integer => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?;
+            let len = len.primitive()?;
             ber_read_content_integer(i, len)
         }
         // 0x03: bitstring
         BerTag::BitString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.6.3)
+            let len = len.primitive()?;
             ber_read_content_bitstring(i, len)
         }
         // 0x04: octetstring
         BerTag::OctetString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.7.1)
+            let len = len.primitive()?;
             ber_read_content_octetstring(i, len)
         }
         // 0x05: null
         BerTag::Null => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?;
+            let len = len.primitive()?;
             custom_check!(i, len != 0, BerError::InvalidLength)?;
             ber_read_content_null(i)
         }
         // 0x06: object identifier
         BerTag::Oid => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.19.1
+            let len = len.primitive()?;
             ber_read_content_oid(i, len)
         }
         // 0x07: object descriptor - Alias for GraphicString with a different
         // implicit tag, see below
         BerTag::ObjDescriptor => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_objectdescriptor(i, len)
         }
         // 0x0a: enumerated
         BerTag::Enumerated => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.4
+            let len = len.primitive()?;
             ber_read_content_enum(i, len)
         }
         // 0x0c: UTF8String - Unicode encoded with the UTF-8 charset (ISO/IEC
         // 10646-1, Annex D)
         BerTag::Utf8String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_utf8string(i, len)
         }
         // 0x0d: relative object identified
         BerTag::RelativeOid => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?;
+            let len = len.primitive()?;
             ber_read_content_relativeoid(i, len)
         }
         // 0x10: sequence
@@ -492,12 +600,14 @@ pub fn ber_read_element_content_as(
         // 0x12: numericstring - ASCII string with digits an spaces only
         BerTag::NumericString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_numericstring(i, len)
         }
         // 0x13: printablestring - ASCII string with certain printable
         // characters only (specified in Table 10 of X.680)
         BerTag::PrintableString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_printablestring(i, len)
         }
         // 0x14: t61string - ISO 2022 string with a Teletex (T.61) charset,
@@ -506,41 +616,53 @@ pub fn ber_read_element_content_as(
         // set. https://en.wikipedia.org/wiki/ITU_T.61
         BerTag::T61String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_t61string(i, len)
         }
         // 0x15: videotexstring - ISO 2022 string with a Videotex (T.100/T.101)
         // charset, excluding ASCII. https://en.wikipedia.org/wiki/Videotex_character_set
         BerTag::VideotexString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_videotexstring(i, len)
         }
         // 0x16: ia5string - ASCII string
         BerTag::Ia5String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_ia5string(i, len)
         }
         // 0x17: utctime - Alias for a VisibleString with a different implicit
         // tag, see below
-        BerTag::UtcTime => ber_read_content_utctime(i, len),
+        BerTag::UtcTime => {
+            let len = len.primitive()?;
+            ber_read_content_utctime(i, len)
+        }
         // 0x18: generalizedtime - Alias for a VisibleString with a different
         // implicit tag, see below
-        BerTag::GeneralizedTime => ber_read_content_generalizedtime(i, len),
+        BerTag::GeneralizedTime => {
+            let len = len.primitive()?;
+            ber_read_content_generalizedtime(i, len)
+        }
         // 0x19: graphicstring - Generic ISO 2022 container with explicit
         // escape sequences, without control characters
         BerTag::GraphicString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_graphicstring(i, len)
         }
         // 0x1a: visiblestring - ASCII string with no control characters except
         // SPACE
         BerTag::VisibleString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_visiblestring(i, len)
         }
         // 0x1b: generalstring - Generic ISO 2022 container with explicit
         // escape sequences
         BerTag::GeneralString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_generalstring(i, len)
         }
         // 0x1e: bmpstring - Unicode encoded with the UCS-2 big-endian charset
@@ -548,12 +670,14 @@ pub fn ber_read_element_content_as(
         // Multilingual Plane) except certain control cahracters
         BerTag::BmpString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_bmpstring(i, len)
         }
         // 0x1c: universalstring - Unicode encoded with the UCS-4 big-endian
         // charset (ISO/IEC 10646-1, section 13.2)
         BerTag::UniversalString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            let len = len.primitive()?;
             ber_read_content_universalstring(i, len)
         }
         // all unknown values
@@ -563,7 +687,7 @@ pub fn ber_read_element_content_as(
 
 /// Parse the next bytes as the content of a BER object (combinator)
 ///
-/// Content type is *not* checked, caller is reponsible of providing the correct tag
+/// Content type is *not* checked to match tag, caller is responsible of providing the correct tag
 ///
 /// Caller is also responsible to check if parsing function consumed the expected number of
 /// bytes (`header.len`).
@@ -586,25 +710,34 @@ pub fn parse_ber_content<'a>(
     tag: BerTag,
 ) -> impl Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>> {
     move |i: &[u8], hdr: &BerObjectHeader, max_recursion: usize| {
-        ber_read_element_content_as(
-            i,
-            tag,
-            hdr.len as usize,
-            hdr.is_constructed(),
-            max_recursion,
-        )
+        ber_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
     }
 }
 
 /// Parse a BER object, expecting a value with specified tag
-pub fn parse_ber_with_tag(i: &[u8], tag: BerTag) -> BerResult {
-    do_parse! {
-        i,
-        hdr: ber_read_element_header >>
-             custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
-        o:   call!(ber_read_element_content_as, hdr.tag, hdr.len as usize, hdr.is_constructed(), MAX_RECURSION) >>
-        ( BerObject::from_header_and_content(hdr, o) )
+///
+/// The object is parsed recursively, with a maximum depth of `MAX_RECURSION`.
+///
+/// ### Example
+///
+/// ```
+/// use der_parser::ber::BerTag;
+/// use der_parser::ber::parse_ber_with_tag;
+///
+/// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (_, obj) = parse_ber_with_tag(bytes, BerTag::Integer).expect("parsing failed");
+///
+/// assert_eq!(obj.header.tag, BerTag::Integer);
+/// ```
+pub fn parse_ber_with_tag<Tag: Into<BerTag>>(i: &[u8], tag: Tag) -> BerResult {
+    let tag = tag.into();
+    let (i, hdr) = ber_read_element_header(i)?;
+    if hdr.tag != tag {
+        return Err(nom::Err::Error(BerError::InvalidTag));
     }
+    let (i, content) =
+        ber_read_element_content_as(i, hdr.tag, hdr.len, hdr.is_constructed(), MAX_RECURSION)?;
+    Ok((i, BerObject::from_header_and_content(hdr, content)))
 }
 
 /// Read end of content marker
@@ -640,7 +773,6 @@ pub fn parse_ber_bool(i: &[u8]) -> BerResult {
 /// # Examples
 ///
 /// ```rust
-/// # #[macro_use] extern crate der_parser;
 /// # extern crate nom;
 /// # use der_parser::ber::parse_ber_integer;
 /// # use der_parser::ber::{BerObject,BerObjectContent};
@@ -806,17 +938,13 @@ pub fn parse_ber_universalstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::UniversalString)
 }
 
-pub fn parse_ber_explicit_failed(i: &[u8], tag: BerTag) -> BerResult {
-    Ok((
-        i,
-        BerObject::from_obj(BerObjectContent::ContextSpecific(tag, None)),
-    ))
-}
-
 /// Parse an optional tagged object, applying function to get content
 ///
 /// This function returns a `BerObject`, trying to read content as generic BER objects.
 /// If parsing failed, return an optional object containing `None`.
+///
+/// To support other return or error types, use
+/// [parse_ber_tagged_explicit_g](fn.parse_ber_tagged_explicit_g.html)
 ///
 /// This function will never fail: if parsing content failed, the BER value `Optional(None)` is
 /// returned.
@@ -824,21 +952,12 @@ pub fn parse_ber_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
 where
     F: Fn(&[u8]) -> BerResult,
 {
-    alt! {
-        i,
-        complete!(do_parse!(
-            hdr:     ber_read_element_header >>
-                     custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
-            content: f >>
-            (
-                BerObject::from_header_and_content(
-                    hdr,
-                    BerObjectContent::ContextSpecific(tag,Some(Box::new(content)))
-                )
-            )
-        )) |
-        complete!(call!(parse_ber_explicit_failed, tag))
-    }
+    parse_ber_optional(parse_ber_tagged_explicit_g(tag, |hdr, content| {
+        let (rem, obj) = f(content)?;
+        let content = BerObjectContent::Tagged(hdr.class, hdr.tag, Box::new(obj));
+        let tagged = BerObject::from_header_and_content(hdr, content);
+        Ok((rem, tagged))
+    }))(i)
 }
 
 /// Parse an optional tagged object, applying function to get content
@@ -846,7 +965,7 @@ where
 /// This function is deprecated, use
 /// [parse_ber_explicit_optional](fn.parse_ber_explicit_optional.html) instead.
 #[deprecated(
-    since = "4.1.0",
+    since = "5.0.0",
     note = "Please use `parse_ber_explicit_optional` instead"
 )]
 #[inline]
@@ -857,25 +976,93 @@ where
     parse_ber_explicit_optional(i, tag, f)
 }
 
-/// call der *content* parsing function
-pub fn parse_ber_implicit<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
+/// Parse an implicit tagged object, applying function to read content
+///
+/// Note: unlike explicit tagged functions, the callback must be a *content* parsing function,
+/// often based on the [`parse_ber_content`](fn.parse_ber_content.html) combinator.
+///
+/// The built object will use the original header (and tag), so the content may not match the tag
+/// value.
+///
+/// For a combinator version, see [parse_ber_tagged_implicit](fn.parse_ber_tagged_implicit.html).
+///
+/// For a generic version (different output and error types), see
+/// [parse_ber_tagged_implicit_g](fn.parse_ber_tagged_implicit_g.html).
+///
+/// # Examples
+///
+/// The following parses `[3] IMPLICIT INTEGER` into a `BerObject`:
+///
+/// ```rust
+/// # use der_parser::ber::*;
+/// # use der_parser::error::BerResult;
+/// #
+/// fn parse_int_implicit(i:&[u8]) -> BerResult<BerObject> {
+///     parse_ber_implicit(
+///         i,
+///         3,
+///         parse_ber_content(BerTag::Integer),
+///     )
+/// }
+///
+/// # let bytes = &[0x83, 0x03, 0x01, 0x00, 0x01];
+/// let res = parse_int_implicit(bytes);
+/// # match res {
+/// #     Ok((rem, content)) => {
+/// #         assert!(rem.is_empty());
+/// #         assert_eq!(content.as_u32(), Ok(0x10001));
+/// #     },
+/// #     _ => assert!(false)
+/// # }
+/// ```
+#[inline]
+pub fn parse_ber_implicit<'a, Tag, F>(i: &'a [u8], tag: Tag, f: F) -> BerResult<'a>
 where
-    F: Fn(&[u8], BerTag, usize) -> BerResult<BerObjectContent>,
+    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>>,
+    Tag: Into<BerTag>,
 {
-    alt! {
-        i,
-        complete!(do_parse!(
-            hdr:     ber_read_element_header >>
-                     custom_check!(hdr.tag != tag, BerError::InvalidTag) >>
-            content: call!(f, tag, hdr.len as usize) >>
-            (
-                BerObject::from_header_and_content(
-                    hdr,
-                    BerObjectContent::ContextSpecific(tag,Some(Box::new(BerObject::from_obj(content))))
-                )
-            )
-        )) |
-        complete!(call!(parse_ber_explicit_failed, tag))
+    parse_ber_tagged_implicit(tag, f)(i)
+}
+
+/// Combinator for building optional BER values
+///
+/// To read optional BER values, it is to use the nom `opt()` combinator. However, this results in
+/// a `Option<BerObject>` and prevents using some functions from this crate (the generic functions
+/// can still be used).
+///
+/// This combinator is used when parsing BER values, while keeping `BerObject` output only.
+///
+/// This function will never fail: if parsing content failed, the BER value `Optional(None)` is
+/// returned.
+///
+/// ### Example
+///
+/// ```
+/// # use der_parser::ber::*;
+/// #
+/// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let parser = parse_ber_optional(parse_ber_integer);
+/// let (_, obj) = parser(bytes).expect("parsing failed");
+///
+/// assert_eq!(obj.header.tag, BerTag::Integer);
+/// assert!(obj.as_optional().is_ok());
+/// ```
+pub fn parse_ber_optional<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<'a>
+where
+    F: Fn(&'a [u8]) -> BerResult<'a>,
+{
+    move |i: &[u8]| {
+        let res = f(i);
+        match res {
+            Ok((rem, inner)) => {
+                let opt = BerObject::from_header_and_content(
+                    inner.header.clone(),
+                    BerObjectContent::Optional(Some(Box::new(inner))),
+                );
+                Ok((rem, opt))
+            }
+            Err(_) => Ok((i, BerObject::from_obj(BerObjectContent::Optional(None)))),
+        }
     }
 }
 
@@ -889,6 +1076,12 @@ pub fn parse_ber_u32(i: &[u8]) -> BerResult<u32> {
 #[inline]
 pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
     map_res(parse_ber_integer, |o| o.as_u64())(i)
+}
+
+/// Helper combinator, to create a parser with a maximum parsing depth
+#[inline]
+pub(crate) fn r_parse_ber(max_depth: usize) -> impl Fn(&[u8]) -> BerResult {
+    move |i: &[u8]| parse_ber_recursive(i, max_depth)
 }
 
 /// Parse BER object recursively, specifying the maximum recursion depth
@@ -908,30 +1101,26 @@ pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
 pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     let (rem, hdr) = ber_read_element_header(i)?;
-    custom_check!(
-        i,
-        hdr.len as usize > i.len() || hdr.len > u64::from(::std::u32::MAX),
-        BerError::InvalidLength
-    )?;
+    if let BerSize::Definite(l) = hdr.len {
+        custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
+    }
     match hdr.class {
         BerClass::Universal | BerClass::Private => (),
         _ => {
-            return map!(rem, take!(hdr.len), |b| {
-                BerObject::from_header_and_content(hdr, BerObjectContent::Unknown(hdr.tag, b))
-            })
+            let (rem, content) = ber_get_object_content(rem, &hdr)?;
+            let content = BerObjectContent::Unknown(hdr.tag, content);
+            let obj = BerObject::from_header_and_content(hdr, content);
+            return Ok((rem, obj));
         }
     }
-    match ber_read_element_content_as(
-        rem,
-        hdr.tag,
-        hdr.len as usize,
-        hdr.is_constructed(),
-        max_depth,
-    ) {
+    match ber_read_element_content_as(rem, hdr.tag, hdr.len, hdr.is_constructed(), max_depth) {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
-        Err(Err::Error(BerError::UnknownTag)) => map!(rem, take!(hdr.len), |b| {
-            BerObject::from_header_and_content(hdr, BerObjectContent::Unknown(hdr.tag, b))
-        }),
+        Err(Err::Error(BerError::UnknownTag)) => {
+            let (rem, content) = ber_get_object_content(rem, &hdr)?;
+            let content = BerObjectContent::Unknown(hdr.tag, content);
+            let obj = BerObject::from_header_and_content(hdr, content);
+            Ok((rem, obj))
+        }
         Err(e) => Err(e),
     }
 }
@@ -940,7 +1129,7 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
 ///
 /// Return a tuple containing the remaining (unparsed) bytes and the BER Object, or an error.
 ///
-/// *Note: this is the same as calling `parse_ber_recursive` with `MAX_RECURSION`.
+/// *Note*: this is the same as calling `parse_ber_recursive` with `MAX_RECURSION`.
 ///
 /// ### Example
 ///

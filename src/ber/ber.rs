@@ -5,11 +5,15 @@ use rusticata_macros::newtype_enum;
 use std::convert::AsRef;
 use std::convert::From;
 use std::convert::TryFrom;
+use std::fmt;
 use std::ops::Index;
 use std::vec::Vec;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct BerClassFromIntError(pub(crate) ());
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct BerSizeError(pub(crate) ());
 
 /// BER Object class of tag
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -21,9 +25,18 @@ pub enum BerClass {
     Private = 0b11,
 }
 
+/// Ber Object Length
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum BerSize {
+    /// Definite form (X.690 8.1.3.3)
+    Definite(usize),
+    /// Indefinite form (X.690 8.1.3.6)
+    Indefinite,
+}
+
 /// BER/DER Tag as defined in X.680 section 8.4
 ///
-/// X.690 doesn't specify the maxmimum tag size so we're assuming that people
+/// X.690 doesn't specify the maximum tag size so we're assuming that people
 /// aren't going to need anything more than a u32.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct BerTag(pub u32);
@@ -67,23 +80,39 @@ impl debug BerTag {
 }
 }
 
-/// Representation of a DER-encoded (X.690) object
+/// Representation of a BER-encoded (X.690) object
+///
+/// A BER object is composed of a header describing the object class, type and length,
+/// and the content.
+///
+/// Note that the content may sometimes not match the header tag (for ex when parsing IMPLICIT
+/// tagged values).
 #[derive(Debug, Clone, PartialEq)]
 pub struct BerObject<'a> {
     pub header: BerObjectHeader<'a>,
     pub content: BerObjectContent<'a>,
 }
 
-#[derive(Clone, Copy, Debug)]
+/// BER object header (identifier and length)
+#[derive(Clone, Debug)]
 pub struct BerObjectHeader<'a> {
+    /// Object class: universal, application, context-specific, or private
     pub class: BerClass,
+    /// Constructed attribute: 1 if constructed, else 0
     pub structured: u8,
+    /// Tag number
     pub tag: BerTag,
-    pub len: u64,
+    /// Object length: definite or indefinite
+    pub len: BerSize,
 
+    /// Optionally, the raw encoding of the tag
+    ///
+    /// This is useful in some cases, where different representations of the same
+    /// BER tags have different meanings (BER only)
     pub raw_tag: Option<&'a [u8]>,
 }
 
+/// BER object content
 #[derive(Debug, Clone, PartialEq)]
 pub enum BerObjectContent<'a> {
     EndOfContent,
@@ -116,8 +145,71 @@ pub enum BerObjectContent<'a> {
     GraphicString(&'a [u8]),
     GeneralString(&'a [u8]),
 
-    ContextSpecific(BerTag, Option<Box<BerObject<'a>>>),
+    Optional(Option<Box<BerObject<'a>>>),
+    Tagged(BerClass, BerTag, Box<BerObject<'a>>),
+
     Unknown(BerTag, &'a [u8]),
+}
+
+impl fmt::Display for BerClass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            BerClass::Universal => "UNIVERSAL",
+            BerClass::Application => "APPLICATION",
+            BerClass::ContextSpecific => "CONTEXT-SPECIFIC",
+            BerClass::Private => "PRIVATE",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl From<u32> for BerTag {
+    fn from(v: u32) -> Self {
+        BerTag(v)
+    }
+}
+
+impl BerSize {
+    /// Return true if length is definite and equal to 0
+    pub fn is_null(&self) -> bool {
+        *self == BerSize::Definite(0)
+    }
+
+    /// Get length of primitive object
+    #[inline]
+    pub fn primitive(&self) -> Result<usize, BerError> {
+        match self {
+            BerSize::Definite(sz) => Ok(*sz),
+            BerSize::Indefinite => Err(BerError::IndefiniteLengthUnexpected),
+        }
+    }
+}
+
+impl From<usize> for BerSize {
+    fn from(v: usize) -> Self {
+        BerSize::Definite(v)
+    }
+}
+
+impl TryFrom<u64> for BerSize {
+    type Error = BerSizeError;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        let v = usize::try_from(value).or(Err(BerSizeError(())))?;
+        Ok(BerSize::Definite(v))
+    }
+}
+
+impl TryFrom<BerSize> for usize {
+    type Error = BerSizeError;
+
+    #[inline]
+    fn try_from(value: BerSize) -> Result<Self, Self::Error> {
+        match value {
+            BerSize::Definite(sz) => Ok(sz),
+            BerSize::Indefinite => Err(BerSizeError(())),
+        }
+    }
 }
 
 impl TryFrom<u8> for BerClass {
@@ -137,12 +229,12 @@ impl TryFrom<u8> for BerClass {
 
 impl<'a> BerObjectHeader<'a> {
     /// Build a new BER header
-    pub fn new(class: BerClass, structured: u8, tag: BerTag, len: u64) -> Self {
+    pub fn new<Len: Into<BerSize>>(class: BerClass, structured: u8, tag: BerTag, len: Len) -> Self {
         BerObjectHeader {
             tag,
             structured,
             class,
-            len,
+            len: len.into(),
             raw_tag: None,
         }
     }
@@ -161,7 +253,7 @@ impl<'a> BerObjectHeader<'a> {
 
     /// Update header length
     #[inline]
-    pub fn with_len(self, len: u64) -> Self {
+    pub fn with_len(self, len: BerSize) -> Self {
         BerObjectHeader { len, ..self }
     }
 
@@ -206,14 +298,16 @@ impl<'a> BerObjectHeader<'a> {
 
 impl<'a> BerObject<'a> {
     /// Build a BerObject from a header and content.
+    ///
     /// Note: values are not checked, so the tag can be different from the real content, or flags
     /// can be invalid.
-    pub fn from_header_and_content<'hdr>(
-        header: BerObjectHeader<'hdr>,
-        content: BerObjectContent<'hdr>,
-    ) -> BerObject<'hdr> {
+    pub fn from_header_and_content<'o>(
+        header: BerObjectHeader<'o>,
+        content: BerObjectContent<'o>,
+    ) -> BerObject<'o> {
         BerObject { header, content }
     }
+
     /// Build a BerObject from its content, using default flags (no class, correct tag,
     /// and structured flag set only for Set and Sequence)
     pub fn from_obj(c: BerObjectContent) -> BerObject {
@@ -223,13 +317,18 @@ impl<'a> BerObject<'a> {
             BerTag::Sequence | BerTag::Set => 1,
             _ => 0,
         };
-        let header = BerObjectHeader::new(class, structured, tag, 0);
+        let header = BerObjectHeader::new(class, structured, tag, BerSize::Definite(0));
         BerObject { header, content: c }
     }
 
     /// Build a DER integer object from a slice containing an encoded integer
     pub fn from_int_slice(i: &'a [u8]) -> BerObject<'a> {
-        let header = BerObjectHeader::new(BerClass::Universal, 0, BerTag::Integer, 0);
+        let header = BerObjectHeader::new(
+            BerClass::Universal,
+            0,
+            BerTag::Integer,
+            BerSize::Definite(0),
+        );
         BerObject {
             header,
             content: BerObjectContent::Integer(i),
@@ -261,15 +360,14 @@ impl<'a> BerObject<'a> {
         note = "please use `obj.header` or `obj.header.clone()` instead"
     )]
     pub fn to_header(&self) -> BerObjectHeader {
-        self.header
+        self.header.clone()
     }
 
     /// Attempt to read integer value from DER object.
     /// This can fail if the object is not an integer, or if it is too large.
     ///
     /// ```rust
-    /// # extern crate der_parser;
-    /// # use der_parser::ber::{BerObject,BerObjectContent};
+    /// # use der_parser::ber::BerObject;
     /// let der_int  = BerObject::from_int_slice(b"\x01\x00\x01");
     /// assert_eq!(
     ///     der_int.as_u64(),
@@ -314,12 +412,16 @@ impl<'a> BerObject<'a> {
         self.content.as_oid_val()
     }
 
-    /// Attempt to read the content from a context-specific DER object.
-    /// This can fail if the object is not context-specific.
-    ///
-    /// Note: the object is cloned.
-    pub fn as_context_specific(&self) -> Result<(BerTag, Option<Box<BerObject<'a>>>), BerError> {
-        self.content.as_context_specific()
+    /// Attempt to get a reference on the content from an optional object.
+    /// This can fail if the object is not optional.
+    pub fn as_optional(&'a self) -> Result<Option<&'_ BerObject<'a>>, BerError> {
+        self.content.as_optional()
+    }
+
+    /// Attempt to get a reference on the content from a tagged object.
+    /// This can fail if the object is not tagged.
+    pub fn as_tagged(&'a self) -> Result<(BerClass, BerTag, &'_ BerObject<'a>), BerError> {
+        self.content.as_tagged()
     }
 
     /// Attempt to read a reference to a BitString value from DER object.
@@ -425,7 +527,7 @@ impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
             && self.tag == other.tag
             && self.structured == other.structured
             && {
-                if self.len != 0 && other.len != 0 {
+                if self.len.is_null() && other.len.is_null() {
                     self.len == other.len
                 } else {
                     true
@@ -502,9 +604,17 @@ impl<'a> BerObjectContent<'a> {
         self.as_oid().map(|o| o.clone())
     }
 
-    pub fn as_context_specific(&self) -> Result<(BerTag, Option<Box<BerObject<'a>>>), BerError> {
+    pub fn as_optional(&'a self) -> Result<Option<&'_ BerObject<'a>>, BerError> {
         match *self {
-            BerObjectContent::ContextSpecific(u, ref o) => Ok((u, o.clone())),
+            BerObjectContent::Optional(Some(ref o)) => Ok(Some(&o)),
+            BerObjectContent::Optional(None) => Ok(None),
+            _ => Err(BerError::BerTypeError),
+        }
+    }
+
+    pub fn as_tagged(&'a self) -> Result<(BerClass, BerTag, &'_ BerObject<'a>), BerError> {
+        match *self {
+            BerObjectContent::Tagged(class, tag, ref o) => Ok((class, tag, o.as_ref())),
             _ => Err(BerError::BerTypeError),
         }
     }
@@ -577,8 +687,8 @@ impl<'a> BerObjectContent<'a> {
     }
 
     #[rustfmt::skip]
-    pub fn tag(&self) -> BerTag {
-        match *self {
+    fn tag(&self) -> BerTag {
+        match self {
             BerObjectContent::EndOfContent         => BerTag::EndOfContent,
             BerObjectContent::Boolean(_)           => BerTag::Boolean,
             BerObjectContent::Integer(_)           => BerTag::Integer,
@@ -604,8 +714,10 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::ObjectDescriptor(_)  => BerTag::ObjDescriptor,
             BerObjectContent::GraphicString(_)     => BerTag::GraphicString,
             BerObjectContent::GeneralString(_)     => BerTag::GeneralString,
-            BerObjectContent::ContextSpecific(x,_) |
-            BerObjectContent::Unknown(x,_)         => x,
+            BerObjectContent::Tagged(_,x,_) |
+            BerObjectContent::Unknown(x,_)         => *x,
+            BerObjectContent::Optional(Some(obj))  => obj.content.tag(),
+            BerObjectContent::Optional(None)       => BerTag(0x00), // XXX invalid !
         }
     }
 }

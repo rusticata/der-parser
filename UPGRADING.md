@@ -1,3 +1,34 @@
+## Upgrading from 4.x to 5.0
+
+### BER variants: ContextSpecific, Optional, Tagged
+
+The variant `ContextSpecific` has been removed from `BerObject`, and 2 new variants have been added:
+- `Tagged` for explicit tagged objects,
+- `Optional` to simplify writing subparsers with only `BerObject`
+
+This is also used to clarify parsing of tagged values, and the API now clearly says if trying to parse an
+optional value or not.
+
+### Ber Size
+
+The `len` field of `BerObjectHeader` is now an enum, to represent definite and indefinite lengths.
+To get the value, either match the type, or use `try_from` (which will fail if indefinite).
+
+### Struct parsing Macros
+
+Functions and combinators are now the preferred way of parsing constructed objects.
+
+Macros have been upgrading and use the combinators internally. As a consequence, they do not return
+a tuple `(BerObjectHeader, T)` but only the built object `T`. The header should be removed from function
+signatures, for ex:
+```
+-fn parse_struct01(i: &[u8]) -> BerResult<(BerObjectHeader,MyStruct)> {
++fn parse_struct01(i: &[u8]) -> BerResult<MyStruct> {
+```
+
+The header was usually ignored, so this should simplify most uses of this macro. To get the header,
+use `parse_ber_container` directly.
+
 ## Upgrading from 3.x to 4.0
 
 ### Ber Object and Header

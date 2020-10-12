@@ -51,102 +51,45 @@ macro_rules! fold_der_defined_m(
 macro_rules! parse_ber_defined_m(
     ($i:expr, $tag:expr, $($args:tt)*) => (
         {
-            use $crate::ber::ber_read_element_header;
-            use $crate::fold_der_defined_m;
-            do_parse!(
-                $i,
-                hdr:     ber_read_element_header >>
-                         custom_check!(hdr.class != $crate::ber::BerClass::Universal, $crate::error::BerError::InvalidClass) >>
-                         custom_check!(hdr.structured != 0b1, $crate::error::BerError::ConstructExpected) >>
-                         custom_check!(hdr.tag != $tag, $crate::error::BerError::InvalidTag) >>
-                content: flat_take!(hdr.len as usize, fold_der_defined_m!( $($args)* )) >>
-                (hdr,content)
-            )
+            use $crate::ber::parse_ber_container;
+            use $crate::error::BerError;
+            parse_ber_container(|hdr, content| {
+                if !hdr.is_constructed() {
+                    return Err(nom::Err::Error(BerError::ConstructExpected.into()));
+                }
+                if hdr.tag != $tag {
+                    return Err(nom::Err::Error(BerError::InvalidTag.into()));
+                }
+                let (rem, content) = fold_der_defined_m!(content, $($args)* )?;
+                Ok((rem, (hdr, content)))
+            })($i)
         }
     );
 );
 
-/// Parse a defined sequence of DER elements (macro version)
+/// Parse a defined sequence of DER elements (deprecated)
 ///
 /// Given a list of expected parsers, apply them to build a DER sequence.
 ///
-/// ```rust
-/// # #[macro_use] extern crate der_parser;
-/// # use der_parser::ber::{parse_ber_integer, BerObject};
-/// # use der_parser::error::BerResult;
-/// #
-/// # fn main() {
-/// fn localparse_seq(i:&[u8]) -> BerResult {
-///     parse_der_sequence_defined_m!(i,
-///         parse_ber_integer >>
-///         // macros can also be called
-///         call!(parse_ber_integer)
-///     )
-/// }
-///
-/// let empty = &b""[..];
-/// let bytes = [ 0x30, 0x0a,
-///               0x02, 0x03, 0x01, 0x00, 0x01,
-///               0x02, 0x03, 0x01, 0x00, 0x00,
-/// ];
-/// let expected  = BerObject::from_seq(vec![
-///     BerObject::from_int_slice(b"\x01\x00\x01"),
-///     BerObject::from_int_slice(b"\x01\x00\x00"),
-/// ]);
-/// assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
-/// # }
-/// ```
+/// Deprecated, use [`parse_der_sequence_defined`](macro.parse_der_sequence_defined.html) instead.
 #[macro_export]
 #[deprecated(since = "3.0.0", note = "Use parse_der_sequence_defined")]
 macro_rules! parse_der_sequence_defined_m(
     ($i:expr, $($args:tt)*) => ({
-        map!(
-            $i,
-            parse_ber_defined_m!($crate::ber::BerTag::Sequence, $($args)*),
-            |(hdr,o)| $crate::ber::BerObject::from_header_and_content(hdr,$crate::ber::BerObjectContent::Sequence(o))
-        )
+        parse_der_sequence_defined!($i, $($args)*)
     });
 );
 
-/// Parse a defined set of DER elements
+/// Parse a defined set of DER elements (deprecated)
 ///
 /// Given a list of expected parsers, apply them to build a DER set.
 ///
-/// ```rust
-/// # #[macro_use] extern crate der_parser;
-/// # use der_parser::ber::{parse_ber_integer, BerObject};
-/// # use der_parser::error::BerResult;
-/// #
-/// # fn main() {
-/// fn localparse_set(i:&[u8]) -> BerResult {
-///     parse_der_set_defined_m!(i,
-///         parse_ber_integer >>
-///         // macros can also be called
-///         call!(parse_ber_integer)
-///     )
-/// }
-///
-/// let empty = &b""[..];
-/// let bytes = [ 0x31, 0x0a,
-///               0x02, 0x03, 0x01, 0x00, 0x01,
-///               0x02, 0x03, 0x01, 0x00, 0x00,
-/// ];
-/// let expected  = BerObject::from_set(vec![
-///     BerObject::from_int_slice(b"\x01\x00\x01").set_raw_tag(Some(&[0x2])),
-///     BerObject::from_int_slice(b"\x01\x00\x00").set_raw_tag(Some(&[0x2])),
-/// ]).set_raw_tag(Some(&[0x31]));
-/// assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
-/// # }
-/// ```
+/// Deprecated, use [`parse_der_set_defined`](macro.parse_der_set_defined.html) instead.
 #[macro_export]
 #[deprecated(since = "3.0.0", note = "Use parse_der_set_defined")]
 macro_rules! parse_der_set_defined_m(
     ($i:expr, $($args:tt)*) => ({
-        map!(
-            $i,
-            parse_ber_defined_m!($crate::ber::BerTag::Set, $($args)*),
-            |(hdr,o)| $crate::ber::BerObject::from_header_and_content(hdr,$crate::ber::BerObjectContent::Set(o))
-        )
+        parse_der_set_defined!($i, $($args)*)
     });
 );
 
@@ -244,15 +187,6 @@ macro_rules! parse_der_sequence_defined(
         )
     });
 );
-// macro_rules! parse_der_sequence_defined(
-//     ($i:expr, $($args:tt)*) => ({
-//         map!(
-//             $i,
-//             parse_der_defined!($crate::ber::BerTag::Sequence, $($args)*),
-//             |(hdr,o)| $crate::ber::BerObject::from_header_and_content(hdr,$crate::ber::BerObjectContent::Sequence(o))
-//         )
-//     });
-// );
 
 /// Parse a defined set of DER elements
 ///
@@ -293,16 +227,6 @@ macro_rules! parse_der_set_defined(
         )
     });
 );
-// #[macro_export]
-// macro_rules! parse_der_set_defined(
-//     ($i:expr, $($args:tt)*) => (
-//         map!(
-//             $i,
-//             parse_der_defined!($crate::ber::BerTag::Set, $($args)*),
-//             |(hdr,o)| $crate::ber::BerObject::from_header_and_content(hdr,$crate::ber::BerObjectContent::Set(o))
-//         )
-//     );
-// );
 
 /// Parse a sequence of identical DER elements
 ///
@@ -333,20 +257,8 @@ macro_rules! parse_der_set_defined(
 #[macro_export]
 macro_rules! parse_der_sequence_of(
     ($i:expr, $f:ident) => ({
-        use $crate::ber::ber_read_element_header;
-        do_parse!(
-            $i,
-            hdr:     ber_read_element_header >>
-                     custom_check!(hdr.tag != $crate::ber::BerTag::Sequence, $crate::error::BerError::InvalidTag) >>
-            content: flat_take!(hdr.len as usize,
-                do_parse!(
-                    r: many0!(complete!($f)) >>
-                       eof!() >>
-                    ( r )
-                )
-            ) >>
-            ( $crate::ber::BerObject::from_header_and_content(hdr, $crate::ber::BerObjectContent::Sequence(content)) )
-        )
+        use $crate::ber::parse_ber_sequence_of;
+        parse_ber_sequence_of($f)($i)
     })
 );
 
@@ -379,20 +291,8 @@ macro_rules! parse_der_sequence_of(
 #[macro_export]
 macro_rules! parse_der_set_of(
     ($i:expr, $f:ident) => ({
-        use $crate::ber::ber_read_element_header;
-        do_parse!(
-            $i,
-            hdr:     ber_read_element_header >>
-                     custom_check!(hdr.tag != $crate::ber::BerTag::Set, $crate::error::BerError::InvalidTag) >>
-            content: flat_take!(hdr.len as usize,
-                do_parse!(
-                    r: many0!(complete!($f)) >>
-                       eof!() >>
-                    ( r )
-                )
-            ) >>
-            ( $crate::ber::BerObject::from_header_and_content(hdr, $crate::ber::BerObjectContent::Set(content)) )
-        )
+        use $crate::ber::parse_ber_set_of;
+        parse_ber_set_of($f)($i)
     })
 );
 
@@ -413,16 +313,15 @@ macro_rules! parse_der_set_of(
 ///                0x02, 0x03, 0x01, 0x00, 0x01];
 /// let bytes2 = [ 0x30, 0x05,
 ///                0x02, 0x03, 0x01, 0x00, 0x01];
-/// let expected1  = BerObject::from_seq(vec![
-///     BerObject::from_obj(
-///         BerObjectContent::ContextSpecific(BerTag(0),
-///             Some(Box::new(BerObject::from_obj(BerObjectContent::Enum(1)))))
-///     ),
+/// let expected1 = BerObject::from_seq(vec![
+///     BerObject::from_obj(BerObjectContent::Optional(Some(Box::new(
+///         BerObject::from_obj(BerObjectContent::Enum(1)),
+///     )))),
 ///     BerObject::from_int_slice(b"\x01\x00\x01"),
 /// ]);
 /// let expected2  = BerObject::from_seq(vec![
 ///     BerObject::from_obj(
-///         BerObjectContent::ContextSpecific(BerTag(0), None),
+///         BerObjectContent::Optional(None),
 ///     ),
 ///     BerObject::from_int_slice(b"\x01\x00\x01"),
 /// ]);
@@ -431,7 +330,7 @@ macro_rules! parse_der_set_of(
 ///     parse_der_optional!(i, parse_ber_enum)
 /// }
 /// fn parser(i:&[u8]) -> BerResult {
-///     parse_der_sequence_defined_m!(i,
+///     parse_der_sequence_defined!(i,
 ///         parse_optional_enum >>
 ///         parse_ber_integer
 ///     )
@@ -444,18 +343,34 @@ macro_rules! parse_der_set_of(
 #[macro_export]
 macro_rules! parse_der_optional(
     ($i:expr, $f:ident) => (
-        alt!(
-            $i,
-            complete!(do_parse!(
-                content: call!($f) >>
-                (
-                    $crate::ber::BerObject::from_obj(
-                        $crate::ber::BerObjectContent::ContextSpecific($crate::ber::BerTag(0) /* XXX */,Some(Box::new(content)))
-                    )
-                )
-            )) |
-            complete!(call!($crate::ber::parse_ber_explicit_failed,$crate::ber::BerTag(0) /* XXX */))
-        )
+        match $f($i) {
+            Ok((rem, obj)) => {
+                let opt =
+                    $crate::ber::BerObject::from_header_and_content(
+                        obj.header.clone(),
+                        $crate::ber::BerObjectContent::Optional(Some(Box::new(obj)))
+                    );
+                Ok((rem, opt))
+            }
+            Err(_) => {
+                let opt = $crate::ber::BerObject::from_obj(
+                    $crate::ber::BerObjectContent::Optional(None)
+                );
+                Ok(($i, opt))
+            }
+        }
+        // alt!(
+        //     $i,
+        //     complete!(do_parse!(
+        //         content: call!($f) >>
+        //         (
+        //             $crate::ber::BerObject::from_obj(
+        //                 $crate::ber::BerObjectContent::ContextSpecific($crate::ber::BerTag(0) /* XXX */,Some(Box::new(content)))
+        //             )
+        //         )
+        //     )) |
+        //     complete!(call!($crate::ber::parse_ber_explicit_failed,$crate::ber::BerTag(0) /* XXX */))
+        // )
     )
 );
 
@@ -493,7 +408,7 @@ macro_rules! parse_der_optional(
 ///     b: BerObject<'a>,
 /// }
 ///
-/// fn parse_struct01(i: &[u8]) -> BerResult<(BerObjectHeader,MyStruct)> {
+/// fn parse_struct01(i: &[u8]) -> BerResult<MyStruct> {
 ///     parse_der_struct!(
 ///         i,
 ///         a: parse_ber_integer >>
@@ -508,14 +423,10 @@ macro_rules! parse_der_optional(
 ///               0x02, 0x03, 0x01, 0x00, 0x00,
 /// ];
 /// let empty = &b""[..];
-/// let expected = (
-///     BerObjectHeader::new(BerClass::Universal, 1, BerTag::Sequence, 0xa)
-///         .with_raw_tag(Some(&[0x30])),
-///     MyStruct {
-///         a: BerObject::from_int_slice(b"\x01\x00\x01"),
-///         b: BerObject::from_int_slice(b"\x01\x00\x00"),
-///     }
-/// );
+/// let expected = MyStruct {
+///     a: BerObject::from_int_slice(b"\x01\x00\x01"),
+///     b: BerObject::from_int_slice(b"\x01\x00\x00"),
+/// };
 /// let res = parse_struct01(&bytes);
 /// assert_eq!(res, Ok((empty, expected)));
 /// # }
@@ -534,14 +445,14 @@ macro_rules! parse_der_optional(
 ///     b: BerObject<'a>,
 /// }
 ///
-/// fn parse_struct_with_tag(i: &[u8]) -> BerResult<(BerObjectHeader,MyStruct)> {
+/// fn parse_struct_with_tag(i: &[u8]) -> BerResult<MyStruct> {
 ///     parse_der_struct!(
 ///         i,
 ///         TAG BerTag::Sequence,
 ///         a: parse_ber_integer >>
 ///         b: parse_ber_integer >>
 ///            eof!() >>
-///         ( MyStruct{ a: a, b: b } )
+///         ( MyStruct{ a, b } )
 ///     )
 /// }
 /// # }
@@ -549,23 +460,31 @@ macro_rules! parse_der_optional(
 #[macro_export]
 macro_rules! parse_der_struct(
     ($i:expr, TAG $tag:expr, $($rest:tt)*) => ({
-        use $crate::ber::{BerObjectHeader,ber_read_element_header};
-        do_parse!(
-            $i,
-            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader|
-                         hdr.structured == 1 && hdr.tag == $tag) >>
-            res: flat_take!(hdr.len as usize, do_parse!( $($rest)* )) >>
-            (hdr,res)
-        )
+        use $crate::ber::parse_ber_container;
+        use $crate::error::BerError;
+        parse_ber_container(
+            |hdr, i| {
+                if !hdr.is_constructed() {
+                    return Err(nom::Err::Error(BerError::ConstructExpected.into()));
+                }
+                if hdr.tag != $tag {
+                    return Err(nom::Err::Error(BerError::InvalidTag.into()));
+                }
+                do_parse!(i, $($rest)*)
+            }
+        )($i)
     });
     ($i:expr, $($rest:tt)*) => ({
-        use $crate::ber::{BerObjectHeader,ber_read_element_header};
-        do_parse!(
-            $i,
-            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader| hdr.structured == 1) >>
-            res: flat_take!(hdr.len as usize, do_parse!( $($rest)* )) >>
-            (hdr,res)
-        )
+        use $crate::ber::parse_ber_container;
+        use $crate::error::BerError;
+        parse_ber_container(
+            |hdr, i| {
+                if !hdr.is_constructed() {
+                    return Err(nom::Err::Error(BerError::ConstructExpected.into()));
+                }
+                do_parse!(i, $($rest)*)
+            }
+        )($i)
     });
 );
 
@@ -598,7 +517,7 @@ macro_rules! parse_der_struct(
 ///     map_res!(
 ///         i,
 ///         parse_der_tagged!(EXPLICIT 2, parse_ber_integer),
-///         |x: BerObject| x.as_u32()
+///         |x: BerObject| x.as_tagged()?.2.as_u32()
 ///     )
 /// }
 ///
@@ -609,7 +528,7 @@ macro_rules! parse_der_struct(
 ///         assert!(rem.is_empty());
 ///         assert_eq!(val, 0x10001);
 ///     },
-///     _ => assert!(false)
+///     Err(e) => panic!("parse_int_explicit failed: {:?}", e),
 /// }
 /// # }
 /// ```
@@ -618,7 +537,7 @@ macro_rules! parse_der_struct(
 ///
 /// ```rust
 /// # #[macro_use] extern crate der_parser;
-/// # use der_parser::ber::{parse_ber_integer, BerObject, BerTag};
+/// # use der_parser::ber::{BerObject, BerTag};
 /// # use der_parser::error::BerResult;
 /// #
 /// # fn main() {
@@ -644,31 +563,29 @@ macro_rules! parse_der_struct(
 #[macro_export]
 macro_rules! parse_der_tagged(
     ($i:expr, EXPLICIT $tag:expr, $f:ident) => ({
-        use $crate::ber::{BerObjectHeader,ber_read_element_header};
-        do_parse!(
-            $i,
-            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader| hdr.tag.0 == $tag) >>
-            res: flat_take!(hdr.len as usize, call!( $f )) >>
-            (res)
-        )
+        use $crate::ber::parse_ber_tagged_explicit;
+        parse_ber_tagged_explicit(
+            $tag,
+            $f
+        )($i)
     });
     ($i:expr, EXPLICIT $tag:expr, $submac:ident!( $($args:tt)*)) => ({
-        use $crate::ber::{BerObjectHeader,ber_read_element_header};
-        do_parse!(
-            $i,
-            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader| hdr.tag.0 == $tag) >>
-            res: flat_take!(hdr.len as usize, $submac!( $($args)* )) >>
-            (res)
-        )
+        use $crate::ber::parse_ber_tagged_explicit;
+        parse_ber_tagged_explicit(
+            $tag,
+            |content| {
+                $submac!(content, $($args)*)
+            }
+        )($i)
     });
     ($i:expr, IMPLICIT $tag:expr, $type:expr) => ({
-        use $crate::ber::{BerObjectHeader,ber_read_element_header,ber_read_element_content_as,MAX_RECURSION};
-        do_parse!(
-            $i,
-            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader| hdr.tag.0 == $tag) >>
-            res: call!(ber_read_element_content_as, $type, hdr.len as usize, hdr.is_constructed(), MAX_RECURSION) >>
-            (BerObject::from_obj(res))
-        )
+        use $crate::ber::{ber_read_element_content_as, parse_ber_tagged_implicit};
+        parse_ber_tagged_implicit(
+            $tag,
+            |content, hdr, max_size| {
+                ber_read_element_content_as(content, $type, hdr.len, hdr.is_constructed(), max_size)
+            }
+        )($i)
     });
     ($i:expr, $tag:expr, $f:ident) => ( parse_der_tagged!($i, EXPLICIT $tag, $f) );
 );
@@ -699,7 +616,7 @@ macro_rules! parse_der_tagged(
 ///     a: u32,
 /// };
 ///
-/// fn parse_app01(i:&[u8]) -> BerResult<(BerObjectHeader,SimpleStruct)> {
+/// fn parse_app01(i:&[u8]) -> BerResult<SimpleStruct> {
 ///     parse_der_application!(
 ///         i,
 ///         APPLICATION 2,
@@ -712,11 +629,8 @@ macro_rules! parse_der_tagged(
 /// let bytes = &[0x62, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
 /// let res = parse_app01(bytes);
 /// match res {
-///     Ok((rem,(hdr,app))) => {
+///     Ok((rem, app)) => {
 ///         assert!(rem.is_empty());
-///         assert_eq!(hdr.tag, BerTag::Integer);
-///         assert!(hdr.is_application());
-///         assert_eq!(hdr.structured, 1);
 ///         assert_eq!(app, SimpleStruct{ a:0x10001 });
 ///     },
 ///     _ => assert!(false)
@@ -726,14 +640,19 @@ macro_rules! parse_der_tagged(
 #[macro_export]
 macro_rules! parse_der_application(
     ($i:expr, APPLICATION $tag:expr, $($rest:tt)*) => ({
-        use $crate::ber::{BerObjectHeader,ber_read_element_header};
-        do_parse!(
-            $i,
-            hdr: verify!(ber_read_element_header, |hdr: &BerObjectHeader|
-                         hdr.class == $crate::ber::BerClass::Application && hdr.tag.0 == $tag) >>
-            res: flat_take!(hdr.len as usize, do_parse!( $($rest)* )) >>
-            (hdr,res)
-        )
+        use $crate::ber::{parse_ber_container, BerClass, BerTag};
+        use $crate::error::BerError;
+        parse_ber_container(
+            |hdr, content| {
+                if hdr.class != BerClass::Application {
+                    return Err(nom::Err::Error(BerError::InvalidClass.into()));
+                }
+                if hdr.tag != BerTag($tag) {
+                    return Err(nom::Err::Error(BerError::BerTypeError.into()));
+                }
+                do_parse!(content, $($rest)* )
+            }
+        )($i)
     });
-    ($i:expr, $tag:expr, $($rest:tt)*) => ( parse_der_application!($i, $tag, $($rest)*) );
+    ($i:expr, $tag:expr, $($rest:tt)*) => ( parse_der_application!($i, APPLICATION $tag, $($rest)*) );
 );
