@@ -460,7 +460,7 @@ pub fn parse_der_content<'a>(
 
 /// Parse the next bytes as the content of a DER object.
 ///
-/// Content type is *not* checked, caller is reponsible of providing the correct tag
+/// Content type is *not* checked, caller is responsible of providing the correct tag
 pub fn der_read_element_content_as(
     i: &[u8],
     tag: BerTag,
