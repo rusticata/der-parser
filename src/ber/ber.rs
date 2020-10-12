@@ -69,7 +69,7 @@ impl debug BerTag {
     UtcTime = 0x17,
     GeneralizedTime = 0x18,
 
-    GraphicString = 15, // 0x19
+    GraphicString = 25, // 0x19
     VisibleString = 26, // 0x1a
     GeneralString = 27, // 0x1b
 
