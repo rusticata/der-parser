@@ -50,13 +50,17 @@ impl debug BerTag {
     NumericString = 0x12,
     PrintableString = 0x13,
     T61String = 0x14,
+    VideotexString = 0x15,
 
     Ia5String = 0x16,
     UtcTime = 0x17,
     GeneralizedTime = 0x18,
 
+    GraphicString = 15, // 0x19
+    VisibleString = 26, // 0x1a
     GeneralString = 27, // 0x1b
 
+    UniversalString = 0x1c,
     BmpString = 0x1e,
 
     Invalid = 0xff,
@@ -92,19 +96,24 @@ pub enum BerObjectContent<'a> {
     OID(Oid<'a>),
     RelativeOID(Oid<'a>),
     NumericString(&'a str),
+    VisibleString(&'a str),
     PrintableString(&'a str),
     IA5String(&'a str),
     UTF8String(&'a str),
     T61String(&'a [u8]),
+    VideotexString(&'a [u8]),
 
     BmpString(&'a [u8]),
+    UniversalString(&'a [u8]),
 
     Sequence(Vec<BerObject<'a>>),
     Set(Vec<BerObject<'a>>),
 
-    UTCTime(&'a [u8]),
-    GeneralizedTime(&'a [u8]),
+    UTCTime(&'a str),
+    GeneralizedTime(&'a str),
 
+    ObjectDescriptor(&'a [u8]),
+    GraphicString(&'a [u8]),
     GeneralString(&'a [u8]),
 
     ContextSpecific(BerTag, Option<Box<BerObject<'a>>>),
@@ -351,8 +360,9 @@ impl<'a> BerObject<'a> {
     /// Attempt to get the content from a DER object, as a str.
     /// This can fail if the object does not contain a string type.
     ///
-    /// Only NumericString, PrintableString, UTF8String and IA5String
-    /// are considered here. Other string types can be read using `as_slice`.
+    /// Only NumericString, VisibleString, UTCTime, GeneralizedTime,
+    /// PrintableString, UTF8String and IA5String are considered here. Other
+    /// string types can be read using `as_slice`.
     pub fn as_str(&self) -> Result<&'a str, BerError> {
         self.content.as_str()
     }
@@ -531,6 +541,9 @@ impl<'a> BerObjectContent<'a> {
     pub fn as_slice(&self) -> Result<&'a [u8],BerError> {
         match *self {
             BerObjectContent::NumericString(s) |
+            BerObjectContent::GeneralizedTime(s) |
+            BerObjectContent::UTCTime(s) |
+            BerObjectContent::VisibleString(s) |
             BerObjectContent::PrintableString(s) |
             BerObjectContent::UTF8String(s) |
             BerObjectContent::IA5String(s) => Ok(s.as_ref()),
@@ -538,7 +551,11 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::BitString(_,BitStringObject{data:s}) |
             BerObjectContent::OctetString(s) |
             BerObjectContent::T61String(s) |
+            BerObjectContent::VideotexString(s) |
             BerObjectContent::BmpString(s) |
+            BerObjectContent::UniversalString(s) |
+            BerObjectContent::ObjectDescriptor(s) |
+            BerObjectContent::GraphicString(s) |
             BerObjectContent::GeneralString(s) |
             BerObjectContent::Unknown(_,s) => Ok(s),
             _ => Err(BerError::BerTypeError),
@@ -549,6 +566,9 @@ impl<'a> BerObjectContent<'a> {
     pub fn as_str(&self) -> Result<&'a str,BerError> {
         match *self {
             BerObjectContent::NumericString(s) |
+            BerObjectContent::GeneralizedTime(s) |
+            BerObjectContent::UTCTime(s) |
+            BerObjectContent::VisibleString(s) |
             BerObjectContent::PrintableString(s) |
             BerObjectContent::UTF8String(s) |
             BerObjectContent::IA5String(s) => Ok(s),
@@ -568,16 +588,21 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::Enum(_)              => BerTag::Enumerated,
             BerObjectContent::OID(_)               => BerTag::Oid,
             BerObjectContent::NumericString(_)     => BerTag::NumericString,
+            BerObjectContent::VisibleString(_)     => BerTag::VisibleString,
             BerObjectContent::PrintableString(_)   => BerTag::PrintableString,
             BerObjectContent::IA5String(_)         => BerTag::Ia5String,
             BerObjectContent::UTF8String(_)        => BerTag::Utf8String,
             BerObjectContent::RelativeOID(_)       => BerTag::RelativeOid,
             BerObjectContent::T61String(_)         => BerTag::T61String,
+            BerObjectContent::VideotexString(_)    => BerTag::VideotexString,
             BerObjectContent::BmpString(_)         => BerTag::BmpString,
+            BerObjectContent::UniversalString(_)   => BerTag::UniversalString,
             BerObjectContent::Sequence(_)          => BerTag::Sequence,
             BerObjectContent::Set(_)               => BerTag::Set,
             BerObjectContent::UTCTime(_)           => BerTag::UtcTime,
             BerObjectContent::GeneralizedTime(_)   => BerTag::GeneralizedTime,
+            BerObjectContent::ObjectDescriptor(_)  => BerTag::ObjDescriptor,
+            BerObjectContent::GraphicString(_)     => BerTag::GraphicString,
             BerObjectContent::GeneralString(_)     => BerTag::GeneralString,
             BerObjectContent::ContextSpecific(x,_) |
             BerObjectContent::Unknown(x,_)         => x,

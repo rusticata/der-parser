@@ -2,8 +2,11 @@
 
 ## [Unreleased][unreleased]
 
-- Implement the `as_u64` and `as_u32` methods for BerObjects with contents of type `BerObjectContent::BitString``
 - Fix the bug that caused OIDs longer than two subidentifiers which started by subidentifiers "0.0" ("itu-t recommenation") not to be decoded correctly
+- Implement the `as_u64` and `as_u32` methods for BerObjects with contents of type `BerObjectContent::BitString`.
+- Implement the `VideotexString`, `ObjectDescriptor` `GraphicString`, and `VisibleString` string types. (Non-breaking changes)
+- Correctly decode `BMPString` as UTF-16 instead of UTF-8 when printing. (Non-breaking change)
+- Turn `UTCTime` and `GeneralizedTime` into a `&str` instead of `&[u8]`, as they inherit from `VisibleString` which is a subset of ASCII. (Breaking change)
 
 ### Thanks
 

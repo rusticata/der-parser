@@ -274,6 +274,22 @@ fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     })
 }
 
+fn ber_read_content_visiblestring<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
+    // Argument must be a reference, because of the .iter().all(F) call below
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    fn is_visible(b: &u8) -> bool {
+        0x20 <= *b && *b <= 0x7f
+    }
+    map_res!(i, take!(len), |bytes: &'a [u8]| {
+        if !bytes.iter().all(is_visible) {
+            return Err(BerError::BerValueError);
+        }
+        std::str::from_utf8(bytes)
+            .map(|s| BerObjectContent::VisibleString(s))
+            .map_err(|_| BerError::BerValueError)
+    })
+}
+
 fn ber_read_content_printablestring<'a>(
     i: &'a [u8],
     len: usize,
@@ -315,6 +331,11 @@ fn ber_read_content_t61string(i: &[u8], len: usize) -> BerResult<BerObjectConten
     map(take(len), BerObjectContent::T61String)(i)
 }
 
+#[inline]
+fn ber_read_content_videotexstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+    map(take(len), BerObjectContent::VideotexString)(i)
+}
+
 fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
     map_res(take(len), |bytes: &'a [u8]| {
         if !bytes.iter().all(u8::is_ascii) {
@@ -326,14 +347,49 @@ fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjec
     })(i)
 }
 
-#[inline]
-fn ber_read_content_utctime(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::UTCTime)(i)
+fn ber_read_content_utctime<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
+    // Argument must be a reference, because of the .iter().all(F) call below
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    fn is_visible(b: &u8) -> bool {
+        0x20 <= *b && *b <= 0x7f
+    }
+    map_res!(i, take!(len), |bytes: &'a [u8]| {
+        if !bytes.iter().all(is_visible) {
+            return Err(BerError::BerValueError);
+        }
+        std::str::from_utf8(bytes)
+            .map(|s| BerObjectContent::UTCTime(s))
+            .map_err(|_| BerError::BerValueError)
+    })
+}
+
+fn ber_read_content_generalizedtime<'a>(
+    i: &'a [u8],
+    len: usize,
+) -> BerResult<BerObjectContent<'a>> {
+    // Argument must be a reference, because of the .iter().all(F) call below
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    fn is_visible(b: &u8) -> bool {
+        0x20 <= *b && *b <= 0x7f
+    }
+    map_res!(i, take!(len), |bytes: &'a [u8]| {
+        if !bytes.iter().all(is_visible) {
+            return Err(BerError::BerValueError);
+        }
+        std::str::from_utf8(bytes)
+            .map(|s| BerObjectContent::GeneralizedTime(s))
+            .map_err(|_| BerError::BerValueError)
+    })
 }
 
 #[inline]
-fn ber_read_content_generalizedtime(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::GeneralizedTime)(i)
+fn ber_read_content_objectdescriptor(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+    map(take(len), BerObjectContent::ObjectDescriptor)(i)
+}
+
+#[inline]
+fn ber_read_content_graphicstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+    map(take(len), BerObjectContent::GraphicString)(i)
 }
 
 #[inline]
@@ -344,6 +400,11 @@ fn ber_read_content_generalstring(i: &[u8], len: usize) -> BerResult<BerObjectCo
 #[inline]
 fn ber_read_content_bmpstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
     map(take(len), BerObjectContent::BmpString)(i)
+}
+
+#[inline]
+fn ber_read_content_universalstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+    map(take(len), BerObjectContent::UniversalString)(i)
 }
 
 /// Parse the next bytes as the content of a BER object.
@@ -391,17 +452,24 @@ pub fn ber_read_element_content_as(
             custom_check!(i, len != 0, BerError::InvalidLength)?;
             ber_read_content_null(i)
         }
-        // 0x06: object identified
+        // 0x06: object identifier
         BerTag::Oid => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.19.1
             ber_read_content_oid(i, len)
+        }
+        // 0x07: object descriptor - Alias for GraphicString with a different
+        // implicit tag, see below
+        BerTag::ObjDescriptor => {
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            ber_read_content_objectdescriptor(i, len)
         }
         // 0x0a: enumerated
         BerTag::Enumerated => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.4
             ber_read_content_enum(i, len)
         }
-        // 0x0c: UTF8String
+        // 0x0c: UTF8String - Unicode encoded with the UTF-8 charset (ISO/IEC
+        // 10646-1, Annex D)
         BerTag::Utf8String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_utf8string(i, len)
@@ -421,39 +489,72 @@ pub fn ber_read_element_content_as(
             custom_check!(i, !constructed, BerError::ConstructExpected)?;
             ber_read_content_set(i, len, max_depth)
         }
-        // 0x12: numericstring
+        // 0x12: numericstring - ASCII string with digits an spaces only
         BerTag::NumericString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_numericstring(i, len)
         }
-        // 0x13: printablestring
+        // 0x13: printablestring - ASCII string with certain printable
+        // characters only (specified in Table 10 of X.680)
         BerTag::PrintableString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_printablestring(i, len)
         }
-        // 0x14: t61string
+        // 0x14: t61string - ISO 2022 string with a Teletex (T.61) charset,
+        // ASCII is possible but only when explicit escaped, as by default
+        // the G0 character range (0x20-0x7f) will match the graphic character
+        // set. https://en.wikipedia.org/wiki/ITU_T.61
         BerTag::T61String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_t61string(i, len)
         }
-        // 0x16: ia5string
+        // 0x15: videotexstring - ISO 2022 string with a Videotex (T.100/T.101)
+        // charset, excluding ASCII. https://en.wikipedia.org/wiki/Videotex_character_set
+        BerTag::VideotexString => {
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            ber_read_content_videotexstring(i, len)
+        }
+        // 0x16: ia5string - ASCII string
         BerTag::Ia5String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_ia5string(i, len)
         }
-        // 0x17: utctime
+        // 0x17: utctime - Alias for a VisibleString with a different implicit
+        // tag, see below
         BerTag::UtcTime => ber_read_content_utctime(i, len),
-        // 0x18: generalizedtime
+        // 0x18: generalizedtime - Alias for a VisibleString with a different
+        // implicit tag, see below
         BerTag::GeneralizedTime => ber_read_content_generalizedtime(i, len),
-        // 0x1b: generalstring
+        // 0x19: graphicstring - Generic ISO 2022 container with explicit
+        // escape sequences, without control characters
+        BerTag::GraphicString => {
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            ber_read_content_graphicstring(i, len)
+        }
+        // 0x1a: visiblestring - ASCII string with no control characters except
+        // SPACE
+        BerTag::VisibleString => {
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            ber_read_content_visiblestring(i, len)
+        }
+        // 0x1b: generalstring - Generic ISO 2022 container with explicit
+        // escape sequences
         BerTag::GeneralString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_generalstring(i, len)
         }
-        // 0x1e: bmpstring
+        // 0x1e: bmpstring - Unicode encoded with the UCS-2 big-endian charset
+        // (ISO/IEC 10646-1, section 13.1), restricted to the BMP (Basic
+        // Multilingual Plane) except certain control cahracters
         BerTag::BmpString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             ber_read_content_bmpstring(i, len)
+        }
+        // 0x1c: universalstring - Unicode encoded with the UCS-4 big-endian
+        // charset (ISO/IEC 10646-1, section 13.2)
+        BerTag::UniversalString => {
+            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+            ber_read_content_universalstring(i, len)
         }
         // all unknown values
         _ => Err(Err::Error(BerError::UnknownTag)),
@@ -631,6 +732,13 @@ pub fn parse_ber_numericstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::NumericString)
 }
 
+/// Read a visible string value. The content is verified to
+/// contain only the allowed characters.
+#[inline]
+pub fn parse_ber_visiblestring(i: &[u8]) -> BerResult {
+    parse_ber_with_tag(i, BerTag::VisibleString)
+}
+
 /// Read a printable string value. The content is verified to
 /// contain only the allowed characters.
 #[inline]
@@ -642,6 +750,12 @@ pub fn parse_ber_printablestring(i: &[u8]) -> BerResult {
 #[inline]
 pub fn parse_ber_t61string(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::T61String)
+}
+
+/// Read a Videotex string value
+#[inline]
+pub fn parse_ber_videotexstring(i: &[u8]) -> BerResult {
+    parse_ber_with_tag(i, BerTag::VideotexString)
 }
 
 /// Read an IA5 string value. The content is verified to be ASCII.
@@ -662,6 +776,18 @@ pub fn parse_ber_generalizedtime(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::GeneralizedTime)
 }
 
+/// Read an ObjectDescriptor value
+#[inline]
+pub fn parse_ber_objectdescriptor(i: &[u8]) -> BerResult {
+    parse_ber_with_tag(i, BerTag::ObjDescriptor)
+}
+
+/// Read a GraphicString value
+#[inline]
+pub fn parse_ber_graphicstring(i: &[u8]) -> BerResult {
+    parse_ber_with_tag(i, BerTag::GraphicString)
+}
+
 /// Read a GeneralString value
 #[inline]
 pub fn parse_ber_generalstring(i: &[u8]) -> BerResult {
@@ -672,6 +798,12 @@ pub fn parse_ber_generalstring(i: &[u8]) -> BerResult {
 #[inline]
 pub fn parse_ber_bmpstring(i: &[u8]) -> BerResult {
     parse_ber_with_tag(i, BerTag::BmpString)
+}
+
+/// Read a UniversalString value
+#[inline]
+pub fn parse_ber_universalstring(i: &[u8]) -> BerResult {
+    parse_ber_with_tag(i, BerTag::UniversalString)
 }
 
 pub fn parse_ber_explicit_failed(i: &[u8], tag: BerTag) -> BerResult {
@@ -842,6 +974,22 @@ fn test_numericstring() {
 }
 
 #[test]
+fn text_visiblestring() {
+    assert_eq!(
+        ber_read_content_visiblestring(b"AZaz]09 '()+,-./:=?", 19),
+        Ok((
+            [].as_ref(),
+            BerObjectContent::VisibleString("AZaz]09 '()+,-./:=?")
+        )),
+    );
+    assert_eq!(
+        ber_read_content_visiblestring(b"", 0),
+        Ok(([].as_ref(), BerObjectContent::VisibleString(""))),
+    );
+    assert!(ber_read_content_visiblestring(b"\n", 1).is_err());
+}
+
+#[test]
 fn test_printablestring() {
     assert_eq!(
         ber_read_content_printablestring(b"AZaz09 '()+,-./:=?", 18),
@@ -854,16 +1002,16 @@ fn test_printablestring() {
         ber_read_content_printablestring(b"", 0),
         Ok(([].as_ref(), BerObjectContent::PrintableString(""))),
     );
-    assert!(ber_read_content_printablestring(b"]", 1).is_err());
+    assert!(ber_read_content_printablestring(b"]\n", 2).is_err());
 }
 
 #[test]
 fn test_ia5string() {
     assert_eq!(
-        ber_read_content_ia5string(b"AZaz09 '()+,-./:=?[]{}\0\n", 24),
+        ber_read_content_ia5string(b"AZaz\n09 '()+,-./:=?[]{}\0\n", 25),
         Ok((
             [].as_ref(),
-            BerObjectContent::IA5String("AZaz09 '()+,-./:=?[]{}\0\n")
+            BerObjectContent::IA5String("AZaz\n09 '()+,-./:=?[]{}\0\n")
         )),
     );
     assert_eq!(

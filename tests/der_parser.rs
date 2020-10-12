@@ -253,7 +253,9 @@ fn test_der_set_of() {
 #[test]
 fn test_der_utctime() {
     let bytes = hex!("17 0D 30 32 31 32 31 33 31 34 32 39 32 33 5A FF");
-    let expected = DerObject::from_obj(BerObjectContent::UTCTime(&bytes[2..(2 + 0x0d)]));
+    let expected = DerObject::from_obj(BerObjectContent::UTCTime(
+        std::str::from_utf8(&bytes[2..(2 + 0x0d)]).unwrap(),
+    ));
     assert_eq!(parse_der_utctime(&bytes), Ok((&[0xff][..], expected)));
     let bytes = hex!("17 0c 30 32 31 32 31 33 31 34 32 39 32 33");
     parse_der_utctime(&bytes).err().expect("expected error");
@@ -265,7 +267,9 @@ fn test_der_generalizedtime() {
     let bytes = [
         0x18, 0x0D, 0x30, 0x32, 0x31, 0x32, 0x31, 0x33, 0x31, 0x34, 0x32, 0x39, 0x32, 0x33, 0x5A,
     ];
-    let expected = DerObject::from_obj(BerObjectContent::GeneralizedTime(&bytes[2..]));
+    let expected = DerObject::from_obj(BerObjectContent::GeneralizedTime(
+        std::str::from_utf8(&bytes[2..]).unwrap(),
+    ));
     assert_eq!(parse_der_generalizedtime(&bytes), Ok((empty, expected)));
 }
 
