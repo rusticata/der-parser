@@ -2,7 +2,7 @@
 
 use crate::ber::BerObject;
 use crate::der::DerObject;
-use nom::error::{ErrorKind, ParseError};
+use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::IResult;
 use std::error::Error;
 use std::fmt;
@@ -76,6 +76,12 @@ impl<I> ParseError<I> for BerError {
         BerError::NomError(kind)
     }
     fn append(_input: I, kind: ErrorKind, _other: Self) -> Self {
+        BerError::NomError(kind)
+    }
+}
+
+impl<I, E> FromExternalError<I, E> for BerError {
+    fn from_external_error(_input: I, kind: ErrorKind, _e: E) -> BerError {
         BerError::NomError(kind)
     }
 }

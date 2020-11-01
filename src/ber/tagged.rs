@@ -34,7 +34,7 @@ use nom::{Err, IResult};
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_explicit<'a, Tag, F>(tag: Tag, f: F) -> impl Fn(&'a [u8]) -> BerResult
+pub fn parse_ber_tagged_explicit<'a, Tag, F>(tag: Tag, f: F) -> impl FnMut(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult<BerObject>,
     Tag: Into<BerTag>,
@@ -80,7 +80,7 @@ where
 pub fn parse_ber_tagged_explicit_g<'a, Tag, Output, F, E>(
     tag: Tag,
     f: F,
-) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Output, E>
+) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Output, E>
 where
     F: Fn(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], Output, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
@@ -167,7 +167,7 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_implicit<'a, Tag, F>(tag: Tag, f: F) -> impl Fn(&'a [u8]) -> BerResult
+pub fn parse_ber_tagged_implicit<'a, Tag, F>(tag: Tag, f: F) -> impl FnMut(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>>,
     Tag: Into<BerTag>,
@@ -218,7 +218,7 @@ where
 pub fn parse_ber_tagged_implicit_g<'a, Tag, Output, F, E>(
     tag: Tag,
     f: F,
-) -> impl Fn(&'a [u8]) -> IResult<&[u8], Output, E>
+) -> impl FnMut(&'a [u8]) -> IResult<&[u8], Output, E>
 where
     F: Fn(&'a [u8], BerObjectHeader<'a>, usize) -> IResult<&'a [u8], Output, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,

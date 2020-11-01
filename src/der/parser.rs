@@ -4,7 +4,7 @@ use crate::error::*;
 use nom::number::streaming::be_u8;
 use nom::*;
 use rusticata_macros::custom_check;
-use std::convert::TryFrom;
+use std::convert::{Into, TryFrom};
 
 use crate::ber::MAX_RECURSION;
 
@@ -470,7 +470,7 @@ pub fn der_read_element_content_as(
 ) -> BerResult<BerObjectContent> {
     if let BerSize::Definite(l) = len {
         if i.len() < l {
-            return Err(Err::Incomplete(Needed::Size(l)));
+            return Err(Err::Incomplete(Needed::new(l)));
         }
     }
     match tag {

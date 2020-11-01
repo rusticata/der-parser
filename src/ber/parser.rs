@@ -8,7 +8,7 @@ use nom::number::streaming::be_u8;
 use nom::*;
 use rusticata_macros::{custom_check, parse_hex_to_u64};
 use std::borrow::Cow;
-use std::convert::TryFrom;
+use std::convert::{Into, TryFrom};
 
 /// Default maximum recursion limit
 pub const MAX_RECURSION: usize = 50;
@@ -122,7 +122,7 @@ pub(crate) fn bitstring_to_u64(
 
 pub(crate) fn parse_identifier(i: &[u8]) -> BerResult<(u8, u8, u32, &[u8])> {
     if i.is_empty() {
-        Err(Err::Incomplete(Needed::Size(1)))
+        Err(Err::Incomplete(Needed::new(1)))
     } else {
         let a = i[0] >> 6;
         let b = if i[0] & 0b0010_0000 != 0 { 1 } else { 0 };
@@ -158,7 +158,7 @@ pub(crate) fn parse_identifier(i: &[u8]) -> BerResult<(u8, u8, u32, &[u8])> {
 /// Return the MSB and the rest of the first byte, or an error
 pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
     if i.is_empty() {
-        Err(Err::Incomplete(Needed::Size(1)))
+        Err(Err::Incomplete(Needed::new(1)))
     } else {
         let a = i[0] >> 7;
         let b = i[0] & 0b0111_1111;
@@ -515,7 +515,7 @@ pub fn ber_read_element_content_as(
     if let BerSize::Definite(l) = len {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
         if i.len() < l {
-            return Err(Err::Incomplete(Needed::Size(l)));
+            return Err(Err::Incomplete(Needed::new(l)));
         }
     }
     match tag {
@@ -1041,15 +1041,15 @@ where
 /// # use der_parser::ber::*;
 /// #
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
-/// let parser = parse_ber_optional(parse_ber_integer);
+/// let mut parser = parse_ber_optional(parse_ber_integer);
 /// let (_, obj) = parser(bytes).expect("parsing failed");
 ///
 /// assert_eq!(obj.header.tag, BerTag::Integer);
 /// assert!(obj.as_optional().is_ok());
 /// ```
-pub fn parse_ber_optional<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<'a>
+pub fn parse_ber_optional<'a, F>(mut f: F) -> impl FnMut(&'a [u8]) -> BerResult<'a>
 where
-    F: Fn(&'a [u8]) -> BerResult<'a>,
+    F: FnMut(&'a [u8]) -> BerResult<'a>,
 {
     move |i: &[u8]| {
         let res = f(i);

@@ -160,20 +160,20 @@ fn test_overflow_tag() {
 fn test_incomplete_length() {
     let bytes = hex!("30");
     let res = parse_ber(&bytes).err().expect("expected error");
-    assert_eq!(res, Err::Incomplete(Needed::Size(1)));
+    assert_eq!(res, Err::Incomplete(Needed::new(1)));
     let res = parse_der(&bytes).err().expect("expected error");
-    assert_eq!(res, Err::Incomplete(Needed::Size(1)));
+    assert_eq!(res, Err::Incomplete(Needed::new(1)));
     let bytes = hex!("02");
     let res = parse_ber(&bytes).err().expect("expected error");
-    assert_eq!(res, Err::Incomplete(Needed::Size(1)));
+    assert_eq!(res, Err::Incomplete(Needed::new(1)));
     let bytes = hex!("02 05");
     let _ = parse_ber(&bytes).err().expect("expected error");
     let bytes = hex!("02 85");
     let res = parse_ber(&bytes).err().expect("expected error");
-    assert_eq!(res, Err::Incomplete(Needed::Size(5)));
+    assert_eq!(res, Err::Incomplete(Needed::new(5)));
     let bytes = hex!("02 85 ff");
     let res = parse_ber(&bytes).err().expect("expected error");
-    assert_eq!(res, Err::Incomplete(Needed::Size(5)));
+    assert_eq!(res, Err::Incomplete(Needed::new(4)));
 }
 
 #[test]
@@ -194,7 +194,7 @@ fn test_invalid_length() {
     }
     let bytes = hex!("02 02 00");
     let res = parse_der(&bytes).err().expect("expected error");
-    assert_eq!(res, Err::Incomplete(Needed::Size(2)));
+    assert_eq!(res, Err::Incomplete(Needed::new(2)));
 }
 
 #[test]

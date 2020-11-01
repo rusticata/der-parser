@@ -30,7 +30,7 @@ use nom::{Err, IResult};
 /// # assert_eq!(parser(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_ber_sequence_of<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
+pub fn parse_ber_sequence_of<'a, F>(f: F) -> impl FnMut(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult,
 {
@@ -64,11 +64,11 @@ where
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
 /// # assert_eq!(v, expected);
 /// ```
-pub fn parse_ber_sequence_of_v<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<Vec<T>>
+pub fn parse_ber_sequence_of_v<'a, T, F>(f: F) -> impl FnMut(&'a [u8]) -> BerResult<Vec<T>>
 where
-    F: Fn(&'a [u8]) -> BerResult<T>,
+    F: FnMut(&'a [u8]) -> BerResult<T>,
 {
-    let subparser = all_consuming(many0(complete(cut(f))));
+    let mut subparser = all_consuming(many0(complete(cut(f))));
     parse_ber_sequence_defined_g(move |_, data| subparser(data))
 }
 
@@ -150,9 +150,9 @@ where
 /// # assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
 /// let (rem, v) = localparse_seq(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_ber_sequence_defined<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
+pub fn parse_ber_sequence_defined<'a, F>(mut f: F) -> impl FnMut(&'a [u8]) -> BerResult
 where
-    F: Fn(&'a [u8]) -> BerResult<Vec<BerObject>>,
+    F: FnMut(&'a [u8]) -> BerResult<Vec<BerObject>>,
 {
     map(
         parse_ber_sequence_defined_g(move |_, data| f(data)),
@@ -214,10 +214,10 @@ where
 /// let (rem, v) = parse_myobject(&bytes).expect("parsing failed");
 /// ```
 pub fn parse_ber_sequence_defined_g<'a, O, F, E>(
-    f: F,
-) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
+    mut f: F,
+) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: Fn(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: FnMut(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     parse_ber_container(move |hdr, i| {
@@ -253,7 +253,7 @@ where
 /// # assert_eq!(parser(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_ber_set_of<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
+pub fn parse_ber_set_of<'a, F>(f: F) -> impl FnMut(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult,
 {
@@ -287,11 +287,11 @@ where
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
 /// # assert_eq!(v, expected);
 /// ```
-pub fn parse_ber_set_of_v<'a, T, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult<Vec<T>>
+pub fn parse_ber_set_of_v<'a, T, F>(f: F) -> impl FnMut(&'a [u8]) -> BerResult<Vec<T>>
 where
-    F: Fn(&'a [u8]) -> BerResult<T>,
+    F: FnMut(&'a [u8]) -> BerResult<T>,
 {
-    let subparser = all_consuming(many0(complete(cut(f))));
+    let mut subparser = all_consuming(many0(complete(cut(f))));
     parse_ber_set_defined_g(move |_, data| subparser(data))
 }
 
@@ -373,9 +373,9 @@ where
 /// # assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
 /// let (rem, v) = localparse_set(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_ber_set_defined<'a, F>(f: F) -> impl Fn(&'a [u8]) -> BerResult
+pub fn parse_ber_set_defined<'a, F>(mut f: F) -> impl FnMut(&'a [u8]) -> BerResult
 where
-    F: Fn(&'a [u8]) -> BerResult<Vec<BerObject>>,
+    F: FnMut(&'a [u8]) -> BerResult<Vec<BerObject>>,
 {
     map(
         parse_ber_set_defined_g(move |_, data| f(data)),
@@ -437,9 +437,11 @@ where
 /// # assert_eq!(parse_myobject(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parse_myobject(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_ber_set_defined_g<'a, O, F, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
+pub fn parse_ber_set_defined_g<'a, O, F, E>(
+    mut f: F,
+) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: Fn(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: FnMut(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     parse_ber_container(move |hdr, i| {
@@ -507,9 +509,9 @@ where
 /// # assert_eq!(parse_myobject(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parse_myobject(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_ber_container<'a, O, F, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
+pub fn parse_ber_container<'a, O, F, E>(mut f: F) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: Fn(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: FnMut(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {
