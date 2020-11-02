@@ -7,7 +7,7 @@ use der_parser::oid::*;
 use der_parser::*;
 use hex_literal::hex;
 use nom::error::ErrorKind;
-use nom::Err;
+use nom::{alt, call, Err};
 use pretty_assertions::assert_eq;
 
 #[test]

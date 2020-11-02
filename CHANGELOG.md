@@ -13,6 +13,7 @@
 ### Changed/Fixed
 
 - Upgrade to nom 6
+- Switch all parsers to function-based parsers
 - Change representation of size (new type `BerSize`) to support BER indefinite lengths
 - Rewrite BER/DER parsing macros to use functional parsing combinators
 - The constructed bit is now tested for explicit tagged structures

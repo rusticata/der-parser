@@ -180,6 +180,7 @@ macro_rules! parse_der_defined(
 #[macro_export]
 macro_rules! parse_der_sequence_defined(
     ($i:expr, $($args:tt)*) => ({
+        use nom::map;
         map!(
             $i,
             parse_ber_defined_m!($crate::ber::BerTag::Sequence, $($args)*),
@@ -220,6 +221,7 @@ macro_rules! parse_der_sequence_defined(
 #[macro_export]
 macro_rules! parse_der_set_defined(
     ($i:expr, $($args:tt)*) => ({
+        use nom::map;
         map!(
             $i,
             parse_ber_defined_m!($crate::ber::BerTag::Set, $($args)*),
@@ -400,6 +402,7 @@ macro_rules! parse_der_optional(
 /// # #[macro_use] extern crate der_parser;
 /// # use der_parser::ber::*;
 /// # use der_parser::error::BerResult;
+/// # use nom::eof;
 /// #
 /// # fn main() {
 /// #[derive(Debug, PartialEq)]
@@ -438,6 +441,7 @@ macro_rules! parse_der_optional(
 /// # #[macro_use] extern crate der_parser;
 /// # use der_parser::ber::*;
 /// # use der_parser::error::BerResult;
+/// # use nom::eof;
 /// #
 /// # fn main() {
 /// struct MyStruct<'a>{
@@ -462,6 +466,7 @@ macro_rules! parse_der_struct(
     ($i:expr, TAG $tag:expr, $($rest:tt)*) => ({
         use $crate::ber::parse_ber_container;
         use $crate::error::BerError;
+        use nom::do_parse;
         parse_ber_container(
             |hdr, i| {
                 if !hdr.is_constructed() {
@@ -477,6 +482,7 @@ macro_rules! parse_der_struct(
     ($i:expr, $($rest:tt)*) => ({
         use $crate::ber::parse_ber_container;
         use $crate::error::BerError;
+        use nom::do_parse;
         parse_ber_container(
             |hdr, i| {
                 if !hdr.is_constructed() {
@@ -510,6 +516,7 @@ macro_rules! parse_der_struct(
 /// ```rust
 /// # #[macro_use] extern crate der_parser;
 /// # use der_parser::ber::{parse_ber_integer, BerObject};
+/// # use nom::map_res;
 /// # use der_parser::error::BerResult;
 /// #
 /// # fn main() {
@@ -539,6 +546,7 @@ macro_rules! parse_der_struct(
 /// # #[macro_use] extern crate der_parser;
 /// # use der_parser::ber::{BerObject, BerTag};
 /// # use der_parser::error::BerResult;
+/// # use nom::map_res;
 /// #
 /// # fn main() {
 /// fn parse_int_implicit(i:&[u8]) -> BerResult<u32> {
@@ -609,6 +617,7 @@ macro_rules! parse_der_tagged(
 /// # #[macro_use] extern crate der_parser;
 /// # use der_parser::ber::*;
 /// # use der_parser::error::BerResult;
+/// # use nom::{eof, map_res};
 /// #
 /// # fn main() {
 /// #[derive(Debug, PartialEq)]
@@ -642,6 +651,7 @@ macro_rules! parse_der_application(
     ($i:expr, APPLICATION $tag:expr, $($rest:tt)*) => ({
         use $crate::ber::{parse_ber_container, BerClass, BerTag};
         use $crate::error::BerError;
+        use nom::do_parse;
         parse_ber_container(
             |hdr, content| {
                 if hdr.class != BerClass::Application {

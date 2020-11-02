@@ -202,8 +202,6 @@ pub extern crate num_bigint;
 // re-exports nom macros, so this crate's macros can be used without importing nom
 pub use nom::IResult;
 #[doc(hidden)]
-pub use nom::{alt, call, complete, do_parse, eof, many0, map, map_res, verify};
-#[doc(hidden)]
 pub use rusticata_macros::{custom_check, flat_take};
 
 use proc_macro_hack::proc_macro_hack;

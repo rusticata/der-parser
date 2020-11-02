@@ -1,8 +1,9 @@
 use crate::ber::*;
 use crate::der::DerObject;
 use crate::error::*;
+use nom::bytes::streaming::take;
 use nom::number::streaming::be_u8;
-use nom::*;
+use nom::{Err, Needed};
 use rusticata_macros::custom_check;
 use std::convert::{Into, TryFrom};
 
@@ -544,63 +545,84 @@ fn der_read_element_content_recursive<'a>(
 }
 
 fn der_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    do_parse! {
-        i,
-        ignored_bits: be_u8 >>
-                      custom_check!(ignored_bits > 7, BerError::DerConstraintFailed) >>
-                      custom_check!(len == 0, BerError::InvalidLength) >>
-        s:            take!(len - 1) >>
-                      call!(|input| {
-                          if len > 1 {
-                              let mut last_byte = s[len-2];
-                              for _ in 0..ignored_bits as usize {
-                                  der_constraint_fail_if!(i, last_byte & 1 != 0);
-                                  last_byte >>= 1;
-                              }
-                          }
-                          Ok((input,()))
-                      }) >>
-        ( BerObjectContent::BitString(ignored_bits,BitStringObject{ data:s }) )
+    let (i, ignored_bits) = be_u8(i)?;
+    if ignored_bits > 7 {
+        return Err(Err::Error(BerError::DerConstraintFailed));
     }
+    if len == 0 {
+        return Err(Err::Error(BerError::InvalidLength));
+    }
+    let (i, data) = take(len - 1)(i)?;
+    if len > 1 {
+        let mut last_byte = data[len - 2];
+        for _ in 0..ignored_bits as usize {
+            der_constraint_fail_if!(i, last_byte & 1 != 0);
+            last_byte >>= 1;
+        }
+    }
+    Ok((
+        i,
+        BerObjectContent::BitString(ignored_bits, BitStringObject { data }),
+    ))
+    // do_parse! {
+    //     i,
+    //     ignored_bits: be_u8 >>
+    //                   custom_check!(ignored_bits > 7, BerError::DerConstraintFailed) >>
+    //                   custom_check!(len == 0, BerError::InvalidLength) >>
+    //     s:            take!(len - 1) >>
+    //                   call!(|input| {
+    //                       if len > 1 {
+    //                           let mut last_byte = s[len-2];
+    //                           for _ in 0..ignored_bits as usize {
+    //                               der_constraint_fail_if!(i, last_byte & 1 != 0);
+    //                               last_byte >>= 1;
+    //                           }
+    //                       }
+    //                       Ok((input,()))
+    //                   }) >>
+    //     ( BerObjectContent::BitString(ignored_bits,BitStringObject{ data:s }) )
+    // }
 }
 
 /// Read an object header (DER)
 pub fn der_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
-    do_parse! {
-        i,
-        el:   parse_identifier >>
-        len:  parse_ber_length_byte >>
-        llen: cond!(len.0 == 1, take!(len.1)) >>
-        ( {
-            let class = match BerClass::try_from(el.0) {
-                Ok(c) => c,
-                Err(_) => unreachable!(), // Cannot fail, we read only 2 bits
-            };
-            let len : usize = match len.0 {
-                0 => usize::from(len.1),
-                _ => {
-                    // if len is 0xff -> error (8.1.3.5)
-                    custom_check!(&i[1..], len.1 == 0b0111_1111, BerError::InvalidLength)?;
-                    // if len.1 == 0b0111_1111 {
-                    //     return Err(::nom::Err::Error(error_position!(&i[1..], ErrorKind::Custom(BER_INVALID_LENGTH))));
-                    // }
-                    // DER(9.1) if len is 0 (indefinite form), obj must be constructed
-                    der_constraint_fail_if!(&i[1..], len.1 == 0 && el.1 != 1);
-                    // if len.1 == 0 && el.1 != 1 {
-                    //     return Err(::nom::Err::Error(error_position!(&i[1..], ErrorKind::Custom(BER_INVALID_LENGTH))));
-                    // }
-                    let llen = llen.unwrap(); // safe because we tested len.0 != 0
-                    match bytes_to_u64(llen) {
-                        Ok(l)  => {
-                            // DER: should have been encoded in short form (< 127)
-                            der_constraint_fail_if!(i, l < 127);
-                            usize::try_from(l).or(Err(nom::Err::Error(BerError::InvalidLength)))?
-                        },
-                        Err(_) => { return Err(::nom::Err::Error(BerError::InvalidTag)); },
-                    }
-                },
-            };
-            BerObjectHeader::new(class, el.1, BerTag(el.2), len).with_raw_tag(Some(el.3))
-        } )
-    }
+    let (i1, el) = parse_identifier(i)?;
+    let class = match BerClass::try_from(el.0) {
+        Ok(c) => c,
+        Err(_) => unreachable!(), // Cannot fail, we have read exactly 2 bits
+    };
+    let (i2, len) = parse_ber_length_byte(i1)?;
+    let (i3, len) = match (len.0, len.1) {
+        (0, l1) => {
+            // Short form: MSB is 0, the rest encodes the length (which can be 0) (8.1.3.4)
+            (i2, BerSize::Definite(usize::from(l1)))
+        }
+        (_, 0) => {
+            // Indefinite form: MSB is 1, the rest is 0 (8.1.3.6)
+            (i2, BerSize::Indefinite)
+        }
+        (_, l1) => {
+            // if len is 0xff -> error (8.1.3.5)
+            if l1 == 0b0111_1111 {
+                return Err(::nom::Err::Error(BerError::InvalidTag));
+            }
+            // DER(9.1) if len is 0 (indefinite form), obj must be constructed
+            der_constraint_fail_if!(&i[1..], len.1 == 0 && el.1 != 1);
+            let (i3, llen) = take(l1)(i2)?;
+            match bytes_to_u64(llen) {
+                Ok(l) => {
+                    // DER: should have been encoded in short form (< 127)
+                    der_constraint_fail_if!(i, l < 127);
+                    let l =
+                        usize::try_from(l).or(Err(::nom::Err::Error(BerError::InvalidLength)))?;
+                    (i3, BerSize::Definite(l))
+                }
+                Err(_) => {
+                    return Err(::nom::Err::Error(BerError::InvalidTag));
+                }
+            }
+        }
+    };
+    let hdr = BerObjectHeader::new(class, el.1, BerTag(el.2), len).with_raw_tag(Some(el.3));
+    Ok((i3, hdr))
 }

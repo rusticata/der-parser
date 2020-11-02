@@ -5,8 +5,8 @@ use nom::bytes::streaming::take;
 use nom::combinator::{complete, map, map_res, verify};
 use nom::multi::{many0, many_till};
 use nom::number::streaming::be_u8;
-use nom::*;
-use rusticata_macros::{custom_check, parse_hex_to_u64};
+use nom::{Err, Needed, Offset};
+use rusticata_macros::{combinator::parse_hex_to_u64, custom_check};
 use std::borrow::Cow;
 use std::convert::{Into, TryFrom};
 
@@ -184,7 +184,7 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
     let (i1, el) = parse_identifier(i)?;
     let class = match BerClass::try_from(el.0) {
         Ok(c) => c,
-        Err(_) => unreachable!(), // Cannot fail, we read only 2 bits
+        Err(_) => unreachable!(), // Cannot fail, we have read exactly 2 bits
     };
     let (i2, len) = parse_ber_length_byte(i1)?;
     let (i3, len) = match (len.0, len.1) {
@@ -270,7 +270,8 @@ fn ber_read_content_oid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
 
 #[inline]
 fn ber_read_content_enum(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    parse_hex_to_u64!(i, len).map(|(rem, i)| (rem, BerObjectContent::Enum(i)))
+    let (rem, num) = parse_hex_to_u64(i, len).map_err(|_| BerError::BerValueError)?;
+    Ok((rem, BerObjectContent::Enum(num)))
 }
 
 fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
@@ -339,14 +340,14 @@ fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
             _ => false,
         }
     }
-    map_res!(i, take!(len), |bytes: &'a [u8]| {
+    map_res(take(len), |bytes: &'a [u8]| {
         if !bytes.iter().all(is_numeric) {
             return Err(BerError::BerValueError);
         }
         std::str::from_utf8(bytes)
             .map_err(|_| BerError::BerValueError)
             .map(|s| BerObjectContent::NumericString(s))
-    })
+    })(i)
 }
 
 fn ber_read_content_visiblestring<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
@@ -355,14 +356,14 @@ fn ber_read_content_visiblestring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     fn is_visible(b: &u8) -> bool {
         0x20 <= *b && *b <= 0x7f
     }
-    map_res!(i, take!(len), |bytes: &'a [u8]| {
+    map_res(take(len), |bytes: &'a [u8]| {
         if !bytes.iter().all(is_visible) {
             return Err(BerError::BerValueError);
         }
         std::str::from_utf8(bytes)
             .map(|s| BerObjectContent::VisibleString(s))
             .map_err(|_| BerError::BerValueError)
-    })
+    })(i)
 }
 
 fn ber_read_content_printablestring<'a>(
@@ -391,14 +392,14 @@ fn ber_read_content_printablestring<'a>(
             _ => false,
         }
     }
-    map_res!(i, take!(len), |bytes: &'a [u8]| {
+    map_res(take(len), |bytes: &'a [u8]| {
         if !bytes.iter().all(is_printable) {
             return Err(BerError::BerValueError);
         }
         std::str::from_utf8(bytes)
             .map(|s| BerObjectContent::PrintableString(s))
             .map_err(|_| BerError::BerValueError)
-    })
+    })(i)
 }
 
 #[inline]
@@ -428,14 +429,14 @@ fn ber_read_content_utctime<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectC
     fn is_visible(b: &u8) -> bool {
         0x20 <= *b && *b <= 0x7f
     }
-    map_res!(i, take!(len), |bytes: &'a [u8]| {
+    map_res(take(len), |bytes: &'a [u8]| {
         if !bytes.iter().all(is_visible) {
             return Err(BerError::BerValueError);
         }
         std::str::from_utf8(bytes)
             .map(|s| BerObjectContent::UTCTime(s))
             .map_err(|_| BerError::BerValueError)
-    })
+    })(i)
 }
 
 fn ber_read_content_generalizedtime<'a>(
@@ -447,14 +448,14 @@ fn ber_read_content_generalizedtime<'a>(
     fn is_visible(b: &u8) -> bool {
         0x20 <= *b && *b <= 0x7f
     }
-    map_res!(i, take!(len), |bytes: &'a [u8]| {
+    map_res(take(len), |bytes: &'a [u8]| {
         if !bytes.iter().all(is_visible) {
             return Err(BerError::BerValueError);
         }
         std::str::from_utf8(bytes)
             .map(|s| BerObjectContent::GeneralizedTime(s))
             .map_err(|_| BerError::BerValueError)
-    })
+    })(i)
 }
 
 #[inline]
