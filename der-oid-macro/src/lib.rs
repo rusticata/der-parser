@@ -11,13 +11,13 @@ fn parse_arg(arg: &str) -> (bool, bool, Vec<&str>) {
         combinator::{map, opt, recognize, verify},
         error::{ErrorKind, ParseError},
         exact,
-        multi::separated_list0,
+        multi::separated_list1,
         sequence::{delimited, terminated, tuple},
         IResult,
     };
 
     fn uint<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-        verify(recognize(separated_list0(char('_'), digit1)), |s: &str| {
+        verify(recognize(separated_list1(char('_'), digit1)), |s: &str| {
             s.len() == 1 || !s.starts_with('0')
         })(i)
     }
@@ -36,7 +36,7 @@ fn parse_arg(arg: &str) -> (bool, bool, Vec<&str>) {
         tuple((
             map(opt(terminated(tag("raw "), ws)), |x| x.is_some()),
             map(opt(terminated(tag("rel "), ws)), |x| x.is_some()),
-            separated_list0(ws_dot_ws, uint),
+            separated_list1(ws_dot_ws, uint),
         ))(i)
     }
 
