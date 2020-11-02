@@ -8,7 +8,7 @@
 
 ### Thanks
 
-## XXX (5.x?)
+## 5.0.0-beta1
 
 ### Changed/Fixed
 
@@ -33,7 +33,11 @@
 
 ### Thanks
 
-- `@nickelc` (nom 6 upgrade)
+By alphabetic order of handle:
+
+- `@cccs-sadugas`
+- `@nickelc`
+- `@p1-mmr`
 
 ## 4.1.0
 
