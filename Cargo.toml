@@ -40,7 +40,7 @@ num-traits = "0.2"
 num-bigint = { version = "0.3", optional = true }
 
 proc-macro-hack = "0.5"
-der-oid-macro = { version = "0.2", path = "./der-oid-macro" }
+der-oid-macro = { version = "0.3", path = "./der-oid-macro" }
 
 [features]
 default = []

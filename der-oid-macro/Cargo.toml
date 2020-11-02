@@ -1,7 +1,7 @@
 [package]
 name = "der-oid-macro"
 description = "Macro to encode DER oids at compile time"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2018"
 license = "MIT/Apache-2.0"
 homepage = "https://github.com/rusticata/der-parser"

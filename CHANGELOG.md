@@ -12,6 +12,7 @@
 
 ### Changed/Fixed
 
+- Upgrade to nom 6
 - Change representation of size (new type `BerSize`) to support BER indefinite lengths
 - Rewrite BER/DER parsing macros to use functional parsing combinators
 - The constructed bit is now tested for explicit tagged structures
@@ -30,6 +31,8 @@
 - Add combinator `parse_ber_optional`
 
 ### Thanks
+
+- `@nickelc` (nom 6 upgrade)
 
 ## 4.1.0
 
