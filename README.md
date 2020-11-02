@@ -8,6 +8,7 @@
 [![Travis CI](https://travis-ci.org/rusticata/der-parser.svg?branch=master)](https://travis-ci.org/rusticata/der-parser)
 [![AppVeyor CI](https://ci.appveyor.com/api/projects/status/github/rusticata/der-parser?svg=true)](https://ci.appveyor.com/project/chifflier/der-parser)
 [![dependency status](https://deps.rs/crate/der-parser/4.0.2/status.svg)](https://deps.rs/crate/der-parser/4.0.2)
+[![Minimum rustc version](https://img.shields.io/badge/rustc-1.44.0+-lightgray.svg)](#rust-version-requirements)
 
 # BER/DER Parser
 
@@ -135,6 +136,11 @@ Some parsing tools (for ex for tagged objects) are available in different forms:
 - The DER constraints are verified if using `parse_der`.
 - `BerObject` and `DerObject` are the same objects (type alias). The only difference is the
   verification of constraints *during parsing*.
+
+## Rust version requirements
+
+The 5.0 series of `der-parser` requires **Rustc version 1.44 or greater**, based on nom 6
+dependencies.
 
 # Serialization
 
