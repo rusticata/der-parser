@@ -1,6 +1,7 @@
 use crate::ber::{bitstring_to_u64, bytes_to_u64};
 use crate::error::BerError;
 use crate::oid::Oid;
+use nom::bitvec::{order::Msb0, slice::BitSlice};
 use rusticata_macros::newtype_enum;
 use std::convert::AsRef;
 use std::convert::From;
@@ -439,6 +440,11 @@ impl<'a> BerObject<'a> {
         self.content.as_bitstring()
     }
 
+    /// Constructs a shared `&BitSlice` reference over the object data, if available as slice.
+    pub fn as_bitslice(&self) -> Result<&BitSlice<Msb0, u8>, BerError> {
+        self.content.as_bitslice()
+    }
+
     /// Attempt to extract the list of objects from a DER sequence.
     /// This can fail if the object is not a sequence.
     pub fn as_sequence(&self) -> Result<&Vec<BerObject<'a>>, BerError> {
@@ -631,6 +637,12 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::BitString(_, ref b) => Ok(b.to_owned()),
             _ => Err(BerError::BerTypeError),
         }
+    }
+
+    /// Constructs a shared `&BitSlice` reference over the object data, if available as slice.
+    pub fn as_bitslice(&self) -> Result<&BitSlice<Msb0, u8>, BerError> {
+        self.as_slice()
+            .and_then(|s| BitSlice::<Msb0, _>::from_slice(s).ok_or(BerError::BerValueError))
     }
 
     pub fn as_sequence(&self) -> Result<&Vec<BerObject<'a>>, BerError> {
@@ -854,6 +866,11 @@ impl<'a> BitStringObject<'a> {
         let b = 7 - (bitnum % 8);
         (self.data[byte_pos] & (1 << b)) != 0
     }
+
+    /// Constructs a shared `&BitSlice` reference over the object data.
+    pub fn as_bitslice(&self) -> Option<&BitSlice<Msb0, u8>> {
+        BitSlice::<Msb0, _>::from_slice(&self.data)
+    }
 }
 
 impl<'a> AsRef<[u8]> for BitStringObject<'a> {
@@ -912,7 +929,7 @@ mod tests {
     }
 
     #[test]
-    fn test_der_bistringobject() {
+    fn test_der_bitstringobject() {
         let obj = BitStringObject {
             data: &[0x0f, 0x00, 0x40],
         };
@@ -920,6 +937,23 @@ mod tests {
         assert!(obj.is_set(7));
         assert!(!obj.is_set(9));
         assert!(obj.is_set(17));
+    }
+
+    #[test]
+    fn test_der_bitslice() {
+        let obj = BitStringObject {
+            data: &[0x0f, 0x00, 0x40],
+        };
+        let slice = obj.as_bitslice().expect("as_bitslice");
+        assert_eq!(slice.get(0), Some(&false));
+        assert_eq!(slice.get(7), Some(&true));
+        assert_eq!(slice.get(9), Some(&false));
+        assert_eq!(slice.get(17), Some(&true));
+        let s = slice.iter().fold(String::with_capacity(24), |mut acc, b| {
+            acc += if *b { "1" } else { "0" };
+            acc
+        });
+        assert_eq!(&s, "000011110000000001000000");
     }
 
     #[test]
