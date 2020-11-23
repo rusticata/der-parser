@@ -53,7 +53,7 @@ macro_rules! parse_ber_defined_m(
         {
             use $crate::ber::parse_ber_container;
             use $crate::error::BerError;
-            parse_ber_container(|hdr, content| {
+            parse_ber_container(|content, hdr| {
                 if !hdr.is_constructed() {
                     return Err(nom::Err::Error(BerError::ConstructExpected.into()));
                 }
@@ -468,7 +468,7 @@ macro_rules! parse_der_struct(
         use $crate::error::BerError;
         use nom::do_parse;
         parse_ber_container(
-            |hdr, i| {
+            |i, hdr| {
                 if !hdr.is_constructed() {
                     return Err(nom::Err::Error(BerError::ConstructExpected.into()));
                 }
@@ -484,7 +484,7 @@ macro_rules! parse_der_struct(
         use $crate::error::BerError;
         use nom::do_parse;
         parse_ber_container(
-            |hdr, i| {
+            |i, hdr| {
                 if !hdr.is_constructed() {
                     return Err(nom::Err::Error(BerError::ConstructExpected.into()));
                 }
@@ -653,7 +653,7 @@ macro_rules! parse_der_application(
         use $crate::error::BerError;
         use nom::do_parse;
         parse_ber_container(
-            |hdr, content| {
+            |content, hdr| {
                 if hdr.class != BerClass::Application {
                     return Err(nom::Err::Error(BerError::InvalidClass.into()));
                 }

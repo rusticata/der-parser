@@ -69,7 +69,7 @@ where
     F: FnMut(&'a [u8]) -> BerResult<T>,
 {
     let mut subparser = all_consuming(many0(complete(cut(f))));
-    parse_ber_sequence_defined_g(move |_, data| subparser(data))
+    parse_ber_sequence_defined_g(move |data, _| subparser(data))
 }
 
 /// Parse a defined sequence of DER elements (function version)
@@ -155,7 +155,7 @@ where
     F: FnMut(&'a [u8]) -> BerResult<Vec<BerObject>>,
 {
     map(
-        parse_ber_sequence_defined_g(move |_, data| f(data)),
+        parse_ber_sequence_defined_g(move |data, _| f(data)),
         BerObject::from_seq,
     )
 }
@@ -192,7 +192,7 @@ where
 /// /// }
 /// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
 ///     parse_ber_sequence_defined_g(
-///         |_, i:&[u8]| {
+///         |i:&[u8], _| {
 ///             let (i, a) = parse_ber_u32(i)?;
 ///             let (i, obj) = parse_ber_octetstring(i)?;
 ///             let b = obj.as_slice().unwrap();
@@ -217,14 +217,14 @@ pub fn parse_ber_sequence_defined_g<'a, O, F, E>(
     mut f: F,
 ) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: FnMut(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: FnMut(&'a [u8], BerObjectHeader<'a>) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
-    parse_ber_container(move |hdr, i| {
+    parse_ber_container(move |i, hdr| {
         if hdr.tag != BerTag::Sequence {
             return Err(Err::Error(BerError::BerTypeError.into()));
         }
-        f(hdr, i)
+        f(i, hdr)
     })
 }
 
@@ -292,7 +292,7 @@ where
     F: FnMut(&'a [u8]) -> BerResult<T>,
 {
     let mut subparser = all_consuming(many0(complete(cut(f))));
-    parse_ber_set_defined_g(move |_, data| subparser(data))
+    parse_ber_set_defined_g(move |data, _| subparser(data))
 }
 
 /// Parse a defined set of DER elements (function version)
@@ -378,7 +378,7 @@ where
     F: FnMut(&'a [u8]) -> BerResult<Vec<BerObject>>,
 {
     map(
-        parse_ber_set_defined_g(move |_, data| f(data)),
+        parse_ber_set_defined_g(move |data, _| f(data)),
         BerObject::from_set,
     )
 }
@@ -416,7 +416,7 @@ where
 /// /// }
 /// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
 ///     parse_ber_set_defined_g(
-///         |_, i:&[u8]| {
+///         |i:&[u8], _| {
 ///             let (i, a) = parse_ber_u32(i)?;
 ///             let (i, obj) = parse_ber_octetstring(i)?;
 ///             let b = obj.as_slice().unwrap();
@@ -441,14 +441,14 @@ pub fn parse_ber_set_defined_g<'a, O, F, E>(
     mut f: F,
 ) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: FnMut(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: FnMut(&'a [u8], BerObjectHeader<'a>) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
-    parse_ber_container(move |hdr, i| {
+    parse_ber_container(move |i, hdr| {
         if hdr.tag != BerTag::Set {
             return Err(Err::Error(BerError::BerTypeError.into()));
         }
-        f(hdr, i)
+        f(i, hdr)
     })
 }
 
@@ -485,7 +485,7 @@ where
 /// /// }
 /// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
 ///     parse_ber_container(
-///         |hdr: BerObjectHeader, i:&[u8]| {
+///         |i: &[u8], hdr: BerObjectHeader| {
 ///             if hdr.tag != BerTag::Sequence {
 ///                 return Err(nom::Err::Error(BerError::BerTypeError.into()));
 ///             }
@@ -511,7 +511,7 @@ where
 /// ```
 pub fn parse_ber_container<'a, O, F, E>(mut f: F) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: FnMut(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: FnMut(&'a [u8], BerObjectHeader<'a>) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {
@@ -524,7 +524,7 @@ where
                 take(len)(i)?
             }
         };
-        let (_rest, v) = f(hdr, data)?;
+        let (_rest, v) = f(data, hdr)?;
         Ok((i, v))
     }
 }

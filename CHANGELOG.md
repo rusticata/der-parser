@@ -8,6 +8,13 @@
 
 ### Thanks
 
+## 5.0.0-beta2
+
+### Changed/Fixed
+
+- Consistency: reorder arguments or function callbacks, always set input slice as first argument
+  (`parse_ber_sequence_defined_g`, `parse_ber_container`, `parse_ber_tagged_explicit_g`, ...)
+
 ## 5.0.0-beta1
 
 ### Changed/Fixed

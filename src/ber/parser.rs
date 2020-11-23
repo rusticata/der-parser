@@ -953,7 +953,7 @@ pub fn parse_ber_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
 where
     F: Fn(&[u8]) -> BerResult,
 {
-    parse_ber_optional(parse_ber_tagged_explicit_g(tag, |hdr, content| {
+    parse_ber_optional(parse_ber_tagged_explicit_g(tag, |content, hdr| {
         let (rem, obj) = f(content)?;
         let content = BerObjectContent::Tagged(hdr.class, hdr.tag, Box::new(obj));
         let tagged = BerObject::from_header_and_content(hdr, content);

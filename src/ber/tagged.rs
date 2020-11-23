@@ -40,7 +40,7 @@ where
     Tag: Into<BerTag>,
 {
     let tag = tag.into();
-    parse_ber_tagged_explicit_g(tag, move |hdr, content| {
+    parse_ber_tagged_explicit_g(tag, move |content, hdr| {
         let (rem, obj) = f(content)?;
         let class = hdr.class;
         let obj2 = BerObject::from_header_and_content(
@@ -60,7 +60,7 @@ where
 /// # use der_parser::error::BerResult;
 /// #
 /// fn parse_int_explicit(i:&[u8]) -> BerResult<u32> {
-///     parse_ber_tagged_explicit_g(2, move |hdr, content| {
+///     parse_ber_tagged_explicit_g(2, move |content, hdr| {
 ///         let (rem, obj) = parse_ber_integer(content)?;
 ///         let value = obj.as_u32()?;
 ///         Ok((rem, value))
@@ -82,12 +82,12 @@ pub fn parse_ber_tagged_explicit_g<'a, Tag, Output, F, E>(
     f: F,
 ) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Output, E>
 where
-    F: Fn(BerObjectHeader<'a>, &'a [u8]) -> IResult<&'a [u8], Output, E>,
+    F: Fn(&'a [u8], BerObjectHeader<'a>) -> IResult<&'a [u8], Output, E>,
     E: nom::error::ParseError<&'a [u8]> + From<BerError>,
     Tag: Into<BerTag>,
 {
     let tag = tag.into();
-    parse_ber_container(move |hdr, i| {
+    parse_ber_container(move |i, hdr| {
         if hdr.class == BerClass::Universal {
             return Err(Err::Error(BerError::InvalidClass.into()));
         }
@@ -98,7 +98,7 @@ where
         if !hdr.is_constructed() {
             return Err(Err::Error(BerError::ConstructExpected.into()));
         }
-        f(hdr, i)
+        f(i, hdr)
         // trailing bytes are ignored
     })
 }
@@ -225,7 +225,7 @@ where
     Tag: Into<BerTag>,
 {
     let tag = tag.into();
-    parse_ber_container(move |hdr, i| {
+    parse_ber_container(move |i, hdr| {
         if hdr.tag != tag {
             return Err(Err::Error(BerError::InvalidTag.into()));
         }
