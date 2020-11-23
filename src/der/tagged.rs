@@ -1,4 +1,5 @@
-use crate::ber::*;
+use crate::ber::{BerClass, BerObject, BerObjectContent, BerObjectHeader, MAX_RECURSION};
+use crate::der::*;
 use crate::error::*;
 use nom::error::ParseError;
 use nom::{Err, IResult};
@@ -9,19 +10,19 @@ use nom::{Err, IResult};
 /// with class, value and content.
 ///
 /// For a generic version (different output and error types), see
-/// [parse_ber_tagged_explicit_g](fn.parse_ber_tagged_explicit_g.html).
+/// [parse_der_tagged_explicit_g](fn.parse_der_tagged_explicit_g.html).
 ///
 /// The following parses `[2] EXPLICIT INTEGER`:
 ///
 /// ```rust
-/// # use der_parser::ber::*;
+/// # use der_parser::der::*;
 /// # use der_parser::error::BerResult;
 /// use nom::combinator::map_res;
 /// #
 /// fn parse_int_explicit(i:&[u8]) -> BerResult<u32> {
 ///    map_res(
-///        parse_ber_tagged_explicit(2, parse_ber_integer),
-///        |x: BerObject| x.as_tagged()?.2.as_u32()
+///        parse_der_tagged_explicit(2, parse_der_integer),
+///        |x: DerObject| x.as_tagged()?.2.as_u32()
 ///    )(i)
 /// }
 ///
@@ -35,13 +36,13 @@ use nom::{Err, IResult};
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_explicit<'a, Tag, F>(tag: Tag, f: F) -> impl FnMut(&'a [u8]) -> BerResult
+pub fn parse_der_tagged_explicit<'a, Tag, F>(tag: Tag, f: F) -> impl FnMut(&'a [u8]) -> BerResult
 where
-    F: Fn(&'a [u8]) -> BerResult<BerObject>,
+    F: Fn(&'a [u8]) -> BerResult<DerObject>,
     Tag: Into<BerTag>,
 {
     let tag = tag.into();
-    parse_ber_tagged_explicit_g(tag, move |content, hdr| {
+    parse_der_tagged_explicit_g(tag, move |content, hdr| {
         let (rem, obj) = f(content)?;
         let class = hdr.class;
         let obj2 = BerObject::from_header_and_content(
@@ -57,12 +58,12 @@ where
 /// The following parses `[2] EXPLICIT INTEGER`:
 ///
 /// ```rust
-/// # use der_parser::ber::*;
+/// # use der_parser::der::*;
 /// # use der_parser::error::BerResult;
 /// #
 /// fn parse_int_explicit(i:&[u8]) -> BerResult<u32> {
-///     parse_ber_tagged_explicit_g(2, move |content, hdr| {
-///         let (rem, obj) = parse_ber_integer(content)?;
+///     parse_der_tagged_explicit_g(2, move |content, hdr| {
+///         let (rem, obj) = parse_der_integer(content)?;
 ///         let value = obj.as_u32()?;
 ///         Ok((rem, value))
 ///    })(i)
@@ -78,7 +79,7 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_explicit_g<'a, Tag, Output, F, E>(
+pub fn parse_der_tagged_explicit_g<'a, Tag, Output, F, E>(
     tag: Tag,
     f: F,
 ) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Output, E>
@@ -88,7 +89,7 @@ where
     Tag: Into<BerTag>,
 {
     let tag = tag.into();
-    parse_ber_container(move |i, hdr| {
+    parse_der_container(move |i, hdr| {
         if hdr.class == BerClass::Universal {
             return Err(Err::Error(BerError::InvalidClass.into()));
         }
@@ -112,20 +113,21 @@ where
 /// value.
 ///
 /// For a generic version (different output and error types), see
-/// [parse_ber_tagged_implicit_g](fn.parse_ber_tagged_implicit_g.html).
+/// [parse_der_tagged_implicit_g](fn.parse_der_tagged_implicit_g.html).
 ///
 /// # Examples
 ///
-/// The following parses `[2] IMPLICIT INTEGER` into a `BerObject`:
+/// The following parses `[2] IMPLICIT INTEGER` into a `DerObject`:
 ///
 /// ```rust
-/// # use der_parser::ber::*;
+/// # use der_parser::ber::BerTag;
+/// # use der_parser::der::*;
 /// # use der_parser::error::BerResult;
 /// #
-/// fn parse_int_implicit(i:&[u8]) -> BerResult<BerObject> {
-///     parse_ber_tagged_implicit(
+/// fn parse_int_implicit(i:&[u8]) -> BerResult<DerObject> {
+///     parse_der_tagged_implicit(
 ///         2,
-///         parse_ber_content(BerTag::Integer),
+///         parse_der_content(BerTag::Integer),
 ///     )(i)
 /// }
 ///
@@ -144,17 +146,18 @@ where
 /// too large:
 ///
 /// ```rust
-/// # use der_parser::ber::*;
+/// # use der_parser::ber::BerTag;
+/// # use der_parser::der::*;
 /// # use der_parser::error::BerResult;
 /// use nom::combinator::map_res;
 /// #
 /// fn parse_int_implicit(i:&[u8]) -> BerResult<u32> {
 ///     map_res(
-///         parse_ber_tagged_implicit(
+///         parse_der_tagged_implicit(
 ///             2,
-///             parse_ber_content(BerTag::Integer),
+///             parse_der_content(BerTag::Integer),
 ///         ),
-///         |x: BerObject| x.as_u32()
+///         |x: DerObject| x.as_u32()
 ///     )(i)
 /// }
 ///
@@ -168,13 +171,13 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_implicit<'a, Tag, F>(tag: Tag, f: F) -> impl FnMut(&'a [u8]) -> BerResult
+pub fn parse_der_tagged_implicit<'a, Tag, F>(tag: Tag, f: F) -> impl FnMut(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>>,
     Tag: Into<BerTag>,
 {
     let tag = tag.into();
-    parse_ber_tagged_implicit_g(tag, move |i, hdr, depth| {
+    parse_der_tagged_implicit_g(tag, move |i, hdr, depth| {
         let (rem, content) = f(i, &hdr, depth)?;
         // trailing bytes are ignored
         let obj = BerObject::from_header_and_content(hdr, content);
@@ -188,16 +191,17 @@ where
 ///
 /// # Examples
 ///
-/// The following parses `[1] IMPLICIT OCTETSTRING`, returning a `BerObject`:
+/// The following parses `[1] IMPLICIT OCTETSTRING`, returning a `DerObject`:
 ///
 /// ```rust
-/// # use der_parser::ber::*;
+/// # use der_parser::ber::{BerObjectContent, BerTag};
+/// # use der_parser::der::*;
 /// # use der_parser::error::BerResult;
 /// #
 /// fn parse_implicit_0_octetstring(i:&[u8]) -> BerResult<BerObjectContent> {
-///     parse_ber_tagged_implicit_g(
+///     parse_der_tagged_implicit_g(
 ///         2,
-///         parse_ber_content2(BerTag::OctetString)
+///         parse_der_content2(BerTag::OctetString)
 ///     )(i)
 /// }
 ///
@@ -217,14 +221,15 @@ where
 /// too large:
 ///
 /// ```rust
-/// # use der_parser::ber::*;
+/// # use der_parser::ber::BerTag;
+/// # use der_parser::der::*;
 /// # use der_parser::error::BerResult;
 /// #
 /// fn parse_int_implicit(i:&[u8]) -> BerResult<u32> {
-///     parse_ber_tagged_implicit_g(
+///     parse_der_tagged_implicit_g(
 ///         2,
 ///         |content, hdr, depth| {
-///             let (rem, obj_content) = parse_ber_content(BerTag::Integer)(content, &hdr, depth)?;
+///             let (rem, obj_content) = parse_der_content(BerTag::Integer)(content, &hdr, depth)?;
 ///             let value = obj_content.as_u32()?;
 ///             Ok((rem, value))
 ///         }
@@ -241,7 +246,7 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_ber_tagged_implicit_g<'a, Tag, Output, F, E>(
+pub fn parse_der_tagged_implicit_g<'a, Tag, Output, F, E>(
     tag: Tag,
     f: F,
 ) -> impl FnMut(&'a [u8]) -> IResult<&[u8], Output, E>
@@ -251,7 +256,7 @@ where
     Tag: Into<BerTag>,
 {
     let tag = tag.into();
-    parse_ber_container(move |i, hdr| {
+    parse_der_container(move |i, hdr| {
         if hdr.tag != tag {
             return Err(Err::Error(BerError::InvalidTag.into()));
         }

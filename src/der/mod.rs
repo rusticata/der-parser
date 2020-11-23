@@ -8,8 +8,12 @@
 
 use crate::ber::{BerObject, BerTag};
 
+mod multi;
 mod parser;
+mod tagged;
+pub use crate::der::multi::*;
 pub use crate::der::parser::*;
+pub use crate::der::tagged::*;
 
 /// DER tag (same as BER tag)
 pub type DerTag = BerTag;

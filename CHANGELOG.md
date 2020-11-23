@@ -20,6 +20,7 @@
 
 - Add `parse_ber_content2`, owned version of `parse_ber_content`, which can directly be combined
   with `parse_ber_tagged_implicit_g`
+- Add methods to parse DER tagged values and containers (with constraints)
 
 ## 5.0.0-beta1
 
