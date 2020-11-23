@@ -1,5 +1,5 @@
 use crate::ber::*;
-use crate::der::DerObject;
+use crate::der::*;
 use crate::error::*;
 use nom::bytes::streaming::take;
 use nom::number::streaming::be_u8;
@@ -18,13 +18,12 @@ use crate::ber::MAX_RECURSION;
 /// ### Example
 ///
 /// ```
-/// use der_parser::ber::BerTag;
-/// use der_parser::der::parse_der;
+/// use der_parser::der::{parse_der, DerTag};
 ///
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_der(bytes).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, BerTag::Integer);
+/// assert_eq!(obj.header.tag, DerTag::Integer);
 /// ```
 #[inline]
 pub fn parse_der(i: &[u8]) -> DerResult {
@@ -38,13 +37,12 @@ pub fn parse_der(i: &[u8]) -> DerResult {
 /// ### Example
 ///
 /// ```
-/// use der_parser::ber::BerTag;
-/// use der_parser::der::parse_der_recursive;
+/// use der_parser::der::{parse_der_recursive, DerTag};
 ///
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_der_recursive(bytes, 1).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, BerTag::Integer);
+/// assert_eq!(obj.header.tag, DerTag::Integer);
 /// ```
 pub fn parse_der_recursive(i: &[u8], max_depth: usize) -> DerResult {
     let (i, hdr) = der_read_element_header(i)?;
@@ -74,15 +72,14 @@ macro_rules! der_constraint_fail_if(
 /// ### Example
 ///
 /// ```
-/// use der_parser::ber::BerTag;
-/// use der_parser::der::parse_der_with_tag;
+/// use der_parser::der::{parse_der_with_tag, DerTag};
 ///
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
-/// let (_, obj) = parse_der_with_tag(bytes, BerTag::Integer).expect("parsing failed");
+/// let (_, obj) = parse_der_with_tag(bytes, DerTag::Integer).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, BerTag::Integer);
+/// assert_eq!(obj.header.tag, DerTag::Integer);
 /// ```
-pub fn parse_der_with_tag<Tag: Into<BerTag>>(i: &[u8], tag: Tag) -> DerResult {
+pub fn parse_der_with_tag<Tag: Into<DerTag>>(i: &[u8], tag: Tag) -> DerResult {
     let tag = tag.into();
     let (i, hdr) = der_read_element_header(i)?;
     if hdr.tag != tag {
@@ -90,13 +87,13 @@ pub fn parse_der_with_tag<Tag: Into<BerTag>>(i: &[u8], tag: Tag) -> DerResult {
     }
     let (i, content) =
         der_read_element_content_as(i, hdr.tag, hdr.len, hdr.is_constructed(), MAX_RECURSION)?;
-    Ok((i, BerObject::from_header_and_content(hdr, content)))
+    Ok((i, DerObject::from_header_and_content(hdr, content)))
 }
 
 /// Read end of content marker
 #[inline]
 pub fn parse_der_endofcontent(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::EndOfContent)
+    parse_der_with_tag(i, DerTag::EndOfContent)
 }
 
 /// Read a boolean value
@@ -108,7 +105,7 @@ pub fn parse_der_endofcontent(i: &[u8]) -> DerResult {
 /// If the boolean value is TRUE, the octet shall be one byte, and have all bits set to one (0xff).
 #[inline]
 pub fn parse_der_bool(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::Boolean)
+    parse_der_with_tag(i, DerTag::Boolean)
 }
 
 /// Read an integer value
@@ -126,11 +123,10 @@ pub fn parse_der_bool(i: &[u8]) -> DerResult {
 /// # Examples
 ///
 /// ```rust
-/// # use der_parser::der::{parse_der_integer, DerObject};
-/// # use der_parser::ber::BerObjectContent;
+/// # use der_parser::der::{parse_der_integer, DerObject, DerObjectContent};
 /// let empty = &b""[..];
 /// let bytes = [0x02, 0x03, 0x01, 0x00, 0x01];
-/// let expected  = DerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
+/// let expected  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
 /// assert_eq!(
 ///     parse_der_integer(&bytes),
 ///     Ok((empty, expected))
@@ -138,7 +134,7 @@ pub fn parse_der_bool(i: &[u8]) -> DerResult {
 /// ```
 #[inline]
 pub fn parse_der_integer(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::Integer)
+    parse_der_with_tag(i, DerTag::Integer)
 }
 
 /// Read an bitstring value
@@ -159,43 +155,43 @@ pub fn parse_der_integer(i: &[u8]) -> DerResult {
 /// objects.
 #[inline]
 pub fn parse_der_bitstring(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::BitString)
+    parse_der_with_tag(i, DerTag::BitString)
 }
 
 /// Read an octetstring value
 #[inline]
 pub fn parse_der_octetstring(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::OctetString)
+    parse_der_with_tag(i, DerTag::OctetString)
 }
 
 /// Read a null value
 #[inline]
 pub fn parse_der_null(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::Null)
+    parse_der_with_tag(i, DerTag::Null)
 }
 
 /// Read an object identifier value
 #[inline]
 pub fn parse_der_oid(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::Oid)
+    parse_der_with_tag(i, DerTag::Oid)
 }
 
 /// Read an enumerated value
 #[inline]
 pub fn parse_der_enum(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::Enumerated)
+    parse_der_with_tag(i, DerTag::Enumerated)
 }
 
 /// Read a UTF-8 string value. The encoding is checked.
 #[inline]
 pub fn parse_der_utf8string(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::Utf8String)
+    parse_der_with_tag(i, DerTag::Utf8String)
 }
 
 /// Read a relative object identifier value
 #[inline]
 pub fn parse_der_relative_oid(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::RelativeOid)
+    parse_der_with_tag(i, DerTag::RelativeOid)
 }
 
 /// Parse a sequence of DER elements
@@ -208,7 +204,7 @@ pub fn parse_der_relative_oid(i: &[u8]) -> DerResult {
 /// [`parse_ber_sequence_defined`](macro.parse_ber_sequence_defined.html) macro.
 #[inline]
 pub fn parse_der_sequence(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::Sequence)
+    parse_der_with_tag(i, DerTag::Sequence)
 }
 
 /// Parse a set of DER elements
@@ -221,88 +217,88 @@ pub fn parse_der_sequence(i: &[u8]) -> DerResult {
 /// [`parse_ber_set_defined`](macro.parse_ber_set_defined.html) macro.
 #[inline]
 pub fn parse_der_set(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::Set)
+    parse_der_with_tag(i, DerTag::Set)
 }
 
 /// Read a numeric string value. The content is verified to
 /// contain only digits and spaces.
 #[inline]
 pub fn parse_der_numericstring(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::NumericString)
+    parse_der_with_tag(i, DerTag::NumericString)
 }
 
 /// Read a printable string value. The content is verified to
 /// contain only the allowed characters.
 #[inline]
 pub fn visiblestring(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::VisibleString)
+    parse_der_with_tag(i, DerTag::VisibleString)
 }
 
 /// Read a printable string value. The content is verified to
 /// contain only the allowed characters.
 #[inline]
 pub fn parse_der_printablestring(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::PrintableString)
+    parse_der_with_tag(i, DerTag::PrintableString)
 }
 
 /// Read a T61 string value
 #[inline]
 pub fn parse_der_t61string(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::T61String)
+    parse_der_with_tag(i, DerTag::T61String)
 }
 
 /// Read a Videotex string value
 #[inline]
 pub fn parse_der_videotexstring(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::VideotexString)
+    parse_der_with_tag(i, DerTag::VideotexString)
 }
 
 /// Read an IA5 string value. The content is verified to be ASCII.
 #[inline]
 pub fn parse_der_ia5string(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::Ia5String)
+    parse_der_with_tag(i, DerTag::Ia5String)
 }
 
 /// Read an UTC time value
 #[inline]
 pub fn parse_der_utctime(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::UtcTime)
+    parse_der_with_tag(i, DerTag::UtcTime)
 }
 
 /// Read a Generalized time value
 #[inline]
 pub fn parse_der_generalizedtime(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::GeneralizedTime)
+    parse_der_with_tag(i, DerTag::GeneralizedTime)
 }
 
 /// Read a ObjectDescriptor value
 #[inline]
 pub fn parse_der_objectdescriptor(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::ObjDescriptor)
+    parse_der_with_tag(i, DerTag::ObjDescriptor)
 }
 
 /// Read a GraphicString value
 #[inline]
 pub fn parse_der_graphicstring(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::GraphicString)
+    parse_der_with_tag(i, DerTag::GraphicString)
 }
 
 /// Read a GeneralString value
 #[inline]
 pub fn parse_der_generalstring(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::GeneralString)
+    parse_der_with_tag(i, DerTag::GeneralString)
 }
 
 /// Read a BmpString value
 #[inline]
 pub fn parse_der_bmpstring(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::BmpString)
+    parse_der_with_tag(i, DerTag::BmpString)
 }
 
 /// Read a UniversalString value
 #[inline]
 pub fn parse_der_universalstring(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, BerTag::UniversalString)
+    parse_der_with_tag(i, DerTag::UniversalString)
 }
 
 /// Parse an optional tagged object, applying function to get content
@@ -316,7 +312,7 @@ pub fn parse_der_universalstring(i: &[u8]) -> DerResult {
 /// This function will never fail: if parsing content failed, the BER value `Optional(None)` is
 /// returned.
 #[inline]
-pub fn parse_der_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> DerResult
+pub fn parse_der_explicit_optional<F>(i: &[u8], tag: DerTag, f: F) -> DerResult
 where
     F: Fn(&[u8]) -> DerResult,
 {
@@ -332,7 +328,7 @@ where
     note = "Please use `parse_der_explicit_optional` instead"
 )]
 #[inline]
-pub fn parse_der_explicit<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
+pub fn parse_der_explicit<F>(i: &[u8], tag: DerTag, f: F) -> BerResult
 where
     F: Fn(&[u8]) -> BerResult,
 {
@@ -357,7 +353,6 @@ where
 /// The following parses `[3] IMPLICIT INTEGER` into a `DerObject`:
 ///
 /// ```rust
-/// # use der_parser::ber::*;
 /// # use der_parser::der::*;
 /// # use der_parser::error::DerResult;
 /// #
@@ -365,7 +360,7 @@ where
 ///     parse_der_implicit(
 ///         i,
 ///         3,
-///         parse_der_content(BerTag::Integer),
+///         parse_der_content(DerTag::Integer),
 ///     )
 /// }
 ///
@@ -382,8 +377,8 @@ where
 #[inline]
 pub fn parse_der_implicit<'a, Tag, F>(i: &'a [u8], tag: Tag, f: F) -> DerResult<'a>
 where
-    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>>,
-    Tag: Into<BerTag>,
+    F: Fn(&'a [u8], &'_ DerObjectHeader, usize) -> BerResult<'a, DerObjectContent<'a>>,
+    Tag: Into<DerTag>,
 {
     parse_ber_implicit(i, tag, f)
 }
@@ -392,7 +387,7 @@ where
 pub fn parse_der_u32(i: &[u8]) -> BerResult<u32> {
     match parse_ber_integer(i) {
         Ok((rem, ref obj)) => match obj.content {
-            BerObjectContent::Integer(i) => match i.len() {
+            DerObjectContent::Integer(i) => match i.len() {
                 1 => Ok((rem, u32::from(i[0]))),
                 2 => Ok((rem, u32::from(i[0]) << 8 | u32::from(i[1]))),
                 3 => Ok((
@@ -418,7 +413,7 @@ pub fn parse_der_u32(i: &[u8]) -> BerResult<u32> {
 pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
     match parse_ber_integer(i) {
         Ok((rem, ref obj)) => match obj.content {
-            BerObjectContent::Integer(i) => match bytes_to_u64(i) {
+            DerObjectContent::Integer(i) => match bytes_to_u64(i) {
                 Ok(l) => Ok((rem, l)),
                 Err(_) => Err(Err::Error(BerError::IntegerTooLarge)),
             },
@@ -443,7 +438,7 @@ pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
 /// Example: manually parsing header and content
 ///
 /// ```
-/// # use der_parser::ber::{BerTag, MAX_RECURSION};
+/// # use der_parser::ber::MAX_RECURSION;
 /// # use der_parser::der::*;
 /// #
 /// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
@@ -451,12 +446,12 @@ pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
 /// let (rem, content) = parse_der_content(header.tag)(i, &header, MAX_RECURSION)
 ///     .expect("parsing failed");
 /// #
-/// # assert_eq!(header.tag, BerTag::Integer);
+/// # assert_eq!(header.tag, DerTag::Integer);
 /// ```
 pub fn parse_der_content<'a>(
-    tag: BerTag,
-) -> impl Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>> {
-    move |i: &[u8], hdr: &BerObjectHeader, max_recursion: usize| {
+    tag: DerTag,
+) -> impl Fn(&'a [u8], &'_ DerObjectHeader, usize) -> BerResult<'a, DerObjectContent<'a>> {
+    move |i: &[u8], hdr: &DerObjectHeader, max_recursion: usize| {
         der_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
     }
 }
@@ -476,19 +471,19 @@ pub fn parse_der_content<'a>(
 /// Example: manually parsing header and content
 ///
 /// ```
-/// # use der_parser::ber::{BerTag, MAX_RECURSION};
+/// # use der_parser::ber::MAX_RECURSION;
 /// # use der_parser::der::*;
 /// #
 /// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, header) = der_read_element_header(bytes).expect("parsing failed");
-/// # assert_eq!(header.tag, BerTag::Integer);
+/// # assert_eq!(header.tag, DerTag::Integer);
 /// let (rem, content) = parse_der_content2(header.tag)(i, header, MAX_RECURSION)
 ///     .expect("parsing failed");
 /// ```
 pub fn parse_der_content2<'a>(
-    tag: BerTag,
-) -> impl Fn(&'a [u8], BerObjectHeader<'a>, usize) -> BerResult<'a, BerObjectContent<'a>> {
-    move |i: &[u8], hdr: BerObjectHeader, max_recursion: usize| {
+    tag: DerTag,
+) -> impl Fn(&'a [u8], DerObjectHeader<'a>, usize) -> BerResult<'a, DerObjectContent<'a>> {
+    move |i: &[u8], hdr: DerObjectHeader, max_recursion: usize| {
         der_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
     }
 }
@@ -500,43 +495,43 @@ pub fn parse_der_content2<'a>(
 /// Content type is *not* checked, caller is responsible of providing the correct tag
 pub fn der_read_element_content_as(
     i: &[u8],
-    tag: BerTag,
+    tag: DerTag,
     len: BerSize,
     constructed: bool,
     max_depth: usize,
-) -> BerResult<BerObjectContent> {
+) -> BerResult<DerObjectContent> {
     if let BerSize::Definite(l) = len {
         if i.len() < l {
             return Err(Err::Incomplete(Needed::new(l)));
         }
     }
     match tag {
-        BerTag::Boolean => {
+        DerTag::Boolean => {
             let len = len.primitive()?;
             custom_check!(i, len != 1, BerError::InvalidLength)?;
             der_constraint_fail_if!(i, i[0] != 0 && i[0] != 0xff);
         }
-        BerTag::BitString => {
+        DerTag::BitString => {
             der_constraint_fail_if!(i, constructed);
             let len = len.primitive()?;
             // exception: read and verify padding bits
             return der_read_content_bitstring(i, len);
         }
-        BerTag::NumericString
-        | BerTag::VisibleString
-        | BerTag::PrintableString
-        | BerTag::Ia5String
-        | BerTag::Utf8String
-        | BerTag::T61String
-        | BerTag::VideotexString
-        | BerTag::BmpString
-        | BerTag::UniversalString
-        | BerTag::ObjDescriptor
-        | BerTag::GraphicString
-        | BerTag::GeneralString => {
+        DerTag::NumericString
+        | DerTag::VisibleString
+        | DerTag::PrintableString
+        | DerTag::Ia5String
+        | DerTag::Utf8String
+        | DerTag::T61String
+        | DerTag::VideotexString
+        | DerTag::BmpString
+        | DerTag::UniversalString
+        | DerTag::ObjDescriptor
+        | DerTag::GraphicString
+        | DerTag::GeneralString => {
             der_constraint_fail_if!(i, constructed);
         }
-        BerTag::UtcTime | BerTag::GeneralizedTime => {
+        DerTag::UtcTime | DerTag::GeneralizedTime => {
             let len = len.primitive()?;
             if len == 0 || i.get(len - 1).cloned() != Some(b'Z') {
                 return Err(Err::Error(BerError::DerConstraintFailed));
@@ -550,21 +545,21 @@ pub fn der_read_element_content_as(
 /// Parse DER object content recursively
 ///
 /// *Note: an error is raised if recursion depth exceeds `MAX_RECURSION`.
-pub fn der_read_element_content<'a>(i: &'a [u8], hdr: BerObjectHeader<'a>) -> DerResult<'a> {
+pub fn der_read_element_content<'a>(i: &'a [u8], hdr: DerObjectHeader<'a>) -> DerResult<'a> {
     der_read_element_content_recursive(i, hdr, MAX_RECURSION)
 }
 
 fn der_read_element_content_recursive<'a>(
     i: &'a [u8],
-    hdr: BerObjectHeader<'a>,
+    hdr: DerObjectHeader<'a>,
     max_depth: usize,
 ) -> DerResult<'a> {
     match hdr.class {
-        BerClass::Universal | BerClass::Private => (),
+        DerClass::Universal | DerClass::Private => (),
         _ => {
             let (i, content) = ber_get_object_content(i, &hdr)?;
-            let content = BerObjectContent::Unknown(hdr.tag, content);
-            let obj = BerObject::from_header_and_content(hdr, content);
+            let content = DerObjectContent::Unknown(hdr.tag, content);
+            let obj = DerObject::from_header_and_content(hdr, content);
             return Ok((i, obj));
         }
     }
@@ -572,15 +567,15 @@ fn der_read_element_content_recursive<'a>(
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => {
             let (rem, content) = ber_get_object_content(i, &hdr)?;
-            let content = BerObjectContent::Unknown(hdr.tag, content);
-            let obj = BerObject::from_header_and_content(hdr, content);
+            let content = DerObjectContent::Unknown(hdr.tag, content);
+            let obj = DerObject::from_header_and_content(hdr, content);
             Ok((rem, obj))
         }
         Err(e) => Err(e),
     }
 }
 
-fn der_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
+fn der_read_content_bitstring(i: &[u8], len: usize) -> BerResult<DerObjectContent> {
     let (i, ignored_bits) = be_u8(i)?;
     if ignored_bits > 7 {
         return Err(Err::Error(BerError::DerConstraintFailed));
@@ -598,7 +593,7 @@ fn der_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectConten
     }
     Ok((
         i,
-        BerObjectContent::BitString(ignored_bits, BitStringObject { data }),
+        DerObjectContent::BitString(ignored_bits, BitStringObject { data }),
     ))
     // do_parse! {
     //     i,
@@ -616,14 +611,14 @@ fn der_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectConten
     //                       }
     //                       Ok((input,()))
     //                   }) >>
-    //     ( BerObjectContent::BitString(ignored_bits,BitStringObject{ data:s }) )
+    //     ( DerObjectContent::BitString(ignored_bits,BitStringObject{ data:s }) )
     // }
 }
 
 /// Read an object header (DER)
-pub fn der_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
+pub fn der_read_element_header(i: &[u8]) -> BerResult<DerObjectHeader> {
     let (i1, el) = parse_identifier(i)?;
-    let class = match BerClass::try_from(el.0) {
+    let class = match DerClass::try_from(el.0) {
         Ok(c) => c,
         Err(_) => unreachable!(), // Cannot fail, we have read exactly 2 bits
     };
@@ -659,6 +654,6 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
             }
         }
     };
-    let hdr = BerObjectHeader::new(class, el.1, BerTag(el.2), len).with_raw_tag(Some(el.3));
+    let hdr = DerObjectHeader::new(class, el.1, BerTag(el.2), len).with_raw_tag(Some(el.3));
     Ok((i3, hdr))
 }
