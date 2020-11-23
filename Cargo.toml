@@ -17,7 +17,6 @@ include = [
   "README.md",
   "UPGRADING.md",
   ".gitignore",
-  ".travis.yml",
   "Cargo.toml",
   "bench/*.rs",
   "src/*.rs",
@@ -52,6 +51,3 @@ unstable = []
 hex-literal = "0.3"
 pretty_assertions = "0.6"
 # test-case = "1.0"
-
-[badges]
-travis-ci = { repository = "rusticata/der-parser" }
