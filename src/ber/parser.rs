@@ -335,10 +335,7 @@ fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     // Argument must be a reference, because of the .iter().all(F) call below
     #[allow(clippy::trivially_copy_pass_by_ref)]
     fn is_numeric(b: &u8) -> bool {
-        match *b {
-            b'0'..=b'9' | b' ' => true,
-            _ => false,
-        }
+        matches!(*b, b'0'..=b'9' | b' ')
     }
     map_res(take(len), |bytes: &'a [u8]| {
         if !bytes.iter().all(is_numeric) {
@@ -373,7 +370,7 @@ fn ber_read_content_printablestring<'a>(
     // Argument must be a reference, because of the .iter().all(F) call below
     #[allow(clippy::trivially_copy_pass_by_ref)]
     fn is_printable(b: &u8) -> bool {
-        match *b {
+        matches!(*b,
             b'a'..=b'z'
             | b'A'..=b'Z'
             | b'0'..=b'9'
@@ -388,9 +385,7 @@ fn ber_read_content_printablestring<'a>(
             | b'/'
             | b':'
             | b'='
-            | b'?' => true,
-            _ => false,
-        }
+            | b'?')
     }
     map_res(take(len), |bytes: &'a [u8]| {
         if !bytes.iter().all(is_printable) {
