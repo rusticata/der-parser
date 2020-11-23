@@ -187,6 +187,31 @@ where
 ///
 /// # Examples
 ///
+/// The following parses `[1] IMPLICIT OCTETSTRING`, returning a `BerObject`:
+///
+/// ```rust
+/// # use der_parser::ber::*;
+/// # use der_parser::error::BerResult;
+/// #
+/// fn parse_implicit_0_octetstring(i:&[u8]) -> BerResult<BerObjectContent> {
+///     parse_ber_tagged_implicit_g(
+///         2,
+///         parse_ber_content2(BerTag::OctetString)
+///     )(i)
+/// }
+///
+/// # let bytes = &[0x02, 0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f];
+/// let res = parse_implicit_0_octetstring(bytes);
+/// # match res {
+/// #     Ok((rem, val)) => {
+/// #         assert!(rem.is_empty());
+/// #         let s = val.as_slice().unwrap();
+/// #         assert_eq!(s, b"hello");
+/// #     },
+/// #     _ => assert!(false)
+/// # }
+/// ```
+///
 /// The following parses `[2] IMPLICIT INTEGER` into an `u32`, raising an error if the integer is
 /// too large:
 ///

@@ -428,12 +428,15 @@ pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
     }
 }
 
-/// Parse the next bytes as the content of a DER object (combinator)
+/// Parse the next bytes as the content of a DER object (combinator, header reference)
 ///
 /// Content type is *not* checked to match tag, caller is responsible of providing the correct tag
 ///
 /// Caller is also responsible to check if parsing function consumed the expected number of
 /// bytes (`header.len`).
+///
+/// This function differs from [`parse_der_content2`](fn.parse_der_content2.html) because it passes
+/// the BER object header by reference (required for ex. by `parse_der_implicit`).
 ///
 /// The arguments of the parse function are: `(input, ber_object_header, max_recursion)`.
 ///
@@ -457,6 +460,39 @@ pub fn parse_der_content<'a>(
         der_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
     }
 }
+
+/// Parse the next bytes as the content of a DER object (combinator, owned header)
+///
+/// Content type is *not* checked to match tag, caller is responsible of providing the correct tag
+///
+/// Caller is also responsible to check if parsing function consumed the expected number of
+/// bytes (`header.len`).
+///
+/// The arguments of the parse function are: `(input, ber_object_header, max_recursion)`.
+///
+/// This function differs from [`parse_der_content`](fn.parse_der_content.html) because it passes
+/// an owned BER object header (required for ex. by `parse_ber_tagged_implicit_g`).
+///
+/// Example: manually parsing header and content
+///
+/// ```
+/// # use der_parser::ber::{BerTag, MAX_RECURSION};
+/// # use der_parser::der::*;
+/// #
+/// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (i, header) = der_read_element_header(bytes).expect("parsing failed");
+/// # assert_eq!(header.tag, BerTag::Integer);
+/// let (rem, content) = parse_der_content2(header.tag)(i, header, MAX_RECURSION)
+///     .expect("parsing failed");
+/// ```
+pub fn parse_der_content2<'a>(
+    tag: BerTag,
+) -> impl Fn(&'a [u8], BerObjectHeader<'a>, usize) -> BerResult<'a, BerObjectContent<'a>> {
+    move |i: &[u8], hdr: BerObjectHeader, max_recursion: usize| {
+        der_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
+    }
+}
+
 // --------- end of parse_der_xxx functions ----------
 
 /// Parse the next bytes as the content of a DER object.

@@ -686,7 +686,7 @@ pub fn ber_read_element_content_as(
     }
 }
 
-/// Parse the next bytes as the content of a BER object (combinator)
+/// Parse the next bytes as the content of a BER object (combinator, header reference)
 ///
 /// Content type is *not* checked to match tag, caller is responsible of providing the correct tag
 ///
@@ -694,6 +694,9 @@ pub fn ber_read_element_content_as(
 /// bytes (`header.len`).
 ///
 /// The arguments of the parse function are: `(input, ber_object_header, max_recursion)`.
+///
+/// This function differs from [`parse_ber_content2`](fn.parse_ber_content2.html) because it passes
+/// the BER object header by reference (required for ex. by `parse_ber_implicit`).
 ///
 /// Example: manually parsing header and content
 ///
@@ -711,6 +714,38 @@ pub fn parse_ber_content<'a>(
     tag: BerTag,
 ) -> impl Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>> {
     move |i: &[u8], hdr: &BerObjectHeader, max_recursion: usize| {
+        ber_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
+    }
+}
+
+/// Parse the next bytes as the content of a BER object (combinator, owned header)
+///
+/// Content type is *not* checked to match tag, caller is responsible of providing the correct tag
+///
+/// Caller is also responsible to check if parsing function consumed the expected number of
+/// bytes (`header.len`).
+///
+/// The arguments of the parse function are: `(input, ber_object_header, max_recursion)`.
+///
+/// This function differs from [`parse_ber_content`](fn.parse_ber_content.html) because it passes
+/// an owned BER object header (required for ex. by `parse_ber_tagged_implicit_g`).
+///
+/// Example: manually parsing header and content
+///
+/// ```
+/// # use der_parser::ber::*;
+/// #
+/// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+/// let (i, header) = ber_read_element_header(bytes).expect("parsing failed");
+/// let (rem, content) = parse_ber_content(header.tag)(i, &header, MAX_RECURSION)
+///     .expect("parsing failed");
+/// #
+/// # assert_eq!(header.tag, BerTag::Integer);
+/// ```
+pub fn parse_ber_content2<'a>(
+    tag: BerTag,
+) -> impl Fn(&'a [u8], BerObjectHeader<'a>, usize) -> BerResult<'a, BerObjectContent<'a>> {
+    move |i: &[u8], hdr: BerObjectHeader, max_recursion: usize| {
         ber_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
     }
 }
