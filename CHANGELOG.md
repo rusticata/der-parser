@@ -14,6 +14,7 @@
 
 - Consistency: reorder arguments or function callbacks, always set input slice as first argument
   (`parse_ber_sequence_defined_g`, `parse_ber_container`, `parse_ber_tagged_explicit_g`, ...)
+- Make functions `parse_ber_sequence_of_v` and `parse_ber_set_of_v` accept generic error types
 
 ### Added
 

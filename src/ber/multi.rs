@@ -64,9 +64,12 @@ where
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
 /// # assert_eq!(v, expected);
 /// ```
-pub fn parse_ber_sequence_of_v<'a, T, F>(f: F) -> impl FnMut(&'a [u8]) -> BerResult<Vec<T>>
+pub fn parse_ber_sequence_of_v<'a, T, F, E>(
+    f: F,
+) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Vec<T>, E>
 where
-    F: FnMut(&'a [u8]) -> BerResult<T>,
+    F: FnMut(&'a [u8]) -> IResult<&'a [u8], T, E>,
+    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     let mut subparser = all_consuming(many0(complete(cut(f))));
     parse_ber_sequence_defined_g(move |data, _| subparser(data))
@@ -287,9 +290,10 @@ where
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
 /// # assert_eq!(v, expected);
 /// ```
-pub fn parse_ber_set_of_v<'a, T, F>(f: F) -> impl FnMut(&'a [u8]) -> BerResult<Vec<T>>
+pub fn parse_ber_set_of_v<'a, T, F, E>(f: F) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Vec<T>, E>
 where
-    F: FnMut(&'a [u8]) -> BerResult<T>,
+    F: FnMut(&'a [u8]) -> IResult<&'a [u8], T, E>,
+    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
 {
     let mut subparser = all_consuming(many0(complete(cut(f))));
     parse_ber_set_defined_g(move |data, _| subparser(data))
