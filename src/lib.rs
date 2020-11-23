@@ -194,10 +194,10 @@ pub mod oid;
 pub use ber::parse_ber;
 pub use der::parse_der;
 
-pub extern crate nom;
+pub use nom;
 #[cfg(feature = "bigint")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]
-pub extern crate num_bigint;
+pub use num_bigint;
 
 // re-exports nom macros, so this crate's macros can be used without importing nom
 pub use nom::IResult;
