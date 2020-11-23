@@ -98,7 +98,7 @@ fn parse_app_int(i: &[u8]) -> BerResult<SimpleStruct> {
 
 #[test]
 fn oid_macro() {
-    let abs = oid!(1.2.44.233.0.124_982_9_348248912829838230928);
+    let abs = oid!(1.2.44 .233 .0.124_982_9_348248912829838230928);
     assert!(!abs.relative);
     if cfg!(feature = "bigint") {
         assert_eq!(abs.to_string(), "1.2.44.233.0.1249829348248912829838230928");
