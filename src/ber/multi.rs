@@ -2,6 +2,7 @@ use crate::ber::*;
 use crate::error::*;
 use nom::bytes::complete::take;
 use nom::combinator::{all_consuming, complete, cut, map};
+use nom::error::ParseError;
 use nom::multi::many0;
 use nom::{Err, IResult};
 
@@ -69,7 +70,7 @@ pub fn parse_ber_sequence_of_v<'a, T, F, E>(
 ) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Vec<T>, E>
 where
     F: FnMut(&'a [u8]) -> IResult<&'a [u8], T, E>,
-    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
+    E: ParseError<&'a [u8]> + From<BerError>,
 {
     let mut subparser = all_consuming(many0(complete(cut(f))));
     parse_ber_sequence_defined_g(move |data, _| subparser(data))
@@ -221,7 +222,7 @@ pub fn parse_ber_sequence_defined_g<'a, O, F, E>(
 ) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
     F: FnMut(&'a [u8], BerObjectHeader<'a>) -> IResult<&'a [u8], O, E>,
-    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
+    E: ParseError<&'a [u8]> + From<BerError>,
 {
     parse_ber_container(move |i, hdr| {
         if hdr.tag != BerTag::Sequence {
@@ -293,7 +294,7 @@ where
 pub fn parse_ber_set_of_v<'a, T, F, E>(f: F) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Vec<T>, E>
 where
     F: FnMut(&'a [u8]) -> IResult<&'a [u8], T, E>,
-    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
+    E: ParseError<&'a [u8]> + From<BerError>,
 {
     let mut subparser = all_consuming(many0(complete(cut(f))));
     parse_ber_set_defined_g(move |data, _| subparser(data))
@@ -446,7 +447,7 @@ pub fn parse_ber_set_defined_g<'a, O, F, E>(
 ) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
     F: FnMut(&'a [u8], BerObjectHeader<'a>) -> IResult<&'a [u8], O, E>,
-    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
+    E: ParseError<&'a [u8]> + From<BerError>,
 {
     parse_ber_container(move |i, hdr| {
         if hdr.tag != BerTag::Set {
@@ -516,7 +517,7 @@ where
 pub fn parse_ber_container<'a, O, F, E>(mut f: F) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
     F: FnMut(&'a [u8], BerObjectHeader<'a>) -> IResult<&'a [u8], O, E>,
-    E: nom::error::ParseError<&'a [u8]> + From<BerError>,
+    E: ParseError<&'a [u8]> + From<BerError>,
 {
     move |i: &[u8]| {
         let (i, hdr) = ber_read_element_header(i).map_err(nom::Err::convert)?;
