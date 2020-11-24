@@ -8,6 +8,12 @@
 
 ### Thanks
 
+## 5.0.0-beta3
+
+### Changed/Fixed
+
+- Fixed potential integer underflow in `bytes_to_u64`
+
 ## 5.0.0-beta2
 
 ### Changed/Fixed

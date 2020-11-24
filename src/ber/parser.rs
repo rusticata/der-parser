@@ -108,7 +108,9 @@ pub(crate) fn bitstring_to_u64(
     data: &BitStringObject,
 ) -> Result<u64, BerError> {
     let raw_bytes = data.data;
-    let bit_size = raw_bytes.len() * 8 - padding_bits;
+    let bit_size = (raw_bytes.len() * 8)
+        .checked_sub(padding_bits)
+        .ok_or(BerError::InvalidLength)?;
     if bit_size > 64 {
         return Err(BerError::IntegerTooLarge);
     }
