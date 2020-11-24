@@ -74,7 +74,7 @@ fn test_oid_iter_length_check() {
     // ok
     assert!(oid!(0).iter().is_some());
     assert!(oid!(1.2).iter().is_some());
-    assert!(oid!(1.2.3456 .23 .54).iter().is_some());
+    assert!(oid!(1.2.3456.23.54).iter().is_some());
     // too long
     assert!(oid!(1.2.18445618199572250625).iter().is_none());
     assert!(oid!(rel 18445618199572250625).iter().is_none());
