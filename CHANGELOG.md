@@ -12,7 +12,9 @@
 
 ### Changed/Fixed
 
-- Fixed potential integer underflow in `bytes_to_u64`
+- Fix potential integer underflow in `bytes_to_u64`
+- Fix potential stack recursion overflow for indefinite length objects
+  (Add maximum depth).
 
 ## 5.0.0-beta2
 

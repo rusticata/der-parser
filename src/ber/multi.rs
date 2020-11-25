@@ -524,8 +524,8 @@ where
         let (i, data) = match hdr.len {
             BerSize::Definite(len) => take(len)(i)?,
             BerSize::Indefinite => {
-                let (_, len) =
-                    ber_skip_object_content_get_size(i, &hdr).map_err(nom::Err::convert)?;
+                let (_, len) = ber_skip_object_content_get_size(i, &hdr, MAX_RECURSION)
+                    .map_err(nom::Err::convert)?;
                 take(len)(i)?
             }
         };

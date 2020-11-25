@@ -557,7 +557,7 @@ fn der_read_element_content_recursive<'a>(
     match hdr.class {
         DerClass::Universal | DerClass::Private => (),
         _ => {
-            let (i, content) = ber_get_object_content(i, &hdr)?;
+            let (i, content) = ber_get_object_content(i, &hdr, max_depth)?;
             let content = DerObjectContent::Unknown(hdr.tag, content);
             let obj = DerObject::from_header_and_content(hdr, content);
             return Ok((i, obj));
@@ -566,7 +566,7 @@ fn der_read_element_content_recursive<'a>(
     match der_read_element_content_as(i, hdr.tag, hdr.len, hdr.is_constructed(), max_depth) {
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => {
-            let (rem, content) = ber_get_object_content(i, &hdr)?;
+            let (rem, content) = ber_get_object_content(i, &hdr, max_depth)?;
             let content = DerObjectContent::Unknown(hdr.tag, content);
             let obj = DerObject::from_header_and_content(hdr, content);
             Ok((rem, obj))

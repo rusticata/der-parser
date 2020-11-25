@@ -20,7 +20,11 @@ pub const MAX_OBJECT_SIZE: usize = 4_294_967_295;
 pub(crate) fn ber_skip_object_content<'a>(
     i: &'a [u8],
     hdr: &BerObjectHeader,
+    max_depth: usize,
 ) -> BerResult<'a, bool> {
+    if max_depth == 0 {
+        return Err(Err::Error(BerError::BerMaxDepth));
+    }
     match hdr.len {
         BerSize::Definite(l) => {
             if l == 0 && hdr.tag == BerTag::EndOfContent {
@@ -35,7 +39,7 @@ pub(crate) fn ber_skip_object_content<'a>(
             let mut i = i;
             loop {
                 let (i2, header2) = ber_read_element_header(i)?;
-                let (i3, eoc) = ber_skip_object_content(i2, &header2)?;
+                let (i3, eoc) = ber_skip_object_content(i2, &header2, max_depth - 1)?;
                 if eoc {
                     // return false, since top object was not EndOfContent
                     return Ok((i3, false));
@@ -64,9 +68,10 @@ pub(crate) fn ber_skip_object_content<'a>(
 pub(crate) fn ber_skip_object_content_get_size<'a>(
     i: &'a [u8],
     hdr: &BerObjectHeader,
+    max_depth: usize,
 ) -> BerResult<'a, usize> {
     let start_i = i;
-    let (i, _) = ber_skip_object_content(i, hdr)?;
+    let (i, _) = ber_skip_object_content(i, hdr, max_depth)?;
     let len = start_i.offset(i);
     Ok((i, len))
 }
@@ -75,9 +80,10 @@ pub(crate) fn ber_skip_object_content_get_size<'a>(
 pub(crate) fn ber_get_object_content<'a>(
     i: &'a [u8],
     hdr: &BerObjectHeader,
+    max_depth: usize,
 ) -> BerResult<'a, &'a [u8]> {
     let start_i = i;
-    let (i, _) = ber_skip_object_content(i, hdr)?;
+    let (i, _) = ber_skip_object_content(i, hdr, max_depth)?;
     let len = start_i.offset(i);
     let (content, i) = start_i.split_at(len);
     Ok((i, content))
@@ -1140,7 +1146,7 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     match hdr.class {
         BerClass::Universal | BerClass::Private => (),
         _ => {
-            let (rem, content) = ber_get_object_content(rem, &hdr)?;
+            let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
             let content = BerObjectContent::Unknown(hdr.tag, content);
             let obj = BerObject::from_header_and_content(hdr, content);
             return Ok((rem, obj));
@@ -1149,7 +1155,7 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     match ber_read_element_content_as(rem, hdr.tag, hdr.len, hdr.is_constructed(), max_depth) {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => {
-            let (rem, content) = ber_get_object_content(rem, &hdr)?;
+            let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
             let content = BerObjectContent::Unknown(hdr.tag, content);
             let obj = BerObject::from_header_and_content(hdr, content);
             Ok((rem, obj))
