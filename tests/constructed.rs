@@ -263,3 +263,18 @@ fn application() {
     assert!(rem.is_empty());
     assert_eq!(app, SimpleStruct { a: 0x10001 });
 }
+
+#[test]
+#[ignore = "not yet implemented"]
+fn ber_constructed_string() {
+    // this encoding is equivalent to "04 05 01 AB 23 7F CA"
+    let data = &hex!(
+        "
+        24 80
+            04 02 01 ab
+            04 02 23 7f
+            04 01 ca
+        00 00"
+    );
+    let _ = parse_ber_octetstring(data).expect("parsing failed");
+}

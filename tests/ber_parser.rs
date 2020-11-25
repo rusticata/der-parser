@@ -240,3 +240,34 @@ fn test_ber_customtags() {
     let expected: &[u8] = &[0x9f, 0x0f];
     assert_eq!(hdr.raw_tag, Some(expected));
 }
+
+#[test]
+fn test_ber_indefinite() {
+    let bytes = hex!("30 80 02 03 01 00 01 00 00");
+    let (rem, val) = parse_ber_container::<_, _, BerError>(|i, _| {
+        assert!(!i.is_empty());
+        let (_, val) = parse_ber_u32(i)?;
+        Ok((i, val))
+    })(&bytes)
+    .unwrap();
+    assert!(rem.is_empty());
+    assert_eq!(val, 0x10001);
+}
+
+#[test]
+fn test_ber_indefinite_recursion() {
+    let data = &hex!(
+        "
+        24 80 24 80 24 80 24 80 24 80 24 80 24 80 24 80
+        24 80 24 80 24 80 24 80 24 80 24 80 24 80 24 80
+        24 80 24 80 24 80 24 80 24 80 24 80 24 80 24 80
+        24 80 24 80 24 80 24 80 24 80 24 80 24 80 24 80
+        24 80 24 80 24 80 24 80 24 80 24 80 24 80 24 80
+        24 80 24 80 24 80 24 80 24 80 24 80 24 80 24 80
+        24 80 24 80 24 80 24 80 24 80 24 80 24 80 24 80
+        24 80 24 80 24 80 24 80 24 80 24 80 24 80 24 80
+        24 80 24 80 24 80 24 80 24 80 24 80 24 80 24 80 00 00"
+    );
+    let _ = parse_ber_container::<_, _, BerError>(|i, _| Ok((i, ())))(data)
+        .expect_err("max parsing depth overflow");
+}
