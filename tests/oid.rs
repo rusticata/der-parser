@@ -13,6 +13,7 @@ fn compare_oid(oid: &Oid) -> bool {
     }
 }
 
+#[rustfmt::skip::macros(oid)]
 #[test]
 fn test_compare_oid() {
     let oid = Oid::from(&[1, 2, 840, 113_549, 1, 1, 1]).unwrap();

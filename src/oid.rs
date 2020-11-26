@@ -308,7 +308,11 @@ impl<'a, N: Repr> ExactSizeIterator for SubIdentifierIterator<'a, N> {
         } else if self.oid.asn1.len() == 0 {
             0
         } else if self.oid.asn1.len() == 1 {
-            if self.oid.asn1[0] == 0 { 1 } else { 2 }
+            if self.oid.asn1[0] == 0 {
+                1
+            } else {
+                2
+            }
         } else {
             2 + self.oid.asn1[2..]
                 .iter()

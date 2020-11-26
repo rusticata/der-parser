@@ -64,6 +64,7 @@ fn test_rel_oid() {
     );
 }
 
+#[rustfmt::skip::macros(oid)]
 #[test]
 fn test_oid_iter_length_check() {
     use der_parser::oid;

@@ -96,6 +96,7 @@ fn parse_app_int(i: &[u8]) -> BerResult<SimpleStruct> {
     )
 }
 
+#[rustfmt::skip::macros(oid)]
 #[test]
 fn oid_macro() {
     let abs = oid!(1.2.44.233.0.124_982_9_348248912829838230928);
