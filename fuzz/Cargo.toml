@@ -19,4 +19,12 @@ members = ["."]
 
 [[bin]]
 name = "fuzzer_parse_der"
-path = "fuzzers/fuzzer_parse_der.rs"
+path = "fuzz_targets/fuzzer_parse_der.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_parse_ber"
+path = "fuzz_targets/fuzz_parse_ber.rs"
+test = false
+doc = false

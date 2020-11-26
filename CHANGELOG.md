@@ -12,6 +12,8 @@
 
 ### Changed/Fixed
 
+The following changes applies since 5.0.0-beta1, and do not affect 4.x
+
 - Fix potential integer underflow in `bytes_to_u64`
 - Fix potential stack recursion overflow for indefinite length objects
   (Add maximum depth).
