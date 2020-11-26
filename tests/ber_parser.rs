@@ -3,7 +3,7 @@ use der_parser::error::*;
 use der_parser::oid::*;
 use hex_literal::hex;
 use nom::Err;
-use pretty_assertions::assert_eq;
+// use pretty_assertions::assert_eq;
 use test_case::test_case;
 
 #[test_case(&hex!("01 01 00"), Some(false) ; "val true")]
@@ -211,6 +211,116 @@ fn test_ber_enum() {
     assert_eq!(parse_ber_enum(&[0x0a, 0x01, 0x02]), Ok((empty, expected)));
 }
 
+#[test_case(&hex!("0c 04 31 32 33 34"), Ok("1234") ; "utf8: numeric")]
+#[test_case(&hex!("0c 05 68 65 6c 6c 6f"), Ok("hello") ; "utf8: string")]
+#[test_case(&hex!("0c 0b 68 65 6c 6c 6f 20 77 6f 72 6c 64"), Ok("hello world") ; "utf8: string with spaces")]
+#[test_case(&hex!("0c 0b 68 65 6c 6c 6f 5c 77 6f 72 6c 64"), Ok("hello\\world") ; "utf8: string with backspace")]
+#[test_case(&hex!("0c 0b 68 65 6c 6c 6f 2b 77 6f 72 6c 64"), Ok("hello+world") ; "utf8: string with plus")]
+#[test_case(&hex!("0c 05 01 02 03 04 05"), Ok("\x01\x02\x03\x04\x05") ; "invalid chars")]
+#[test_case(&hex!("0c 0e d0 bf d1 80 d0 b8 d0 b2 d0 b5 cc 81 d1 82"), Ok("приве́т") ; "utf8")]
+#[test_case(&hex!("0c 04 00 9f 92 96"), Err(Err::Error(BerError::StringInvalidCharset)) ; "invalid utf8")]
+fn tc_ber_utf8_string(i: &[u8], out: Result<&str, Err<BerError>>) {
+    let res = parse_ber_utf8string(i);
+    match out {
+        Ok(b) => {
+            let (rem, res) = res.expect("could not parse utf8string");
+            assert!(rem.is_empty());
+            let r = res.as_str().expect("could not convert to string");
+            // let expected = BerObject::from_obj(BerObjectContent::Boolean(b));
+            pretty_assertions::assert_eq!(r, b);
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(e));
+        }
+    }
+}
+
+#[test_case(&hex!("12 04 31 32 33 34"), Ok("1234") ; "numeric string")]
+#[test_case(&hex!("12 05 68 65 6c 6c 6f"), Err(Err::Error(BerError::StringInvalidCharset)) ; "invalid chars")]
+#[test_case(&hex!("12 05 01 02 03 04 05"), Err(Err::Error(BerError::StringInvalidCharset)) ; "invalid chars2")]
+fn tc_ber_numeric_string(i: &[u8], out: Result<&str, Err<BerError>>) {
+    let res = parse_ber_numericstring(i);
+    match out {
+        Ok(b) => {
+            let (rem, res) = res.expect("could not parse numericstring");
+            assert!(rem.is_empty());
+            let r = res.as_str().expect("could not convert to string");
+            // let expected = BerObject::from_obj(BerObjectContent::Boolean(b));
+            pretty_assertions::assert_eq!(r, b);
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(e));
+        }
+    }
+}
+
+#[test_case(&hex!("13 04 31 32 33 34"), Ok("1234") ; "printable: numeric")]
+#[test_case(&hex!("13 05 68 65 6c 6c 6f"), Ok("hello") ; "printable: string")]
+#[test_case(&hex!("13 0b 68 65 6c 6c 6f 20 77 6f 72 6c 64"), Ok("hello world") ; "printable: string with spaces")]
+#[test_case(&hex!("13 0b 68 65 6c 6c 6f 5c 77 6f 72 6c 64"), Err(Err::Error(BerError::StringInvalidCharset)) ; "printable: string with backspace")]
+#[test_case(&hex!("13 0b 68 65 6c 6c 6f 2b 77 6f 72 6c 64"), Ok("hello+world") ; "printable: string with plus")]
+#[test_case(&hex!("13 05 01 02 03 04 05"), Err(Err::Error(BerError::StringInvalidCharset)) ; "invalid chars")]
+fn tc_ber_printable_string(i: &[u8], out: Result<&str, Err<BerError>>) {
+    let res = parse_ber_printablestring(i);
+    match out {
+        Ok(b) => {
+            let (rem, res) = res.expect("could not parse printablestring");
+            assert!(rem.is_empty());
+            let r = res.as_str().expect("could not convert to string");
+            // let expected = BerObject::from_obj(BerObjectContent::Boolean(b));
+            pretty_assertions::assert_eq!(r, b);
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(e));
+        }
+    }
+}
+
+#[test_case(&hex!("16 04 31 32 33 34"), Ok("1234") ; "ia5: numeric")]
+#[test_case(&hex!("16 05 68 65 6c 6c 6f"), Ok("hello") ; "ia5: string")]
+#[test_case(&hex!("16 0b 68 65 6c 6c 6f 20 77 6f 72 6c 64"), Ok("hello world") ; "ia5: string with spaces")]
+#[test_case(&hex!("16 0b 68 65 6c 6c 6f 5c 77 6f 72 6c 64"), Ok("hello\\world") ; "ia5: string with backspace")]
+#[test_case(&hex!("16 0b 68 65 6c 6c 6f 2b 77 6f 72 6c 64"), Ok("hello+world") ; "ia5: string with plus")]
+#[test_case(&hex!("16 05 01 02 03 04 05"), Ok("\x01\x02\x03\x04\x05") ; "invalid chars")]
+#[test_case(&hex!("16 0d d0 bf d1 80 d0 b8 d0 b2 d0 b5 cc 81 d1 82"), Err(Err::Error(BerError::StringInvalidCharset)) ; "utf8")]
+fn tc_ber_ia5_string(i: &[u8], out: Result<&str, Err<BerError>>) {
+    let res = parse_ber_ia5string(i);
+    match out {
+        Ok(b) => {
+            let (rem, res) = res.expect("could not parse ia5string");
+            assert!(rem.is_empty());
+            let r = res.as_str().expect("could not convert to string");
+            // let expected = BerObject::from_obj(BerObjectContent::Boolean(b));
+            pretty_assertions::assert_eq!(r, b);
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(e));
+        }
+    }
+}
+
+#[test_case(&hex!("1a 04 31 32 33 34"), Ok("1234") ; "visible: numeric")]
+#[test_case(&hex!("1a 05 68 65 6c 6c 6f"), Ok("hello") ; "visible: string")]
+#[test_case(&hex!("1a 0b 68 65 6c 6c 6f 20 77 6f 72 6c 64"), Ok("hello world") ; "visible: string with spaces")]
+#[test_case(&hex!("1a 0b 68 65 6c 6c 6f 5c 77 6f 72 6c 64"), Ok("hello\\world") ; "printable: string with backspace")]
+#[test_case(&hex!("1a 0b 68 65 6c 6c 6f 2b 77 6f 72 6c 64"), Ok("hello+world") ; "printable: string with plus")]
+#[test_case(&hex!("1a 05 01 02 03 04 05"), Err(Err::Error(BerError::StringInvalidCharset)) ; "invalid chars")]
+fn tc_ber_visible_string(i: &[u8], out: Result<&str, Err<BerError>>) {
+    let res = parse_ber_visiblestring(i);
+    match out {
+        Ok(b) => {
+            let (rem, res) = res.expect("could not parse visiblestring");
+            assert!(rem.is_empty());
+            let r = res.as_str().expect("could not convert to string");
+            // let expected = BerObject::from_obj(BerObjectContent::Boolean(b));
+            pretty_assertions::assert_eq!(r, b);
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(e));
+        }
+    }
+}
+
 #[test]
 fn test_ber_utf8string() {
     let empty = &b""[..];
@@ -286,4 +396,26 @@ fn test_ber_indefinite_recursion() {
     );
     let _ = parse_ber_container::<_, _, BerError>(|i, _| Ok((i, ())))(data)
         .expect_err("max parsing depth overflow");
+}
+
+#[test]
+fn test_parse_ber_content() {
+    let bytes = &hex!("02 03 01 00 01");
+    let (i, header) = ber_read_element_header(bytes).expect("parsing failed");
+    let (rem, content) =
+        parse_ber_content(header.tag)(i, &header, MAX_RECURSION).expect("parsing failed");
+    assert!(rem.is_empty());
+    assert_eq!(header.tag, BerTag::Integer);
+    assert_eq!(content.as_u32(), Ok(0x10001));
+}
+
+#[test]
+fn test_parse_ber_content2() {
+    let bytes = &hex!("02 03 01 00 01");
+    let (i, header) = ber_read_element_header(bytes).expect("parsing failed");
+    let tag = header.tag;
+    let (rem, content) = parse_ber_content2(tag)(i, header, MAX_RECURSION).expect("parsing failed");
+    assert!(rem.is_empty());
+    assert_eq!(tag, BerTag::Integer);
+    assert_eq!(content.as_u32(), Ok(0x10001));
 }
