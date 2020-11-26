@@ -226,7 +226,7 @@ where
 {
     parse_ber_container(move |i, hdr| {
         if hdr.tag != BerTag::Sequence {
-            return Err(Err::Error(BerError::BerTypeError.into()));
+            return Err(Err::Error(BerError::InvalidTag.into()));
         }
         f(i, hdr)
     })
@@ -451,7 +451,7 @@ where
 {
     parse_ber_container(move |i, hdr| {
         if hdr.tag != BerTag::Set {
-            return Err(Err::Error(BerError::BerTypeError.into()));
+            return Err(Err::Error(BerError::InvalidTag.into()));
         }
         f(i, hdr)
     })

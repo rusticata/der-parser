@@ -227,7 +227,7 @@ where
 {
     parse_der_container(move |i, hdr| {
         if hdr.tag != DerTag::Sequence {
-            return Err(Err::Error(BerError::BerTypeError.into()));
+            return Err(Err::Error(BerError::InvalidTag.into()));
         }
         f(i, hdr)
     })
@@ -452,7 +452,7 @@ where
 {
     parse_der_container(move |i, hdr| {
         if hdr.tag != DerTag::Set {
-            return Err(Err::Error(BerError::BerTypeError.into()));
+            return Err(Err::Error(BerError::InvalidTag.into()));
         }
         f(i, hdr)
     })
