@@ -15,6 +15,7 @@
 - Fix potential integer underflow in `bytes_to_u64`
 - Fix potential stack recursion overflow for indefinite length objects
   (Add maximum depth).
+- Fix potential UB in bitstring_to_u64 with large input and many ignored bits
 
 ## 5.0.0-beta2
 

@@ -120,8 +120,14 @@ pub(crate) fn bitstring_to_u64(
     if bit_size > 64 {
         return Err(BerError::IntegerTooLarge);
     }
+    let padding_bits = padding_bits % 8;
+    let num_bytes = if bit_size % 8 > 0 {
+        (bit_size / 8) + 1
+    } else {
+        bit_size / 8
+    };
     let mut resulting_integer: u64 = 0;
-    for &c in raw_bytes {
+    for &c in &raw_bytes[..num_bytes] {
         resulting_integer <<= 8;
         resulting_integer |= c as u64;
     }
@@ -1263,4 +1269,12 @@ fn test_utf8string() {
         Ok(([].as_ref(), BerObjectContent::UTF8String(""))),
     );
     assert!(ber_read_content_utf8string(b"\xe2\x28\xa1", 3).is_err());
+}
+
+#[test]
+fn test_bitstring_to_u64() {
+    // test large number but with many ignored bits
+    let data = &hex_literal::hex!("0d 71 82 0e 73 72 76 6e 67 6e 62 6c 6e 2d 65 78 30 31");
+    let r = bitstring_to_u64(130, &BitStringObject { data });
+    assert_eq!(r, Ok(0x0d718 >> 6));
 }
