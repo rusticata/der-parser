@@ -1254,8 +1254,19 @@ fn test_utf8string() {
 
 #[test]
 fn test_bitstring_to_u64() {
+    // ignored bits modulo 8 to 0
+    let data = &hex_literal::hex!("0d 71 82");
+    let r = bitstring_to_u64(8, &BitStringObject { data });
+    assert_eq!(r, Ok(0x0d71));
+
+    // input too large to fit a 64-bits integer
+    let data = &hex_literal::hex!("0d 71 82 0e 73 72 76 6e 67 6e 62 6c 6e 2d 65 78 30 31");
+    let r = bitstring_to_u64(0, &BitStringObject { data });
+    assert!(r.is_err());
+
     // test large number but with many ignored bits
     let data = &hex_literal::hex!("0d 71 82 0e 73 72 76 6e 67 6e 62 6c 6e 2d 65 78 30 31");
     let r = bitstring_to_u64(130, &BitStringObject { data });
-    assert_eq!(r, Ok(0x0d718 >> 6));
+    // 2 = 130 % 8
+    assert_eq!(r, Ok(0x0d71 >> 2));
 }

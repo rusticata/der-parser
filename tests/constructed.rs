@@ -2,10 +2,13 @@ use der_parser::ber::*;
 use der_parser::error::*;
 use der_parser::*;
 use hex_literal::hex;
+use nom::combinator::map;
 use nom::error::ErrorKind;
+use nom::sequence::tuple;
 use nom::*;
 use oid::Oid;
 use pretty_assertions::assert_eq;
+use test_case::test_case;
 
 #[derive(Debug, PartialEq)]
 struct MyStruct<'a> {
@@ -54,6 +57,127 @@ fn parse_struct04(i: &[u8], tag: BerTag) -> BerResult<MyStruct> {
     )
 }
 
+#[test_case(&hex!("30 00"), Ok(&[]) ; "empty seq")]
+#[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Ok(&[0x10001, 0x10000]) ; "seq ok")]
+#[test_case(&hex!("30 07 02 03 01 00 01 02 03 01"), Err(Err::Error(BerError::NomError(ErrorKind::Eof))) ; "incomplete")]
+#[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::InvalidTag)) ; "invalid tag")]
+#[test_case(&hex!("30 80 02 03 01 00 01 00 00"), Ok(&[0x10001]) ; "indefinite seq ok")]
+#[test_case(&hex!("30 80"), Err(Err::Incomplete(Needed::new(1))) ; "indefinite incomplete")]
+fn tc_ber_seq_of(i: &[u8], out: Result<&[u32], Err<BerError>>) {
+    fn parser(i: &[u8]) -> BerResult {
+        parse_ber_sequence_of(parse_ber_integer)(i)
+    }
+    let res = parser(i);
+    match out {
+        Ok(l) => {
+            let (rem, res) = res.expect("could not parse sequence of");
+            assert!(rem.is_empty());
+            if let BerObjectContent::Sequence(res) = res.content {
+                pretty_assertions::assert_eq!(res.len(), l.len());
+                for (a, b) in res.iter().zip(l.iter()) {
+                    pretty_assertions::assert_eq!(a.as_u32().unwrap(), *b);
+                }
+            } else {
+                panic!("wrong type for parsed object");
+            }
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(e));
+        }
+    }
+}
+
+#[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Ok(&[0x10001, 0x10000]) ; "seq ok")]
+#[test_case(&hex!("30 07 02 03 01 00 01 02 01"), Err(Err::Incomplete(Needed::new(1))) ; "incomplete")]
+#[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::InvalidTag)) ; "invalid tag")]
+#[test_case(&hex!("30 80 02 03 01 00 01 02 03 01 00 00 00 00"), Ok(&[0x10001, 0x10000]) ; "indefinite seq")]
+fn tc_ber_seq_defined(i: &[u8], out: Result<&[u32], Err<BerError>>) {
+    fn parser(i: &[u8]) -> BerResult<BerObject> {
+        parse_ber_sequence_defined(map(
+            tuple((parse_ber_integer, parse_ber_integer)),
+            |(a, b)| vec![a, b],
+        ))(i)
+    }
+    let res = parser(i);
+    match out {
+        Ok(l) => {
+            let (rem, res) = res.expect("could not parse sequence");
+            assert!(rem.is_empty());
+            if let BerObjectContent::Sequence(res) = res.content {
+                pretty_assertions::assert_eq!(res.len(), l.len());
+                for (a, b) in res.iter().zip(l.iter()) {
+                    pretty_assertions::assert_eq!(a.as_u32().unwrap(), *b);
+                }
+            } else {
+                panic!("wrong type for parsed object");
+            }
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(e));
+        }
+    }
+}
+
+#[test_case(&hex!("31 00"), Ok(&[]) ; "empty set")]
+#[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Ok(&[0x10001, 0x10000]) ; "set ok")]
+#[test_case(&hex!("31 07 02 03 01 00 01 02 03 01"), Err(Err::Error(BerError::NomError(ErrorKind::Eof))) ; "incomplete")]
+#[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::InvalidTag)) ; "invalid tag")]
+#[test_case(&hex!("31 80 02 03 01 00 01 00 00"), Ok(&[0x10001]) ; "indefinite set ok")]
+#[test_case(&hex!("31 80"), Err(Err::Incomplete(Needed::new(1))) ; "indefinite incomplete")]
+fn tc_ber_set_of(i: &[u8], out: Result<&[u32], Err<BerError>>) {
+    fn parser(i: &[u8]) -> BerResult {
+        parse_ber_set_of(parse_ber_integer)(i)
+    }
+    let res = parser(i);
+    match out {
+        Ok(l) => {
+            let (rem, res) = res.expect("could not parse set of");
+            assert!(rem.is_empty());
+            if let BerObjectContent::Set(res) = res.content {
+                pretty_assertions::assert_eq!(res.len(), l.len());
+                for (a, b) in res.iter().zip(l.iter()) {
+                    pretty_assertions::assert_eq!(a.as_u32().unwrap(), *b);
+                }
+            } else {
+                panic!("wrong type for parsed object");
+            }
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(e));
+        }
+    }
+}
+
+#[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Ok(&[0x10001, 0x10000]) ; "set ok")]
+#[test_case(&hex!("31 07 02 03 01 00 01 02 01"), Err(Err::Incomplete(Needed::new(1))) ; "incomplete")]
+#[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::InvalidTag)) ; "invalid tag")]
+#[test_case(&hex!("31 80 02 03 01 00 01 02 03 01 00 00 00 00"), Ok(&[0x10001, 0x10000]) ; "indefinite set")]
+fn tc_ber_set_defined(i: &[u8], out: Result<&[u32], Err<BerError>>) {
+    fn parser(i: &[u8]) -> BerResult<BerObject> {
+        parse_ber_set_defined(map(
+            tuple((parse_ber_integer, parse_ber_integer)),
+            |(a, b)| vec![a, b],
+        ))(i)
+    }
+    let res = parser(i);
+    match out {
+        Ok(l) => {
+            let (rem, res) = res.expect("could not parse set");
+            assert!(rem.is_empty());
+            if let BerObjectContent::Set(res) = res.content {
+                pretty_assertions::assert_eq!(res.len(), l.len());
+                for (a, b) in res.iter().zip(l.iter()) {
+                    pretty_assertions::assert_eq!(a.as_u32().unwrap(), *b);
+                }
+            } else {
+                panic!("wrong type for parsed object");
+            }
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(e));
+        }
+    }
+}
 #[test]
 fn empty_seq() {
     let data = &hex!("30 00");
@@ -184,6 +308,30 @@ fn struct_verify_tag() {
     assert_eq!(res, Ok((empty, expected)));
     let res = parse_struct04(&bytes, BerTag::Set);
     assert_eq!(res, Err(Err::Error(BerError::InvalidTag)));
+}
+
+#[test_case(&hex!("a2 05 02 03 01 00 01"), Ok(0x10001) ; "tag ok")]
+#[test_case(&hex!("a2 80 02 03 01 00 01 00 00"), Ok(0x10001) ; "indefinite tag ok")]
+#[test_case(&hex!("a3 05 02 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+#[test_case(&hex!("22 05 02 03 01 00 01"), Err(BerError::InvalidClass) ; "invalid class")]
+#[test_case(&hex!("82 05 02 03 01 00 01"), Err(BerError::ConstructExpected) ; "construct expected")]
+fn tc_ber_tagged_explicit_g(i: &[u8], out: Result<u32, BerError>) {
+    fn parse_int_explicit(i: &[u8]) -> BerResult<u32> {
+        parse_ber_tagged_explicit_g(2, move |content, _hdr| {
+            let (rem, obj) = parse_ber_integer(content)?;
+            let value = obj.as_u32()?;
+            Ok((rem, value))
+        })(i)
+    }
+    let res = parse_int_explicit(i);
+    match out {
+        Ok(expected) => {
+            pretty_assertions::assert_eq!(res, Ok((&b""[..], expected)));
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(Err::Error(e)));
+        }
+    }
 }
 
 #[test]

@@ -4,6 +4,22 @@ use der_parser::oid::*;
 use hex_literal::hex;
 use nom::Err;
 use pretty_assertions::assert_eq;
+use test_case::test_case;
+
+#[test_case(&hex!("01 01 00"), Some(false) ; "val true")]
+#[test_case(&hex!("01 01 ff"), Some(true) ; "val false")]
+#[test_case(&hex!("01 01 7f"), Some(true) ; "true not ff")]
+#[test_case(&hex!("01 02 00 00"), None ; "invalid length")]
+#[test_case(&hex!("01 01"), None ; "incomplete")]
+fn tc_ber_bool(i: &[u8], out: Option<bool>) {
+    let res = parse_ber_bool(i);
+    if let Some(b) = out {
+        let expected = BerObject::from_obj(BerObjectContent::Boolean(b));
+        pretty_assertions::assert_eq!(res, Ok((&b""[..], expected)));
+    } else {
+        assert!(res.is_err());
+    }
+}
 
 #[test]
 fn test_ber_bool() {
