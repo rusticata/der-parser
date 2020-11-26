@@ -21,6 +21,7 @@ The following changes applies since 5.0.0-beta1, and do not affect 4.x
 - Fix constructed objects parsing with indefinite length (do not include EOC)
 - Constructed objects: use `InvalidTag` everywhere if tag is not expected
 - Add new error `StringInvalidCharset` and update string parsing methods
+- Integer parsing functions now all return `IntegerTooLarge` instead of `MapRes`
 
 ## 5.0.0-beta2
 

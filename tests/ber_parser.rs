@@ -136,6 +136,46 @@ fn test_ber_int() {
     assert_eq!(parse_ber_integer(&bytes), Ok((empty, expected)));
 }
 
+#[test_case(&hex!("02 01 01"), Ok(1) ; "u32-1")]
+#[test_case(&hex!("02 01 ff"), Ok(255) ; "u32-255")]
+#[test_case(&hex!("02 02 01 23"), Ok(0x123) ; "u32-0x123")]
+#[test_case(&hex!("02 04 01 23 45 67"), Ok(0x0123_4567) ; "u32-long-ok")]
+#[test_case(&hex!("02 04 ff ff ff ff"), Ok(0xffff_ffff) ; "u32-long2-ok")]
+#[test_case(&hex!("02 06 00 00 01 23 45 67"), Ok(0x0123_4567) ; "u32-long-leading-zeros-ok")]
+#[test_case(&hex!("02 05 01 23 45 67 01"), Err(BerError::IntegerTooLarge) ; "u32 too large")]
+#[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u32 too large 2")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+fn tc_ber_u32(i: &[u8], out: Result<u32, BerError>) {
+    let res = parse_ber_u32(i);
+    match out {
+        Ok(expected) => {
+            pretty_assertions::assert_eq!(res, Ok((&b""[..], expected)));
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(Err::Error(e)));
+        }
+    }
+}
+
+#[test_case(&hex!("02 01 01"), Ok(1) ; "u64-1")]
+#[test_case(&hex!("02 01 ff"), Ok(255) ; "u64-255")]
+#[test_case(&hex!("02 02 01 23"), Ok(0x123) ; "u64-0x123")]
+#[test_case(&hex!("02 08 01 23 45 67 01 23 45 67"), Ok(0x0123_4567_0123_4567) ; "u64-long-ok")]
+#[test_case(&hex!("02 08 ff ff ff ff ff ff ff ff"), Ok(0xffff_ffff_ffff_ffff) ; "u64-long2-ok")]
+#[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u64 too large")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+fn tc_ber_u64(i: &[u8], out: Result<u64, BerError>) {
+    let res = parse_ber_u64(i);
+    match out {
+        Ok(expected) => {
+            pretty_assertions::assert_eq!(res, Ok((&b""[..], expected)));
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(Err::Error(e)));
+        }
+    }
+}
+
 #[test]
 fn test_ber_bitstring_primitive() {
     let empty = &b""[..];

@@ -9,6 +9,7 @@ use hex_literal::hex;
 use nom::error::ErrorKind;
 use nom::{alt, call, Err};
 use pretty_assertions::assert_eq;
+use test_case::test_case;
 
 #[test]
 fn test_der_bool() {
@@ -511,68 +512,42 @@ fn test_der_defined_set_macros() {
     assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
 }
 
-#[test]
-fn test_parse_u32() {
-    let empty = &b""[..];
-    assert_eq!(parse_der_u32(&[0x02, 0x01, 0x01]), Ok((empty, 1)));
-    assert_eq!(parse_der_u32(&[0x02, 0x01, 0xff]), Ok((empty, 255)));
-    assert_eq!(parse_der_u32(&[0x02, 0x02, 0x01, 0x23]), Ok((empty, 0x123)));
-    assert_eq!(
-        parse_der_u32(&[0x02, 0x02, 0xff, 0xff]),
-        Ok((empty, 0xffff))
-    );
-    assert_eq!(
-        parse_der_u32(&[0x02, 0x03, 0x01, 0x23, 0x45]),
-        Ok((empty, 0x12345))
-    );
-    assert_eq!(
-        parse_der_u32(&[0x02, 0x03, 0xff, 0xff, 0xff]),
-        Ok((empty, 0x00ff_ffff))
-    );
-    assert_eq!(
-        parse_der_u32(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),
-        Ok((empty, 0x0123_4567))
-    );
-    assert_eq!(
-        parse_der_u32(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),
-        Ok((empty, 0xffff_ffff))
-    );
-    let s = &[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89];
-    assert_eq!(parse_der_u32(s), Err(Err::Error(BerError::IntegerTooLarge)));
-    let s = &[0x01, 0x01, 0xff];
-    assert_eq!(parse_der_u32(s), Err(Err::Error(BerError::InvalidTag)));
+#[test_case(&hex!("02 01 01"), Ok(1) ; "u32-1")]
+#[test_case(&hex!("02 01 ff"), Ok(255) ; "u32-255")]
+#[test_case(&hex!("02 02 01 23"), Ok(0x123) ; "u32-0x123")]
+#[test_case(&hex!("02 04 01 23 45 67"), Ok(0x0123_4567) ; "u32-long-ok")]
+#[test_case(&hex!("02 04 ff ff ff ff"), Ok(0xffff_ffff) ; "u32-long2-ok")]
+#[test_case(&hex!("02 06 00 00 01 23 45 67"), Ok(0x0123_4567) ; "u32-long-leading-zeros-ok")]
+#[test_case(&hex!("02 05 01 23 45 67 01"), Err(BerError::IntegerTooLarge) ; "u32 too large")]
+#[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u32 too large 2")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+fn tc_der_u32(i: &[u8], out: Result<u32, BerError>) {
+    let res = parse_der_u32(i);
+    match out {
+        Ok(expected) => {
+            pretty_assertions::assert_eq!(res, Ok((&b""[..], expected)));
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(Err::Error(e)));
+        }
+    }
 }
 
-#[test]
-fn test_parse_u64() {
-    let empty = &b""[..];
-    assert_eq!(parse_der_u64(&[0x02, 0x01, 0x01]), Ok((empty, 1)));
-    assert_eq!(parse_der_u64(&[0x02, 0x01, 0xff]), Ok((empty, 255)));
-    assert_eq!(parse_der_u64(&[0x02, 0x02, 0x01, 0x23]), Ok((empty, 0x123)));
-    assert_eq!(
-        parse_der_u64(&[0x02, 0x02, 0xff, 0xff]),
-        Ok((empty, 0xffff))
-    );
-    assert_eq!(
-        parse_der_u64(&[0x02, 0x03, 0x01, 0x23, 0x45]),
-        Ok((empty, 0x12345))
-    );
-    assert_eq!(
-        parse_der_u64(&[0x02, 0x03, 0xff, 0xff, 0xff]),
-        Ok((empty, 0x00ff_ffff))
-    );
-    assert_eq!(
-        parse_der_u64(&[0x02, 0x04, 0x01, 0x23, 0x45, 0x67]),
-        Ok((empty, 0x0123_4567))
-    );
-    assert_eq!(
-        parse_der_u64(&[0x02, 0x04, 0xff, 0xff, 0xff, 0xff]),
-        Ok((empty, 0xffff_ffff))
-    );
-    assert_eq!(
-        parse_der_u64(&[0x02, 0x05, 0x01, 0x23, 0x45, 0x67, 0x89]),
-        Ok((empty, 0x0001_2345_6789))
-    );
-    let s = &[0x01, 0x01, 0xff];
-    assert_eq!(parse_der_u64(s), Err(Err::Error(BerError::InvalidTag)));
+#[test_case(&hex!("02 01 01"), Ok(1) ; "u64-1")]
+#[test_case(&hex!("02 01 ff"), Ok(255) ; "u64-255")]
+#[test_case(&hex!("02 02 01 23"), Ok(0x123) ; "u64-0x123")]
+#[test_case(&hex!("02 08 01 23 45 67 01 23 45 67"), Ok(0x0123_4567_0123_4567) ; "u64-long-ok")]
+#[test_case(&hex!("02 08 ff ff ff ff ff ff ff ff"), Ok(0xffff_ffff_ffff_ffff) ; "u64-long2-ok")]
+#[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u64 too large")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+fn tc_der_u64(i: &[u8], out: Result<u64, BerError>) {
+    let res = parse_der_u64(i);
+    match out {
+        Ok(expected) => {
+            pretty_assertions::assert_eq!(res, Ok((&b""[..], expected)));
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(Err::Error(e)));
+        }
+    }
 }

@@ -2,7 +2,7 @@ use crate::ber::*;
 use crate::error::*;
 use crate::oid::*;
 use nom::bytes::streaming::take;
-use nom::combinator::{complete, map, map_res, verify};
+use nom::combinator::{complete, map, verify};
 use nom::multi::{many0, many_till};
 use nom::number::streaming::be_u8;
 use nom::{Err, Needed, Offset};
@@ -1093,15 +1093,37 @@ where
 }
 
 /// Parse BER object and try to decode it as a 32-bits unsigned integer
+///
+/// Return `IntegerTooLarge` if object is an integer, but be represented in the target
+/// integer type.
 #[inline]
 pub fn parse_ber_u32(i: &[u8]) -> BerResult<u32> {
-    map_res(parse_ber_integer, |o| o.as_u32())(i)
+    parse_ber_container(|content, hdr| {
+        if hdr.tag != BerTag::Integer {
+            return Err(Err::Error(BerError::InvalidTag));
+        }
+        let l = bytes_to_u64(content)?;
+        if l > 0xffff_ffff {
+            Err(Err::Error(BerError::IntegerTooLarge))
+        } else {
+            Ok((&b""[..], l as u32))
+        }
+    })(i)
 }
 
 /// Parse BER object and try to decode it as a 64-bits unsigned integer
+///
+/// Return `IntegerTooLarge` if object is an integer, but be represented in the target
+/// integer type.
 #[inline]
 pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
-    map_res(parse_ber_integer, |o| o.as_u64())(i)
+    parse_ber_container(|content, hdr| {
+        if hdr.tag != BerTag::Integer {
+            return Err(Err::Error(BerError::InvalidTag));
+        }
+        let l = bytes_to_u64(content)?;
+        Ok((&b""[..], l))
+    })(i)
 }
 
 /// Helper combinator, to create a parser with a maximum parsing depth

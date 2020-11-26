@@ -384,43 +384,35 @@ where
 }
 
 /// Parse DER object and try to decode it as a 32-bits unsigned integer
+///
+/// Return `IntegerTooLarge` if object is an integer, but be represented in the target
+/// integer type.
 pub fn parse_der_u32(i: &[u8]) -> BerResult<u32> {
-    match parse_ber_integer(i) {
-        Ok((rem, ref obj)) => match obj.content {
-            DerObjectContent::Integer(i) => match i.len() {
-                1 => Ok((rem, u32::from(i[0]))),
-                2 => Ok((rem, u32::from(i[0]) << 8 | u32::from(i[1]))),
-                3 => Ok((
-                    rem,
-                    u32::from(i[0]) << 16 | u32::from(i[1]) << 8 | u32::from(i[2]),
-                )),
-                4 => Ok((
-                    rem,
-                    u32::from(i[0]) << 24
-                        | u32::from(i[1]) << 16
-                        | u32::from(i[2]) << 8
-                        | u32::from(i[3]),
-                )),
-                _ => Err(Err::Error(BerError::IntegerTooLarge)),
-            },
-            _ => Err(Err::Error(BerError::InvalidTag)),
-        },
-        Err(e) => Err(e),
-    }
+    parse_der_container(|content, hdr| {
+        if hdr.tag != DerTag::Integer {
+            return Err(Err::Error(BerError::InvalidTag));
+        }
+        let l = bytes_to_u64(content)?;
+        if l > 0xffff_ffff {
+            Err(Err::Error(BerError::IntegerTooLarge))
+        } else {
+            Ok((&b""[..], l as u32))
+        }
+    })(i)
 }
 
 /// Parse DER object and try to decode it as a 64-bits unsigned integer
+///
+/// Return `IntegerTooLarge` if object is an integer, but be represented in the target
+/// integer type.
 pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
-    match parse_ber_integer(i) {
-        Ok((rem, ref obj)) => match obj.content {
-            DerObjectContent::Integer(i) => match bytes_to_u64(i) {
-                Ok(l) => Ok((rem, l)),
-                Err(_) => Err(Err::Error(BerError::IntegerTooLarge)),
-            },
-            _ => Err(Err::Error(BerError::InvalidTag)),
-        },
-        Err(e) => Err(e),
-    }
+    parse_der_container(|content, hdr| {
+        if hdr.tag != DerTag::Integer {
+            return Err(Err::Error(BerError::InvalidTag));
+        }
+        let l = bytes_to_u64(content)?;
+        Ok((&b""[..], l))
+    })(i)
 }
 
 /// Parse the next bytes as the content of a DER object (combinator, header reference)

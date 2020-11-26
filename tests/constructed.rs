@@ -371,6 +371,27 @@ fn tagged_explicit() {
     );
 }
 
+#[test_case(&hex!("82 03 01 00 01"), Ok(0x10001) ; "tag ok")]
+#[test_case(&hex!("83 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+fn tc_ber_tagged_implicit_g(i: &[u8], out: Result<u32, BerError>) {
+    fn parse_int_implicit(i: &[u8]) -> BerResult<u32> {
+        parse_ber_tagged_implicit_g(2, |content, hdr, depth| {
+            let (rem, obj) = parse_ber_content(BerTag::Integer)(content, &hdr, depth)?;
+            let value = obj.as_u32()?;
+            Ok((rem, value))
+        })(i)
+    }
+    let res = parse_int_implicit(i);
+    match out {
+        Ok(expected) => {
+            pretty_assertions::assert_eq!(res, Ok((&b""[..], expected)));
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(Err::Error(e)));
+        }
+    }
+}
+
 #[test]
 fn tagged_implicit() {
     fn parse_int_implicit(i: &[u8]) -> BerResult<u32> {
