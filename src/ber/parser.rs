@@ -270,11 +270,11 @@ fn ber_read_content_enum(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
 }
 
 fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map_res(take(len), |bytes| {
-        std::str::from_utf8(bytes)
-            .map(|s| BerObjectContent::UTF8String(s))
-            .map_err(|_| BerError::BerValueError)
-    })(i)
+    let (i, bytes) = take(len)(i)?;
+    let s = std::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(|s| BerObjectContent::UTF8String(s))?;
+    Ok((i, s))
 }
 
 fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
@@ -332,14 +332,14 @@ fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     fn is_numeric(b: &u8) -> bool {
         matches!(*b, b'0'..=b'9' | b' ')
     }
-    map_res(take(len), |bytes: &'a [u8]| {
-        if !bytes.iter().all(is_numeric) {
-            return Err(BerError::BerValueError);
-        }
-        std::str::from_utf8(bytes)
-            .map_err(|_| BerError::BerValueError)
-            .map(|s| BerObjectContent::NumericString(s))
-    })(i)
+    let (i, bytes) = take(len)(i)?;
+    if !bytes.iter().all(is_numeric) {
+        return Err(Err::Error(BerError::StringInvalidCharset));
+    }
+    let s = std::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(|s| BerObjectContent::NumericString(s))?;
+    Ok((i, s))
 }
 
 fn ber_read_content_visiblestring<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
@@ -348,14 +348,14 @@ fn ber_read_content_visiblestring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     fn is_visible(b: &u8) -> bool {
         0x20 <= *b && *b <= 0x7f
     }
-    map_res(take(len), |bytes: &'a [u8]| {
-        if !bytes.iter().all(is_visible) {
-            return Err(BerError::BerValueError);
-        }
-        std::str::from_utf8(bytes)
-            .map(|s| BerObjectContent::VisibleString(s))
-            .map_err(|_| BerError::BerValueError)
-    })(i)
+    let (i, bytes) = take(len)(i)?;
+    if !bytes.iter().all(is_visible) {
+        return Err(Err::Error(BerError::StringInvalidCharset));
+    }
+    let s = std::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(|s| BerObjectContent::VisibleString(s))?;
+    Ok((i, s))
 }
 
 fn ber_read_content_printablestring<'a>(
@@ -382,14 +382,14 @@ fn ber_read_content_printablestring<'a>(
             | b'='
             | b'?')
     }
-    map_res(take(len), |bytes: &'a [u8]| {
-        if !bytes.iter().all(is_printable) {
-            return Err(BerError::BerValueError);
-        }
-        std::str::from_utf8(bytes)
-            .map(|s| BerObjectContent::PrintableString(s))
-            .map_err(|_| BerError::BerValueError)
-    })(i)
+    let (i, bytes) = take(len)(i)?;
+    if !bytes.iter().all(is_printable) {
+        return Err(Err::Error(BerError::StringInvalidCharset));
+    }
+    let s = std::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(|s| BerObjectContent::PrintableString(s))?;
+    Ok((i, s))
 }
 
 #[inline]
@@ -403,14 +403,14 @@ fn ber_read_content_videotexstring(i: &[u8], len: usize) -> BerResult<BerObjectC
 }
 
 fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
-    map_res(take(len), |bytes: &'a [u8]| {
-        if !bytes.iter().all(u8::is_ascii) {
-            return Err(BerError::BerValueError);
-        }
-        std::str::from_utf8(bytes)
-            .map(BerObjectContent::IA5String)
-            .map_err(|_| BerError::BerValueError)
-    })(i)
+    let (i, bytes) = take(len)(i)?;
+    if !bytes.iter().all(u8::is_ascii) {
+        return Err(Err::Error(BerError::StringInvalidCharset));
+    }
+    let s = std::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(|s| BerObjectContent::IA5String(s))?;
+    Ok((i, s))
 }
 
 fn ber_read_content_utctime<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
@@ -419,14 +419,14 @@ fn ber_read_content_utctime<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectC
     fn is_visible(b: &u8) -> bool {
         0x20 <= *b && *b <= 0x7f
     }
-    map_res(take(len), |bytes: &'a [u8]| {
-        if !bytes.iter().all(is_visible) {
-            return Err(BerError::BerValueError);
-        }
-        std::str::from_utf8(bytes)
-            .map(|s| BerObjectContent::UTCTime(s))
-            .map_err(|_| BerError::BerValueError)
-    })(i)
+    let (i, bytes) = take(len)(i)?;
+    if !bytes.iter().all(is_visible) {
+        return Err(Err::Error(BerError::StringInvalidCharset));
+    }
+    let s = std::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(|s| BerObjectContent::UTCTime(s))?;
+    Ok((i, s))
 }
 
 fn ber_read_content_generalizedtime<'a>(
@@ -438,14 +438,14 @@ fn ber_read_content_generalizedtime<'a>(
     fn is_visible(b: &u8) -> bool {
         0x20 <= *b && *b <= 0x7f
     }
-    map_res(take(len), |bytes: &'a [u8]| {
-        if !bytes.iter().all(is_visible) {
-            return Err(BerError::BerValueError);
-        }
-        std::str::from_utf8(bytes)
-            .map(|s| BerObjectContent::GeneralizedTime(s))
-            .map_err(|_| BerError::BerValueError)
-    })(i)
+    let (i, bytes) = take(len)(i)?;
+    if !bytes.iter().all(is_visible) {
+        return Err(Err::Error(BerError::StringInvalidCharset));
+    }
+    let s = std::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(|s| BerObjectContent::GeneralizedTime(s))?;
+    Ok((i, s))
 }
 
 #[inline]

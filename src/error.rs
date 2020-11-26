@@ -40,6 +40,9 @@ pub enum BerError {
     /// DER object was expected to be primitive (and found to be constructed)
     ConstructUnexpected,
 
+    /// BER string has characters forbidden in standard
+    StringInvalidCharset,
+
     /// BER integer is too large to fit in a native type. Use `as_bigint()`
     IntegerTooLarge,
 
