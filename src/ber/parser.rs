@@ -50,32 +50,6 @@ pub(crate) fn ber_skip_object_content<'a>(
     }
 }
 
-// /// Skip object, and return true if object was End-Of-Content
-// pub(crate) fn ber_skip_object(i: &[u8]) -> BerResult<bool> {
-//     let (i, header) = ber_read_element_header(i)?;
-//     ber_skip_object_content(i, &header)
-// }
-
-// /// Skip object, and return size (including header)
-// pub(crate) fn ber_skip_object_get_size(i: &[u8]) -> BerResult<usize> {
-//     let start_i = i;
-//     let (i, _) = ber_skip_object(i)?;
-//     let len = start_i.offset(i);
-//     Ok((i, len))
-// }
-
-/// Skip object content, and return size
-pub(crate) fn ber_skip_object_content_get_size<'a>(
-    i: &'a [u8],
-    hdr: &BerObjectHeader,
-    max_depth: usize,
-) -> BerResult<'a, usize> {
-    let start_i = i;
-    let (i, _) = ber_skip_object_content(i, hdr, max_depth)?;
-    let len = start_i.offset(i);
-    Ok((i, len))
-}
-
 /// Read object raw content (bytes)
 pub(crate) fn ber_get_object_content<'a>(
     i: &'a [u8],
@@ -86,7 +60,14 @@ pub(crate) fn ber_get_object_content<'a>(
     let (i, _) = ber_skip_object_content(i, hdr, max_depth)?;
     let len = start_i.offset(i);
     let (content, i) = start_i.split_at(len);
-    Ok((i, content))
+    // if len is indefinite, there are 2 extra bytes for EOC
+    if hdr.len == BerSize::Indefinite {
+        let len = content.len();
+        assert!(len >= 2);
+        Ok((i, &content[..len - 2]))
+    } else {
+        Ok((i, content))
+    }
 }
 
 /// Try to parse input bytes as u64

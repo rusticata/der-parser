@@ -16,6 +16,8 @@
 - Fix potential stack recursion overflow for indefinite length objects
   (Add maximum depth).
 - Fix potential UB in bitstring_to_u64 with large input and many ignored bits
+- Fix constructed objects parsing with indefinite length (do not include EOC)
+- Constructed objects: use `InvalidTag` everywhere if tag is not expected
 
 ## 5.0.0-beta2
 
