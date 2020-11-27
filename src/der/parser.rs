@@ -492,22 +492,20 @@ pub fn der_read_element_content_as(
     constructed: bool,
     max_depth: usize,
 ) -> BerResult<DerObjectContent> {
-    if let BerSize::Definite(l) = len {
-        if i.len() < l {
-            return Err(Err::Incomplete(Needed::new(l)));
-        }
+    // Indefinite lengths are not allowed in DER (X.690 section 10.1)
+    let l = len.primitive()?;
+    if i.len() < l {
+        return Err(Err::Incomplete(Needed::new(l)));
     }
     match tag {
         DerTag::Boolean => {
-            let len = len.primitive()?;
-            custom_check!(i, len != 1, BerError::InvalidLength)?;
+            custom_check!(i, l != 1, BerError::InvalidLength)?;
             der_constraint_fail_if!(i, i[0] != 0 && i[0] != 0xff);
         }
         DerTag::BitString => {
             der_constraint_fail_if!(i, constructed);
-            let len = len.primitive()?;
             // exception: read and verify padding bits
-            return der_read_content_bitstring(i, len);
+            return der_read_content_bitstring(i, l);
         }
         DerTag::NumericString
         | DerTag::VisibleString
@@ -524,8 +522,7 @@ pub fn der_read_element_content_as(
             der_constraint_fail_if!(i, constructed);
         }
         DerTag::UtcTime | DerTag::GeneralizedTime => {
-            let len = len.primitive()?;
-            if len == 0 || i.get(len - 1).cloned() != Some(b'Z') {
+            if l == 0 || i.get(l - 1).cloned() != Some(b'Z') {
                 return Err(Err::Error(BerError::DerConstraintFailed));
             }
         }

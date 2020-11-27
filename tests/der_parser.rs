@@ -78,13 +78,19 @@ fn test_der_bitstring_primitive() {
 
 #[test]
 fn test_der_bitstring_constructed() {
-    let bytes = &[
-        0x23, 0x80, 0x03, 0x03, 0x00, 0x0a, 0x3b, 0x03, 0x05, 0x04, 0x5f, 0x29, 0x1c, 0xd0, 0x00,
-        0x00,
-    ];
+    let bytes = &hex!("23 81 0c 03 03 00 0a 3b 03 05 04 5f 29 1c d0");
     assert_eq!(
         parse_der_bitstring(bytes),
         Err(Err::Error(BerError::DerConstraintFailed))
+    );
+}
+
+#[test]
+fn test_der_indefinite_length() {
+    let bytes = &hex!("23 80 03 03 00 0a 3b 03 05 04 5f 29 1c d0 00 00");
+    assert_eq!(
+        parse_der_bitstring(bytes),
+        Err(Err::Error(BerError::IndefiniteLengthUnexpected))
     );
 }
 
