@@ -30,6 +30,53 @@ Serialization has also been added (see [Serialization](#serialization) )
 The code is available on [Github](https://github.com/rusticata/der-parser)
 and is part of the [Rusticata](https://github.com/rusticata) project.
 
+# BER/DER parsers
+
+BER stands for Basic Encoding Rules, and is defined in [X.690]. It defines a set of rules to
+encode and decode ASN.1 objects in binary.
+
+[X.690] also defines Distinguished Encoding Rules (DER), which is BER with added rules to
+ensure canonical and unequivocal binary representation of objects.
+
+The choice of which one to use is usually guided by the speficication of the data format based
+on BER or DER: for example, X.509 uses DER as encoding representation.
+
+See the related modules for object definitions, functions, and example:
+- [`ber`]: Basic Encoding Rules
+- [`der`]: Distinguished Encoding Rules
+
+## Examples
+
+Parse two BER integers:
+
+```rust
+use der_parser::ber::parse_ber_integer;
+
+let bytes = [ 0x02, 0x03, 0x01, 0x00, 0x01,
+              0x02, 0x03, 0x01, 0x00, 0x00,
+];
+
+let (rem, obj1) = parse_ber_integer(&bytes).expect("parsing failed");
+let (rem, obj2) = parse_ber_integer(&bytes).expect("parsing failed");
+```
+
+Parse a DER sequence of integers:
+
+```rust
+use der_parser::der::{parse_der_integer, parse_der_sequence_of};
+
+let bytes = [ 0x30, 0x0a,
+              0x02, 0x03, 0x01, 0x00, 0x01,
+              0x02, 0x03, 0x01, 0x00, 0x00,
+];
+
+let (rem, seq) = parse_der_sequence_of(parse_der_integer)(&bytes)
+                    .expect("parsing failed");
+```
+
+Note: all parsing functions return the remaining (unparsed) bytes and the parsed object, or an
+error.
+
 # DER parser design
 
 Parsing functions are inspired from `nom`, and follow the same interface. The most common
@@ -65,8 +112,9 @@ for sequences and sets variants
 - [`parse_ber_tagged_explicit`](https://docs.rs/der-parser/latest/der_parser/ber/fn.parse_ber_tagged_explicit.html) for tagged explicit
 - [`parse_ber_tagged_implicit`](https://docs.rs/der-parser/latest/der_parser/ber/fn.parse_ber_tagged_implicit.html) for tagged implicit
 - [`parse_ber_container`](https://docs.rs/der-parser/latest/der_parser/ber/fn.parse_ber_container.html) for generic parsing, etc.
+- DER objects use the `_der_` variants
 
-For example, to read a sequence containing two integers:
+For example, to read a BER sequence containing two integers:
 
 ```rust
 use der_parser::ber::*;

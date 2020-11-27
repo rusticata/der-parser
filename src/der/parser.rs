@@ -201,7 +201,7 @@ pub fn parse_der_relative_oid(i: &[u8]) -> DerResult {
 /// same function.
 ///
 /// To read a specific sequence of objects (giving the expected types), use the
-/// [`parse_ber_sequence_defined`](macro.parse_ber_sequence_defined.html) macro.
+/// [`parse_der_sequence_defined`](macro.parse_der_sequence_defined.html) macro.
 #[inline]
 pub fn parse_der_sequence(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, DerTag::Sequence)
@@ -214,7 +214,7 @@ pub fn parse_der_sequence(i: &[u8]) -> DerResult {
 /// same function.
 ///
 /// To read a specific set of objects (giving the expected types), use the
-/// [`parse_ber_set_defined`](macro.parse_ber_set_defined.html) macro.
+/// [`parse_der_set_defined`](macro.parse_der_set_defined.html) macro.
 #[inline]
 pub fn parse_der_set(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, DerTag::Set)
@@ -307,7 +307,7 @@ pub fn parse_der_universalstring(i: &[u8]) -> DerResult {
 /// If parsing failed, return an optional object containing `None`.
 ///
 /// To support other return or error types, use
-/// [parse_ber_tagged_explicit_g](fn.parse_ber_tagged_explicit_g.html)
+/// [parse_der_tagged_explicit_g](fn.parse_der_tagged_explicit_g.html)
 ///
 /// This function will never fail: if parsing content failed, the BER value `Optional(None)` is
 /// returned.
@@ -343,10 +343,10 @@ where
 /// The built object will use the original header (and tag), so the content may not match the tag
 /// value.
 ///
-/// For a combinator version, see [parse_ber_tagged_implicit](../ber/fn.parse_ber_tagged_implicit.html).
+/// For a combinator version, see [parse_der_tagged_implicit](../ber/fn.parse_der_tagged_implicit.html).
 ///
 /// For a generic version (different output and error types), see
-/// [parse_ber_tagged_implicit_g](../ber/fn.parse_ber_tagged_implicit_g.html).
+/// [parse_der_tagged_implicit_g](../ber/fn.parse_der_tagged_implicit_g.html).
 ///
 /// # Examples
 ///
@@ -470,7 +470,7 @@ pub fn parse_der_content<'a>(
 /// The arguments of the parse function are: `(input, ber_object_header, max_recursion)`.
 ///
 /// This function differs from [`parse_der_content`](fn.parse_der_content.html) because it passes
-/// an owned BER object header (required for ex. by `parse_ber_tagged_implicit_g`).
+/// an owned BER object header (required for ex. by `parse_der_tagged_implicit_g`).
 ///
 /// Example: manually parsing header and content
 ///
