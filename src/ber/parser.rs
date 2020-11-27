@@ -189,6 +189,10 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
         }
         (_, 0) => {
             // Indefinite form: MSB is 1, the rest is 0 (8.1.3.6)
+            // If encoding is primitive, definite form shall be used (8.1.3.2)
+            if el.1 == 0 {
+                return Err(Err::Error(BerError::ConstructExpected));
+            }
             (i2, BerSize::Indefinite)
         }
         (_, l1) => {

@@ -90,7 +90,7 @@ fn test_der_indefinite_length() {
     let bytes = &hex!("23 80 03 03 00 0a 3b 03 05 04 5f 29 1c d0 00 00");
     assert_eq!(
         parse_der_bitstring(bytes),
-        Err(Err::Error(BerError::IndefiniteLengthUnexpected))
+        Err(Err::Error(BerError::DerConstraintFailed))
     );
 }
 

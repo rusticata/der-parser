@@ -630,8 +630,8 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<DerObjectHeader> {
             (i2, BerSize::Definite(usize::from(l1)))
         }
         (_, 0) => {
-            // Indefinite form: MSB is 1, the rest is 0 (8.1.3.6)
-            (i2, BerSize::Indefinite)
+            // Indefinite form is not allowed in DER (10.1)
+            return Err(::nom::Err::Error(BerError::DerConstraintFailed));
         }
         (_, l1) => {
             // if len is 0xff -> error (8.1.3.5)
