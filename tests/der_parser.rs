@@ -557,3 +557,20 @@ fn tc_der_u64(i: &[u8], out: Result<u64, BerError>) {
         }
     }
 }
+
+#[test_case(&hex!("02 01 01"), Ok(&[1]) ; "slice 1")]
+#[test_case(&hex!("02 01 ff"), Ok(&[255]) ; "slice 2")]
+#[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Ok(&hex!("01 23 45 67 01 23 45 67 ab")) ; "slice 3")]
+#[test_case(&hex!("22 80 02 01 01 00 00"), Err(BerError::DerConstraintFailed) ; "constructed slice")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+fn tc_der_slice(i: &[u8], out: Result<&[u8], BerError>) {
+    let res = parse_der_slice(i, 2);
+    match out {
+        Ok(expected) => {
+            pretty_assertions::assert_eq!(res, Ok((&b""[..], expected)));
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(Err::Error(e)));
+        }
+    }
+}

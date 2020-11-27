@@ -1126,6 +1126,18 @@ pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
     })(i)
 }
 
+/// Parse BER object and get content as slice
+#[inline]
+pub fn parse_ber_slice<Tag: Into<BerTag>>(i: &[u8], tag: Tag) -> BerResult<&[u8]> {
+    let tag = tag.into();
+    parse_ber_container(move |content, hdr| {
+        if hdr.tag != tag {
+            return Err(Err::Error(BerError::InvalidTag));
+        }
+        Ok((&b""[..], content))
+    })(i)
+}
+
 /// Helper combinator, to create a parser with a maximum parsing depth
 #[inline]
 pub(crate) fn r_parse_ber(max_depth: usize) -> impl Fn(&[u8]) -> BerResult {

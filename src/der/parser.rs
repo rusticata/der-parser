@@ -415,6 +415,18 @@ pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
     })(i)
 }
 
+/// Parse DER object and get content as slice
+#[inline]
+pub fn parse_der_slice<Tag: Into<DerTag>>(i: &[u8], tag: Tag) -> BerResult<&[u8]> {
+    let tag = tag.into();
+    parse_der_container(move |content, hdr| {
+        if hdr.tag != tag {
+            return Err(Err::Error(BerError::InvalidTag));
+        }
+        Ok((&b""[..], content))
+    })(i)
+}
+
 /// Parse the next bytes as the content of a DER object (combinator, header reference)
 ///
 /// Content type is *not* checked to match tag, caller is responsible of providing the correct tag
