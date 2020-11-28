@@ -8,7 +8,9 @@
 
 ### Thanks
 
-## 5.0.0-beta3
+## 5.0.0
+
+See changelog entries for 5.0.0-beta1 and -beta2 for changes since 4.1
 
 ### Changed/Fixed
 
