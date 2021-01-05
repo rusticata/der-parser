@@ -1098,7 +1098,7 @@ where
 
 /// Parse BER object and try to decode it as a 32-bits unsigned integer
 ///
-/// Return `IntegerTooLarge` if object is an integer, but be represented in the target
+/// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
 /// integer type.
 #[inline]
 pub fn parse_ber_u32(i: &[u8]) -> BerResult<u32> {
@@ -1117,7 +1117,7 @@ pub fn parse_ber_u32(i: &[u8]) -> BerResult<u32> {
 
 /// Parse BER object and try to decode it as a 64-bits unsigned integer
 ///
-/// Return `IntegerTooLarge` if object is an integer, but be represented in the target
+/// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
 /// integer type.
 #[inline]
 pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
