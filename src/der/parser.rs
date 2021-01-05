@@ -385,7 +385,7 @@ where
 
 /// Parse DER object and try to decode it as a 32-bits unsigned integer
 ///
-/// Return `IntegerTooLarge` if object is an integer, but be represented in the target
+/// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
 /// integer type.
 pub fn parse_der_u32(i: &[u8]) -> BerResult<u32> {
     parse_der_container(|content, hdr| {
@@ -403,7 +403,7 @@ pub fn parse_der_u32(i: &[u8]) -> BerResult<u32> {
 
 /// Parse DER object and try to decode it as a 64-bits unsigned integer
 ///
-/// Return `IntegerTooLarge` if object is an integer, but be represented in the target
+/// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
 /// integer type.
 pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
     parse_der_container(|content, hdr| {
