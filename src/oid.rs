@@ -205,9 +205,9 @@ impl<'a> Oid<'a> {
 
     /// Return an iterator over the sub-identifiers (arcs).
     #[cfg(feature = "bigint")]
-    pub fn iter_bigint<'b>(
-        &'b self,
-    ) -> impl Iterator<Item = BigUint> + FusedIterator + ExactSizeIterator + 'b {
+    pub fn iter_bigint(
+        &'_ self,
+    ) -> impl Iterator<Item = BigUint> + FusedIterator + ExactSizeIterator + '_ {
         SubIdentifierIterator {
             oid: &self,
             pos: 0,
