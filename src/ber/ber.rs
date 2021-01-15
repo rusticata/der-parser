@@ -116,39 +116,72 @@ pub struct BerObjectHeader<'a> {
 /// BER object content
 #[derive(Debug, Clone, PartialEq)]
 pub enum BerObjectContent<'a> {
+    /// EOC (no content)
     EndOfContent,
+    /// BOOLEAN: decoded value
     Boolean(bool),
+    /// INTEGER: raw bytes
+    ///
+    /// Note: the reason to store the raw bytes is that integers have non-finite length in the
+    /// spec, and also that the raw encoding is also important for some applications.
+    ///
+    /// To extract the number, see the `as_u64`, `as_u32`, `as_bigint` and `as_biguint` methods.
     Integer(&'a [u8]),
+    /// BIT STRING: number of unused bits, and object
     BitString(u8, BitStringObject<'a>),
+    /// OCTET STRING: slice
     OctetString(&'a [u8]),
+    /// NULL (no content)
     Null,
+    /// ENUMERATED: decoded enum number
     Enum(u64),
+    /// OID
     OID(Oid<'a>),
+    /// RELATIVE OID
     RelativeOID(Oid<'a>),
+    /// NumericString: decoded string
     NumericString(&'a str),
+    /// VisibleString: decoded string
     VisibleString(&'a str),
+    /// PrintableString: decoded string
     PrintableString(&'a str),
+    /// IA5String: decoded string
     IA5String(&'a str),
+    /// UTF8String: decoded string
     UTF8String(&'a str),
+    /// T61String: raw object bytes
     T61String(&'a [u8]),
+    /// VideotexString: raw object bytes
     VideotexString(&'a [u8]),
 
+    /// BmpString: raw object bytes
     BmpString(&'a [u8]),
+    /// UniversalString: raw object bytes
     UniversalString(&'a [u8]),
 
+    /// SEQUENCE: list of objects
     Sequence(Vec<BerObject<'a>>),
+    /// SET: list of objects
     Set(Vec<BerObject<'a>>),
 
+    /// UTCTime: decoded string
     UTCTime(&'a str),
+    /// GeneralizedTime: decoded string
     GeneralizedTime(&'a str),
 
+    /// Object descriptor: raw object bytes
     ObjectDescriptor(&'a [u8]),
+    /// GraphicString: raw object bytes
     GraphicString(&'a [u8]),
+    /// GeneralString: raw object bytes
     GeneralString(&'a [u8]),
 
+    /// Optional object
     Optional(Option<Box<BerObject<'a>>>),
+    /// Tagged object (EXPLICIT): class, tag  and content of inner object
     Tagged(BerClass, BerTag, Box<BerObject<'a>>),
 
+    /// Unknown object: object tag (copied from header), and raw content
     Unknown(BerTag, &'a [u8]),
 }
 
