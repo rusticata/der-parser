@@ -8,6 +8,16 @@
 
 ### Thanks
 
+## 5.0.1
+
+### Changed/Fixed
+
+- Fix typos in the `parse_[ber|der]_[u32|u64]` doc comments
+- Add documentation for BerObjectContent variants (#41)
+- Fixes for clippy
+
+### Added
+
 ## 5.0.0
 
 See changelog entries for 5.0.0-beta1 and -beta2 for changes since 4.1
