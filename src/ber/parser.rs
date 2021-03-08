@@ -217,6 +217,7 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
     Ok((i3, hdr))
 }
 
+#[allow(clippy::unnecessary_wraps)]
 #[inline]
 fn ber_read_content_eoc(i: &[u8]) -> BerResult<BerObjectContent> {
     Ok((i, BerObjectContent::EndOfContent))
@@ -253,6 +254,7 @@ fn ber_read_content_octetstring(i: &[u8], len: usize) -> BerResult<BerObjectCont
     map(take(len), BerObjectContent::OctetString)(i)
 }
 
+#[allow(clippy::unnecessary_wraps)]
 #[inline]
 fn ber_read_content_null(i: &[u8]) -> BerResult<BerObjectContent> {
     Ok((i, BerObjectContent::Null))
