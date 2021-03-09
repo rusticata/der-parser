@@ -49,5 +49,5 @@ unstable = []
 
 [dev-dependencies]
 hex-literal = "0.3"
-pretty_assertions = "0.6"
+pretty_assertions = "0.7"
 test-case = "1.0"
