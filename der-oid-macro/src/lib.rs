@@ -1,8 +1,6 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use proc_macro_hack::proc_macro_hack;
-
 fn parse_arg(arg: &str) -> (bool, bool, Vec<&str>) {
     use nom::{
         bytes::complete::{tag, take_while},
@@ -107,7 +105,7 @@ fn encode_components(components: &[num_bigint::BigUint], relative: bool) -> Vec<
     enc
 }
 
-#[proc_macro_hack]
+#[proc_macro]
 pub fn oid(item: TokenStream) -> TokenStream {
     let arg = item.to_string();
     let (raw, relative, int_strings) = parse_arg(&arg);

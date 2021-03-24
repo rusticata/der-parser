@@ -38,8 +38,7 @@ rusticata-macros = "3.0.1"
 num-traits = "0.2"
 num-bigint = { version = "0.4", optional = true }
 
-proc-macro-hack = "0.5"
-der-oid-macro = { version = "0.3", path = "./der-oid-macro" }
+der-oid-macro = { version = "0.4", path = "./der-oid-macro" }
 
 [features]
 default = []
