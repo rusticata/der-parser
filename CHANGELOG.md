@@ -8,6 +8,14 @@
 
 ### Thanks
 
+## 5.1.0
+
+### Changed/Fixed
+
+- Remove dependency on proc-macro-hack (attempt to fix #36)
+- Update pretty_assertions requirement from 0.6 to 0.7
+- Update num-bigint to 0.4 (Closes #42)
+
 ## 5.0.1
 
 ### Changed/Fixed
