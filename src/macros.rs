@@ -242,7 +242,7 @@ macro_rules! parse_der_set_defined(
 /// # fn main() {
 /// fn parser(i:&[u8]) -> BerResult {
 ///     parse_der_sequence_of!(i, parse_ber_integer)
-/// };
+/// }
 ///
 /// let empty = &b""[..];
 /// let bytes = [ 0x30, 0x0a,
@@ -276,7 +276,7 @@ macro_rules! parse_der_sequence_of(
 /// # fn main() {
 /// fn parser(i:&[u8]) -> BerResult {
 ///     parse_der_set_of!(i, parse_ber_integer)
-/// };
+/// }
 ///
 /// let empty = &b""[..];
 /// let bytes = [ 0x31, 0x0a,
@@ -336,7 +336,7 @@ macro_rules! parse_der_set_of(
 ///         parse_optional_enum >>
 ///         parse_ber_integer
 ///     )
-/// };
+/// }
 ///
 /// assert_eq!(parser(&bytes1), Ok((empty, expected1)));
 /// assert_eq!(parser(&bytes2), Ok((empty, expected2)));
@@ -623,7 +623,7 @@ macro_rules! parse_der_tagged(
 /// #[derive(Debug, PartialEq)]
 /// struct SimpleStruct {
 ///     a: u32,
-/// };
+/// }
 ///
 /// fn parse_app01(i:&[u8]) -> BerResult<SimpleStruct> {
 ///     parse_der_application!(

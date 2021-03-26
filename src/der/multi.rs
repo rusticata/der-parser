@@ -18,7 +18,7 @@ use nom::{Err, IResult};
 /// /// Read a SEQUENCE OF INTEGER
 /// fn parser(i:&[u8]) -> BerResult<DerObject> {
 ///     parse_der_sequence_of(parse_der_integer)(i)
-/// };
+/// }
 ///
 /// # let empty = &b""[..];
 /// # let bytes = [ 0x30, 0x0a,
@@ -52,7 +52,7 @@ where
 /// /// Read a SEQUENCE OF INTEGER
 /// fn parser(i:&[u8]) -> BerResult<Vec<DerObject>> {
 ///     parse_der_sequence_of_v(parse_der_integer)(i)
-/// };
+/// }
 ///
 /// # let empty = &b""[..];
 /// # let bytes = [ 0x30, 0x0a,
@@ -244,7 +244,7 @@ where
 /// /// Read a SET OF INTEGER
 /// fn parser(i:&[u8]) -> BerResult<DerObject> {
 ///     parse_der_set_of(parse_der_integer)(i)
-/// };
+/// }
 ///
 /// # let empty = &b""[..];
 /// # let bytes = [ 0x31, 0x0a,
@@ -278,7 +278,7 @@ where
 /// /// Read a SET OF INTEGER
 /// fn parser(i:&[u8]) -> BerResult<Vec<DerObject>> {
 ///     parse_der_set_of_v(parse_der_integer)(i)
-/// };
+/// }
 ///
 /// # let empty = &b""[..];
 /// # let bytes = [ 0x31, 0x0a,
