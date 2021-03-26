@@ -75,7 +75,7 @@ fn test_ber_set_of() {
     ]);
     fn parser(i: &[u8]) -> BerResult {
         parse_ber_set_of(parse_ber_integer)(i)
-    };
+    }
     assert_eq!(parser(&bytes), Ok((empty, expected)));
     // empty input should raise error (could not read set header)
     assert!(parser(&[]).is_err());
@@ -95,7 +95,7 @@ fn test_ber_set_of_v() {
     ];
     fn parser(i: &[u8]) -> BerResult<Vec<BerObject>> {
         parse_ber_set_of_v(parse_ber_integer)(i)
-    };
+    }
     assert_eq!(parser(&bytes), Ok((empty, expected)));
     // empty input should raise error (could not read set header)
     assert!(parser(&[]).is_err());

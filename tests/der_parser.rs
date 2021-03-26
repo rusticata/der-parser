@@ -176,7 +176,7 @@ fn test_der_seq_defined() {
     ]);
     fn parser(i: &[u8]) -> DerResult {
         parse_der_sequence_defined!(i, parse_der_integer >> parse_der_integer)
-    };
+    }
     assert_eq!(parser(&bytes), Ok((empty, expected)));
 }
 
@@ -192,7 +192,7 @@ fn test_der_set_defined() {
     ]);
     fn parser(i: &[u8]) -> DerResult {
         parse_der_set_defined!(i, parse_der_integer >> parse_der_integer)
-    };
+    }
     assert_eq!(parser(&bytes), Ok((empty, expected)));
 }
 
@@ -208,7 +208,7 @@ fn test_der_seq_of() {
     ]);
     fn parser(i: &[u8]) -> DerResult {
         parse_der_sequence_of!(i, parse_der_integer)
-    };
+    }
     assert_eq!(parser(&bytes), Ok((empty, expected.clone())));
     //
     fn parser2(i: &[u8]) -> BerResult {
@@ -223,7 +223,7 @@ fn test_der_seq_of_incomplete() {
     let bytes = [0x30, 0x07, 0x02, 0x03, 0x01, 0x00, 0x01, 0x00, 0x00];
     fn parser(i: &[u8]) -> DerResult {
         parse_der_sequence_of!(i, parse_der_integer)
-    };
+    }
     assert_eq!(parser(&bytes), Err(Err::Failure(BerError::InvalidTag)));
     //
     fn parser2(i: &[u8]) -> BerResult<Vec<BerObject>> {
@@ -251,7 +251,7 @@ fn test_der_set_of() {
     ]);
     fn parser(i: &[u8]) -> DerResult {
         parse_der_set_of!(i, parse_der_integer)
-    };
+    }
     assert_eq!(parser(&bytes), Ok((empty, expected)));
 }
 
@@ -400,7 +400,7 @@ fn test_der_optional() {
     }
     fn parser(i: &[u8]) -> DerResult {
         parse_der_sequence_defined!(i, parse_optional_enum >> parse_der_integer)
-    };
+    }
     assert_eq!(parser(&bytes1), Ok((empty, expected1)));
     assert_eq!(parser(&bytes2), Ok((empty, expected2)));
 }
@@ -466,7 +466,7 @@ fn test_der_seq_dn_defined() {
     #[inline]
     fn parse_attr_type_and_value(i: &[u8]) -> DerResult {
         parse_der_sequence_defined!(i, parse_der_oid >> parse_directory_string)
-    };
+    }
     #[inline]
     fn parse_rdn(i: &[u8]) -> DerResult {
         parse_der_set_defined!(i, parse_attr_type_and_value)

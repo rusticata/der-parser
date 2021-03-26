@@ -213,7 +213,7 @@ fn struct02() {
     struct Attr<'a> {
         oid: Oid<'a>,
         val: BerObject<'a>,
-    };
+    }
     #[derive(Debug, PartialEq)]
     struct Rdn<'a> {
         a: Attr<'a>,
@@ -262,7 +262,7 @@ fn struct02() {
                 >> s: parse_directory_string
                 >> (Attr { oid: o, val: s })
         )
-    };
+    }
     fn parse_rdn(i: &[u8]) -> BerResult<Rdn> {
         parse_der_struct!(i, a: parse_attr_type_and_value >> (Rdn { a }))
     }
@@ -418,7 +418,7 @@ fn application() {
     #[derive(Debug, PartialEq)]
     struct SimpleStruct {
         a: u32,
-    };
+    }
     fn parse_app01(i: &[u8]) -> BerResult<SimpleStruct> {
         parse_der_application!(
             i,
