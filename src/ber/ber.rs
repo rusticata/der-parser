@@ -115,6 +115,7 @@ pub struct BerObjectHeader<'a> {
 
 /// BER object content
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum BerObjectContent<'a> {
     /// EOC (no content)
     EndOfContent,
