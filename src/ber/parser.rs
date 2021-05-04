@@ -281,7 +281,7 @@ fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectConte
     let (i, bytes) = take(len)(i)?;
     let s = std::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::UTF8String(s))?;
+        .map(|s| BerObjectContent::UTF8String(Cow::Borrowed(s)))?;
     Ok((i, s))
 }
 
@@ -346,7 +346,7 @@ fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     }
     let s = std::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::NumericString(s))?;
+        .map(|s| BerObjectContent::NumericString(Cow::Borrowed(s)))?;
     Ok((i, s))
 }
 
@@ -362,7 +362,7 @@ fn ber_read_content_visiblestring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     }
     let s = std::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::VisibleString(s))?;
+        .map(|s| BerObjectContent::VisibleString(Cow::Borrowed(s)))?;
     Ok((i, s))
 }
 
@@ -396,7 +396,7 @@ fn ber_read_content_printablestring<'a>(
     }
     let s = std::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::PrintableString(s))?;
+        .map(|s| BerObjectContent::PrintableString(Cow::Borrowed(s)))?;
     Ok((i, s))
 }
 
@@ -417,7 +417,7 @@ fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjec
     }
     let s = std::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::IA5String(s))?;
+        .map(|s| BerObjectContent::IA5String(Cow::Borrowed(s)))?;
     Ok((i, s))
 }
 
@@ -1220,12 +1220,15 @@ fn test_numericstring() {
         ber_read_content_numericstring(b" 0123  4495768 ", 15),
         Ok((
             [].as_ref(),
-            BerObjectContent::NumericString(" 0123  4495768 ")
+            BerObjectContent::NumericString(Cow::Borrowed(" 0123  4495768 "))
         )),
     );
     assert_eq!(
         ber_read_content_numericstring(b"", 0),
-        Ok(([].as_ref(), BerObjectContent::NumericString(""))),
+        Ok((
+            [].as_ref(),
+            BerObjectContent::NumericString(Cow::Borrowed(""))
+        )),
     );
     assert!(ber_read_content_numericstring(b"123a", 4).is_err());
 }
@@ -1236,12 +1239,15 @@ fn text_visiblestring() {
         ber_read_content_visiblestring(b"AZaz]09 '()+,-./:=?", 19),
         Ok((
             [].as_ref(),
-            BerObjectContent::VisibleString("AZaz]09 '()+,-./:=?")
+            BerObjectContent::VisibleString(Cow::Borrowed("AZaz]09 '()+,-./:=?"))
         )),
     );
     assert_eq!(
         ber_read_content_visiblestring(b"", 0),
-        Ok(([].as_ref(), BerObjectContent::VisibleString(""))),
+        Ok((
+            [].as_ref(),
+            BerObjectContent::VisibleString(Cow::Borrowed(""))
+        )),
     );
     assert!(ber_read_content_visiblestring(b"\n", 1).is_err());
 }
@@ -1252,12 +1258,15 @@ fn test_printablestring() {
         ber_read_content_printablestring(b"AZaz09 '()+,-./:=?", 18),
         Ok((
             [].as_ref(),
-            BerObjectContent::PrintableString("AZaz09 '()+,-./:=?")
+            BerObjectContent::PrintableString(Cow::Borrowed("AZaz09 '()+,-./:=?"))
         )),
     );
     assert_eq!(
         ber_read_content_printablestring(b"", 0),
-        Ok(([].as_ref(), BerObjectContent::PrintableString(""))),
+        Ok((
+            [].as_ref(),
+            BerObjectContent::PrintableString(Cow::Borrowed(""))
+        )),
     );
     assert!(ber_read_content_printablestring(b"]\n", 2).is_err());
 }
@@ -1268,12 +1277,12 @@ fn test_ia5string() {
         ber_read_content_ia5string(b"AZaz\n09 '()+,-./:=?[]{}\0\n", 25),
         Ok((
             [].as_ref(),
-            BerObjectContent::IA5String("AZaz\n09 '()+,-./:=?[]{}\0\n")
+            BerObjectContent::IA5String(Cow::Borrowed("AZaz\n09 '()+,-./:=?[]{}\0\n"))
         )),
     );
     assert_eq!(
         ber_read_content_ia5string(b"", 0),
-        Ok(([].as_ref(), BerObjectContent::IA5String(""))),
+        Ok(([].as_ref(), BerObjectContent::IA5String(Cow::Borrowed("")))),
     );
     assert!(ber_read_content_ia5string(b"\xFF", 1).is_err());
 }
@@ -1284,12 +1293,12 @@ fn test_utf8string() {
         ber_read_content_utf8string("AZaz09 '()+,-./:=?[]{}\0\nüÜ".as_ref(), 28),
         Ok((
             [].as_ref(),
-            BerObjectContent::UTF8String("AZaz09 '()+,-./:=?[]{}\0\nüÜ")
+            BerObjectContent::UTF8String(Cow::Borrowed("AZaz09 '()+,-./:=?[]{}\0\nüÜ"))
         )),
     );
     assert_eq!(
         ber_read_content_utf8string(b"", 0),
-        Ok(([].as_ref(), BerObjectContent::UTF8String(""))),
+        Ok(([].as_ref(), BerObjectContent::UTF8String(Cow::Borrowed("")))),
     );
     assert!(ber_read_content_utf8string(b"\xe2\x28\xa1", 3).is_err());
 }

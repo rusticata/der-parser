@@ -139,7 +139,7 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         | BerObjectContent::VisibleString(s)
         | BerObjectContent::PrintableString(s)
         | BerObjectContent::IA5String(s)
-        | BerObjectContent::UTF8String(s) => slice(s)(out),
+        | BerObjectContent::UTF8String(s) => slice(s.as_ref())(out),
         BerObjectContent::UTCTime(s) | BerObjectContent::GeneralizedTime(s) => {
             slice(s.as_ref())(out)
         }

@@ -142,15 +142,15 @@ pub enum BerObjectContent<'a> {
     /// RELATIVE OID
     RelativeOID(Oid<'a>),
     /// NumericString: decoded string
-    NumericString(&'a str),
+    NumericString(Cow<'a, str>),
     /// VisibleString: decoded string
-    VisibleString(&'a str),
+    VisibleString(Cow<'a, str>),
     /// PrintableString: decoded string
-    PrintableString(&'a str),
+    PrintableString(Cow<'a, str>),
     /// IA5String: decoded string
-    IA5String(&'a str),
+    IA5String(Cow<'a, str>),
     /// UTF8String: decoded string
-    UTF8String(&'a str),
+    UTF8String(Cow<'a, str>),
     /// T61String: raw object bytes
     T61String(&'a [u8]),
     /// VideotexString: raw object bytes
@@ -725,7 +725,7 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::VisibleString(s)
             | BerObjectContent::PrintableString(s)
             | BerObjectContent::UTF8String(s)
-            | BerObjectContent::IA5String(s) => Ok(s.as_ref()),
+            | BerObjectContent::IA5String(s) => Ok(s.as_bytes()),
             BerObjectContent::GeneralizedTime(s) | BerObjectContent::UTCTime(s) => Ok(s.as_bytes()),
             BerObjectContent::T61String(s)
             | BerObjectContent::VideotexString(s)
@@ -748,11 +748,11 @@ impl<'a> BerObjectContent<'a> {
     /// (consuming object prevents returning a reference in that case).
     pub fn into_bytes(self) -> Result<&'a [u8], BerError> {
         match self {
-            BerObjectContent::NumericString(s)
-            | BerObjectContent::VisibleString(s)
-            | BerObjectContent::PrintableString(s)
-            | BerObjectContent::UTF8String(s)
-            | BerObjectContent::IA5String(s) => Ok(s.as_ref()),
+            BerObjectContent::NumericString(Cow::Borrowed(s))
+            | BerObjectContent::VisibleString(Cow::Borrowed(s))
+            | BerObjectContent::PrintableString(Cow::Borrowed(s))
+            | BerObjectContent::UTF8String(Cow::Borrowed(s))
+            | BerObjectContent::IA5String(Cow::Borrowed(s)) => Ok(s.as_ref()),
             BerObjectContent::GeneralizedTime(Cow::Borrowed(s))
             | BerObjectContent::UTCTime(Cow::Borrowed(s)) => Ok(s.as_bytes()),
             BerObjectContent::T61String(s)

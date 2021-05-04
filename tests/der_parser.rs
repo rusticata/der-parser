@@ -135,7 +135,7 @@ fn test_der_utf8string() {
     let bytes = [
         0x0c, 0x0a, 0x53, 0x6f, 0x6d, 0x65, 0x2d, 0x53, 0x74, 0x61, 0x74, 0x65,
     ];
-    let expected = DerObject::from_obj(BerObjectContent::UTF8String("Some-State"));
+    let expected = DerObject::from_obj(BerObjectContent::UTF8String(Cow::Borrowed("Some-State")));
     assert_eq!(parse_der_utf8string(&bytes), Ok((empty, expected)));
 }
 
@@ -334,7 +334,7 @@ fn test_der_implicit() {
     let expected = DerObject {
         header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(1), 4)
             .with_raw_tag(Some(&[0x81])),
-        content: BerObjectContent::IA5String("pass"),
+        content: BerObjectContent::IA5String(Cow::Borrowed("pass")),
     };
     fn der_read_ia5string_content<'a>(
         i: &'a [u8],
@@ -360,7 +360,7 @@ fn test_der_implicit_long_tag() {
     let expected = DerObject {
         header: BerObjectHeader::new(BerClass::Application, 0, BerTag(0x52), 4)
             .with_raw_tag(Some(&[0x5f, 0x52])),
-        content: BerObjectContent::IA5String("pass"),
+        content: BerObjectContent::IA5String(Cow::Borrowed("pass")),
     };
     fn der_read_ia5string_content<'a>(
         i: &'a [u8],
@@ -419,15 +419,17 @@ fn test_der_seq_dn() {
     let expected = DerObject::from_seq(vec![
         DerObject::from_set(vec![DerObject::from_seq(vec![
             DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 6]).unwrap())), // countryName
-            DerObject::from_obj(BerObjectContent::PrintableString("FR")),
+            DerObject::from_obj(BerObjectContent::PrintableString(Cow::Borrowed("FR"))),
         ])]),
         DerObject::from_set(vec![DerObject::from_seq(vec![
             DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 8]).unwrap())), // stateOrProvinceName
-            DerObject::from_obj(BerObjectContent::UTF8String("Some-State")),
+            DerObject::from_obj(BerObjectContent::UTF8String(Cow::Borrowed("Some-State"))),
         ])]),
         DerObject::from_set(vec![DerObject::from_seq(vec![
             DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 10]).unwrap())), // organizationName
-            DerObject::from_obj(BerObjectContent::UTF8String("Internet Widgits Pty Ltd")),
+            DerObject::from_obj(BerObjectContent::UTF8String(Cow::Borrowed(
+                "Internet Widgits Pty Ltd",
+            ))),
         ])]),
     ]);
     assert_eq!(parse_der(&bytes), Ok((empty, expected)));
@@ -446,15 +448,17 @@ fn test_der_seq_dn_defined() {
     let expected = DerObject::from_seq(vec![
         DerObject::from_set(vec![DerObject::from_seq(vec![
             DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 6]).unwrap())), // countryName
-            DerObject::from_obj(BerObjectContent::PrintableString("FR")),
+            DerObject::from_obj(BerObjectContent::PrintableString(Cow::Borrowed("FR"))),
         ])]),
         DerObject::from_set(vec![DerObject::from_seq(vec![
             DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 8]).unwrap())), // stateOrProvinceName
-            DerObject::from_obj(BerObjectContent::UTF8String("Some-State")),
+            DerObject::from_obj(BerObjectContent::UTF8String(Cow::Borrowed("Some-State"))),
         ])]),
         DerObject::from_set(vec![DerObject::from_seq(vec![
             DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 10]).unwrap())), // organizationName
-            DerObject::from_obj(BerObjectContent::UTF8String("Internet Widgits Pty Ltd")),
+            DerObject::from_obj(BerObjectContent::UTF8String(Cow::Borrowed(
+                "Internet Widgits Pty Ltd",
+            ))),
         ])]),
     ]);
     #[inline]

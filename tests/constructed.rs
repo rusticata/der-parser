@@ -8,6 +8,7 @@ use nom::sequence::tuple;
 use nom::*;
 use oid::Oid;
 use pretty_assertions::assert_eq;
+use std::borrow::Cow;
 use test_case::test_case;
 
 #[derive(Debug, PartialEq)]
@@ -227,21 +228,25 @@ fn struct02() {
             Rdn {
                 a: Attr {
                     oid: Oid::from(&[2, 5, 4, 6]).unwrap(), // countryName
-                    val: BerObject::from_obj(BerObjectContent::PrintableString("FR")),
+                    val: BerObject::from_obj(BerObjectContent::PrintableString(Cow::Borrowed(
+                        "FR",
+                    ))),
                 },
             },
             Rdn {
                 a: Attr {
                     oid: Oid::from(&[2, 5, 4, 8]).unwrap(), // stateOrProvinceName
-                    val: BerObject::from_obj(BerObjectContent::UTF8String("Some-State")),
+                    val: BerObject::from_obj(BerObjectContent::UTF8String(Cow::Borrowed(
+                        "Some-State",
+                    ))),
                 },
             },
             Rdn {
                 a: Attr {
                     oid: Oid::from(&[2, 5, 4, 10]).unwrap(), // organizationName
-                    val: BerObject::from_obj(BerObjectContent::IA5String(
+                    val: BerObject::from_obj(BerObjectContent::IA5String(Cow::Borrowed(
                         "Internet Widgits Pty Ltd",
-                    )),
+                    ))),
                 },
             },
         ],
