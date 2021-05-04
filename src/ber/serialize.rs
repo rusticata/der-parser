@@ -285,7 +285,7 @@ mod test {
 
     #[test]
     fn test_encode_octetstring() {
-        let i = BerObject::from_obj(BerObjectContent::OctetString(b"AAAAA"));
+        let i = BerObject::from_obj(BerObjectContent::OctetString(Cow::Borrowed(b"AAAAA")));
         let v = encode_and_parse!(i, ber_encode_object, parse_ber_octetstring);
         assert_eq!(&v[..], hex!("04 05 41 41 41 41 41"))
     }

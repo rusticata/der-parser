@@ -49,7 +49,7 @@ fn test_seq_indefinite_length() {
         Ok((
             &data[9..],
             BerObject::from_seq(vec![BerObject::from_obj(BerObjectContent::OctetString(
-                &data[4..=6]
+                Cow::Borrowed(&data[4..=6])
             )),])
         ))
     );
@@ -59,7 +59,7 @@ fn test_seq_indefinite_length() {
         Ok((
             &data[9..],
             BerObject::from_seq(vec![BerObject::from_obj(BerObjectContent::OctetString(
-                &data[4..=6]
+                Cow::Borrowed(&data[4..=6])
             )),])
         ))
     );
@@ -111,7 +111,7 @@ fn test_set_indefinite_length() {
         Ok((
             &data[9..],
             BerObject::from_set(vec![BerObject::from_obj(BerObjectContent::OctetString(
-                &data[4..=6]
+                Cow::Borrowed(&data[4..=6])
             )),])
         ))
     );
@@ -121,7 +121,7 @@ fn test_set_indefinite_length() {
         Ok((
             &data[9..],
             BerObject::from_set(vec![BerObject::from_obj(BerObjectContent::OctetString(
-                &data[4..=6]
+                Cow::Borrowed(&data[4..=6])
             )),])
         ))
     );
@@ -237,7 +237,7 @@ fn test_ber_bitstring_constructed() {
 fn test_ber_octetstring_primitive() {
     let empty = &b""[..];
     let bytes = [0x04, 0x05, 0x41, 0x41, 0x41, 0x41, 0x41];
-    let expected = BerObject::from_obj(BerObjectContent::OctetString(b"AAAAA"));
+    let expected = BerObject::from_obj(BerObjectContent::OctetString(Cow::Borrowed(b"AAAAA")));
     assert_eq!(parse_ber_octetstring(&bytes), Ok((empty, expected)));
 }
 

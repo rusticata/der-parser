@@ -251,7 +251,9 @@ fn ber_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectConten
 
 #[inline]
 fn ber_read_content_octetstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::OctetString)(i)
+    map(take(len), |b| {
+        BerObjectContent::OctetString(Cow::Borrowed(b))
+    })(i)
 }
 
 #[allow(clippy::unnecessary_wraps)]

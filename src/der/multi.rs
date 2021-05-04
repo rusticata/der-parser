@@ -124,6 +124,7 @@ where
 /// ```rust
 /// # use der_parser::der::*;
 /// # use der_parser::error::BerResult;
+/// # use std::borrow::Cow;
 /// use nom::combinator::map;
 /// use nom::sequence::tuple;
 ///
@@ -150,7 +151,7 @@ where
 /// # ];
 /// # let expected  = DerObject::from_seq(vec![
 /// #     DerObject::from_int_slice(b"\x01\x00\x01"),
-/// #     DerObject::from_obj(DerObjectContent::OctetString(b"\x01\x00\x00")),
+/// #     DerObject::from_obj(DerObjectContent::OctetString(Cow::Borrowed(b"\x01\x00\x00"))),
 /// # ]);
 /// # assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
 /// let (rem, v) = localparse_seq(&bytes).expect("parsing failed");
@@ -348,6 +349,7 @@ where
 /// ```rust
 /// # use der_parser::der::*;
 /// # use der_parser::error::BerResult;
+/// # use std::borrow::Cow;
 /// use nom::combinator::map;
 /// use nom::sequence::tuple;
 ///
@@ -374,7 +376,7 @@ where
 /// # ];
 /// # let expected  = DerObject::from_set(vec![
 /// #     DerObject::from_int_slice(b"\x01\x00\x01"),
-/// #     DerObject::from_obj(DerObjectContent::OctetString(b"\x01\x00\x00")),
+/// #     DerObject::from_obj(DerObjectContent::OctetString(Cow::Borrowed(b"\x01\x00\x00"))),
 /// # ]);
 /// # assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
 /// let (rem, v) = localparse_set(&bytes).expect("parsing failed");

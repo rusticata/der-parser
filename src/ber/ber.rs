@@ -132,7 +132,7 @@ pub enum BerObjectContent<'a> {
     /// BIT STRING: number of unused bits, and object
     BitString(u8, BitStringObject<'a>),
     /// OCTET STRING: slice
-    OctetString(&'a [u8]),
+    OctetString(Cow<'a, [u8]>),
     /// NULL (no content)
     Null,
     /// ENUMERATED: decoded enum number
@@ -727,8 +727,7 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::UTF8String(s)
             | BerObjectContent::IA5String(s) => Ok(s.as_ref()),
             BerObjectContent::GeneralizedTime(s) | BerObjectContent::UTCTime(s) => Ok(s.as_bytes()),
-            BerObjectContent::OctetString(s)
-            | BerObjectContent::T61String(s)
+            BerObjectContent::T61String(s)
             | BerObjectContent::VideotexString(s)
             | BerObjectContent::BmpString(s)
             | BerObjectContent::UniversalString(s)
@@ -737,6 +736,7 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::GeneralString(s) => Ok(s),
             BerObjectContent::BitString(_, BitStringObject { data: s })
             | BerObjectContent::Integer(s)
+            | BerObjectContent::OctetString(s)
             | BerObjectContent::Unknown(_, s) => Ok(s.as_ref()),
             _ => Err(BerError::BerTypeError),
         }
@@ -755,8 +755,7 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::IA5String(s) => Ok(s.as_ref()),
             BerObjectContent::GeneralizedTime(Cow::Borrowed(s))
             | BerObjectContent::UTCTime(Cow::Borrowed(s)) => Ok(s.as_bytes()),
-            BerObjectContent::OctetString(s)
-            | BerObjectContent::T61String(s)
+            BerObjectContent::T61String(s)
             | BerObjectContent::VideotexString(s)
             | BerObjectContent::BmpString(s)
             | BerObjectContent::UniversalString(s)
@@ -770,6 +769,7 @@ impl<'a> BerObjectContent<'a> {
                 },
             )
             | BerObjectContent::Integer(Cow::Borrowed(s))
+            | BerObjectContent::OctetString(Cow::Borrowed(s))
             | BerObjectContent::Unknown(_, Cow::Borrowed(s)) => Ok(s),
             _ => Err(BerError::BerTypeError),
         }

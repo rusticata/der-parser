@@ -99,7 +99,7 @@ fn test_der_indefinite_length() {
 fn test_der_octetstring_primitive() {
     let empty = &b""[..];
     let bytes = [0x04, 0x05, 0x41, 0x41, 0x41, 0x41, 0x41];
-    let expected = DerObject::from_obj(BerObjectContent::OctetString(b"AAAAA"));
+    let expected = DerObject::from_obj(BerObjectContent::OctetString(Cow::Borrowed(b"AAAAA")));
     assert_eq!(parse_der_octetstring(&bytes), Ok((empty, expected)));
 }
 
