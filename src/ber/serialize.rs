@@ -277,7 +277,7 @@ mod test {
         let bytes = hex!("03 04 06 6e 5d e0");
         let b = BerObject::from_obj(BerObjectContent::BitString(
             6,
-            BitStringObject { data: &bytes[3..] },
+            BitStringObject::from_bytes(&bytes[3..]),
         ));
         let v = encode_and_parse!(b, ber_encode_object, parse_ber_bitstring);
         assert_eq!(&v[..], bytes)

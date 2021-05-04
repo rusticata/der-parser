@@ -94,7 +94,7 @@ pub(crate) fn bitstring_to_u64(
     padding_bits: usize,
     data: &BitStringObject,
 ) -> Result<u64, BerError> {
-    let raw_bytes = data.data;
+    let raw_bytes = data.data.as_ref();
     let bit_size = (raw_bytes.len() * 8)
         .checked_sub(padding_bits)
         .ok_or(BerError::InvalidLength)?;
@@ -245,7 +245,7 @@ fn ber_read_content_bitstring(i: &[u8], len: usize) -> BerResult<BerObjectConten
     let (i, data) = take(len - 1)(i)?;
     Ok((
         i,
-        BerObjectContent::BitString(ignored_bits, BitStringObject { data }),
+        BerObjectContent::BitString(ignored_bits, BitStringObject::from_bytes(data)),
     ))
 }
 
@@ -1296,17 +1296,17 @@ fn test_utf8string() {
 fn test_bitstring_to_u64() {
     // ignored bits modulo 8 to 0
     let data = &hex_literal::hex!("0d 71 82");
-    let r = bitstring_to_u64(8, &BitStringObject { data });
+    let r = bitstring_to_u64(8, &BitStringObject::from_bytes(data));
     assert_eq!(r, Ok(0x0d71));
 
     // input too large to fit a 64-bits integer
     let data = &hex_literal::hex!("0d 71 82 0e 73 72 76 6e 67 6e 62 6c 6e 2d 65 78 30 31");
-    let r = bitstring_to_u64(0, &BitStringObject { data });
+    let r = bitstring_to_u64(0, &BitStringObject::from_bytes(data));
     assert!(r.is_err());
 
     // test large number but with many ignored bits
     let data = &hex_literal::hex!("0d 71 82 0e 73 72 76 6e 67 6e 62 6c 6e 2d 65 78 30 31");
-    let r = bitstring_to_u64(130, &BitStringObject { data });
+    let r = bitstring_to_u64(130, &BitStringObject::from_bytes(data));
     // 2 = 130 % 8
     assert_eq!(r, Ok(0x0d71 >> 2));
 }

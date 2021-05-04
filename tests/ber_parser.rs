@@ -91,10 +91,7 @@ fn test_ber_set_of_v() {
     let bytes = [
         0x31, 0x0a, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00,
     ];
-    let expected = vec![
-        ber_int!(b"\x01\x00\x01"),
-        ber_int!(b"\x01\x00\x00"),
-    ];
+    let expected = vec![ber_int!(b"\x01\x00\x01"), ber_int!(b"\x01\x00\x00")];
     fn parser(i: &[u8]) -> BerResult<Vec<BerObject>> {
         parse_ber_set_of_v(parse_ber_integer)(i)
     }
@@ -201,7 +198,7 @@ fn test_ber_bitstring_primitive() {
     let bytes = &[0x03, 0x07, 0x04, 0x0a, 0x3b, 0x5f, 0x29, 0x1c, 0xd0];
     let expected = BerObject::from_obj(BerObjectContent::BitString(
         4,
-        BitStringObject { data: &bytes[3..] },
+        BitStringObject::from_bytes(&bytes[3..]),
     ));
     assert_eq!(parse_ber_bitstring(bytes), Ok((empty, expected)));
     //
@@ -210,7 +207,7 @@ fn test_ber_bitstring_primitive() {
     let bytes = &[0x03, 0x04, 0x06, 0x6e, 0x5d, 0xe0];
     let expected = BerObject::from_obj(BerObjectContent::BitString(
         6,
-        BitStringObject { data: &bytes[3..] },
+        BitStringObject::from_bytes(&bytes[3..]),
     ));
     assert_eq!(parse_ber_bitstring(bytes), Ok((empty, expected)));
     //
@@ -219,7 +216,7 @@ fn test_ber_bitstring_primitive() {
     let bytes = &[0x03, 0x81, 0x04, 0x06, 0x6e, 0x5d, 0xc0];
     let expected = BerObject::from_obj(BerObjectContent::BitString(
         6,
-        BitStringObject { data: &bytes[4..] },
+        BitStringObject::from_bytes(&bytes[4..]),
     ));
     assert_eq!(parse_ber_bitstring(bytes), Ok((empty, expected)));
 }

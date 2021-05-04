@@ -727,8 +727,7 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::UTF8String(s)
             | BerObjectContent::IA5String(s) => Ok(s.as_ref()),
             BerObjectContent::GeneralizedTime(s) | BerObjectContent::UTCTime(s) => Ok(s.as_bytes()),
-            BerObjectContent::BitString(_, BitStringObject { data: s })
-            | BerObjectContent::OctetString(s)
+            BerObjectContent::OctetString(s)
             | BerObjectContent::T61String(s)
             | BerObjectContent::VideotexString(s)
             | BerObjectContent::BmpString(s)
@@ -736,7 +735,9 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::ObjectDescriptor(s)
             | BerObjectContent::GraphicString(s)
             | BerObjectContent::GeneralString(s) => Ok(s),
-            BerObjectContent::Integer(s) | BerObjectContent::Unknown(_, s) => Ok(s.as_ref()),
+            BerObjectContent::BitString(_, BitStringObject { data: s })
+            | BerObjectContent::Integer(s)
+            | BerObjectContent::Unknown(_, s) => Ok(s.as_ref()),
             _ => Err(BerError::BerTypeError),
         }
     }
@@ -754,8 +755,7 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::IA5String(s) => Ok(s.as_ref()),
             BerObjectContent::GeneralizedTime(Cow::Borrowed(s))
             | BerObjectContent::UTCTime(Cow::Borrowed(s)) => Ok(s.as_bytes()),
-            BerObjectContent::BitString(_, BitStringObject { data: s })
-            | BerObjectContent::OctetString(s)
+            BerObjectContent::OctetString(s)
             | BerObjectContent::T61String(s)
             | BerObjectContent::VideotexString(s)
             | BerObjectContent::BmpString(s)
@@ -763,7 +763,13 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::ObjectDescriptor(s)
             | BerObjectContent::GraphicString(s)
             | BerObjectContent::GeneralString(s) => Ok(s),
-            BerObjectContent::Integer(Cow::Borrowed(s))
+            BerObjectContent::BitString(
+                _,
+                BitStringObject {
+                    data: Cow::Borrowed(s),
+                },
+            )
+            | BerObjectContent::Integer(Cow::Borrowed(s))
             | BerObjectContent::Unknown(_, Cow::Borrowed(s)) => Ok(s),
             _ => Err(BerError::BerTypeError),
         }
@@ -945,10 +951,16 @@ impl<'a> Index<usize> for BerObject<'a> {
 /// BitString wrapper
 #[derive(Clone, Debug, PartialEq)]
 pub struct BitStringObject<'a> {
-    pub data: &'a [u8],
+    pub data: Cow<'a, [u8]>,
 }
 
 impl<'a> BitStringObject<'a> {
+    pub const fn from_bytes(b: &'a [u8]) -> Self {
+        BitStringObject {
+            data: Cow::Borrowed(b),
+        }
+    }
+
     /// Test if bit `bitnum` is set
     pub fn is_set(&self, bitnum: usize) -> bool {
         let byte_pos = bitnum / 8;
@@ -967,7 +979,7 @@ impl<'a> BitStringObject<'a> {
 
 impl<'a> AsRef<[u8]> for BitStringObject<'a> {
     fn as_ref(&self) -> &[u8] {
-        self.data
+        self.data.as_ref()
     }
 }
 
@@ -1024,9 +1036,7 @@ mod tests {
 
     #[test]
     fn test_der_bitstringobject() {
-        let obj = BitStringObject {
-            data: &[0x0f, 0x00, 0x40],
-        };
+        let obj = BitStringObject::from_bytes(&[0x0f, 0x00, 0x40]);
         assert!(!obj.is_set(0));
         assert!(obj.is_set(7));
         assert!(!obj.is_set(9));
@@ -1035,9 +1045,7 @@ mod tests {
 
     #[test]
     fn test_der_bitslice() {
-        let obj = BitStringObject {
-            data: &[0x0f, 0x00, 0x40],
-        };
+        let obj = BitStringObject::from_bytes(&[0x0f, 0x00, 0x40]);
         let slice = obj.as_bitslice().expect("as_bitslice");
         assert_eq!(slice.get(0), Some(&false));
         assert_eq!(slice.get(7), Some(&true));
@@ -1056,14 +1064,16 @@ mod tests {
             assert_eq!(s.as_ref(), b);
         }
         let b: &[u8] = &[0x0f, 0x00, 0x40];
-        let obj = BitStringObject { data: b };
+        let obj = BitStringObject {
+            data: Cow::Borrowed(b),
+        };
         assert_equal(obj, b);
     }
 
     #[cfg(feature = "bigint")]
     #[test]
     fn test_der_to_bigint() {
-        let obj = BerObject::from_obj(BerObjectContent::Integer(Cow::Borrowed(b"\x01\x00\x01")));
+        let obj = ber_int!(b"\x01\x00\x01");
         let expected = ::num_bigint::BigInt::from(0x10001);
 
         assert_eq!(obj.as_bigint(), Some(expected));
@@ -1072,7 +1082,7 @@ mod tests {
     #[cfg(feature = "bigint")]
     #[test]
     fn test_der_to_biguint() {
-        let obj = BerObject::from_obj(BerObjectContent::Integer(Cow::Borrowed(b"\x01\x00\x01")));
+        let obj = ber_int!(b"\x01\x00\x01");
         let expected = ::num_bigint::BigUint::from(0x10001_u32);
 
         assert_eq!(obj.as_biguint(), Some(expected));

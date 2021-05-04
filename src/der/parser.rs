@@ -596,7 +596,7 @@ fn der_read_content_bitstring(i: &[u8], len: usize) -> BerResult<DerObjectConten
     }
     Ok((
         i,
-        DerObjectContent::BitString(ignored_bits, BitStringObject { data }),
+        DerObjectContent::BitString(ignored_bits, BitStringObject::from_bytes(data)),
     ))
     // do_parse! {
     //     i,

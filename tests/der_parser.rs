@@ -56,7 +56,7 @@ fn test_der_bitstring_primitive() {
     let bytes = &[0x03, 0x04, 0x06, 0x6e, 0x5d, 0xc0];
     let expected = DerObject::from_obj(BerObjectContent::BitString(
         6,
-        BitStringObject { data: &bytes[3..] },
+        BitStringObject::from_bytes(&bytes[3..]),
     ));
     assert_eq!(parse_der_bitstring(bytes), Ok((empty, expected)));
     //
