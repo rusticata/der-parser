@@ -402,12 +402,14 @@ fn ber_read_content_printablestring<'a>(
 
 #[inline]
 fn ber_read_content_t61string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::T61String)(i)
+    map(take(len), |b| BerObjectContent::T61String(Cow::Borrowed(b)))(i)
 }
 
 #[inline]
 fn ber_read_content_videotexstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::VideotexString)(i)
+    map(take(len), |b| {
+        BerObjectContent::VideotexString(Cow::Borrowed(b))
+    })(i)
 }
 
 fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
@@ -458,27 +460,35 @@ fn ber_read_content_generalizedtime<'a>(
 
 #[inline]
 fn ber_read_content_objectdescriptor(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::ObjectDescriptor)(i)
+    map(take(len), |b| {
+        BerObjectContent::ObjectDescriptor(Cow::Borrowed(b))
+    })(i)
 }
 
 #[inline]
 fn ber_read_content_graphicstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::GraphicString)(i)
+    map(take(len), |b| {
+        BerObjectContent::GraphicString(Cow::Borrowed(b))
+    })(i)
 }
 
 #[inline]
 fn ber_read_content_generalstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::GeneralString)(i)
+    map(take(len), |b| {
+        BerObjectContent::GeneralString(Cow::Borrowed(b))
+    })(i)
 }
 
 #[inline]
 fn ber_read_content_bmpstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::BmpString)(i)
+    map(take(len), |b| BerObjectContent::BmpString(Cow::Borrowed(b)))(i)
 }
 
 #[inline]
 fn ber_read_content_universalstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::UniversalString)(i)
+    map(take(len), |b| {
+        BerObjectContent::UniversalString(Cow::Borrowed(b))
+    })(i)
 }
 
 /// Parse the next bytes as the *content* of a BER object.

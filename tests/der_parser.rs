@@ -283,7 +283,7 @@ fn test_der_generalizedtime() {
 fn test_der_generalstring() {
     let empty = &b""[..];
     let bytes = [0x1b, 0x04, 0x63, 0x69, 0x66, 0x73];
-    let expected = DerObject::from_obj(BerObjectContent::GeneralString(b"cifs"));
+    let expected = DerObject::from_obj(BerObjectContent::GeneralString(Cow::Borrowed(b"cifs")));
     assert_eq!(parse_der_generalstring(&bytes), Ok((empty, expected)));
 }
 

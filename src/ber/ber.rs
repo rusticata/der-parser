@@ -111,7 +111,7 @@ pub struct BerObjectHeader<'a> {
     ///
     /// This is useful in some cases, where different representations of the same
     /// BER tags have different meanings (BER only)
-    pub raw_tag: Option<&'a [u8]>,
+    pub raw_tag: Option<Cow<'a, [u8]>>,
 }
 
 /// BER object content
@@ -152,14 +152,14 @@ pub enum BerObjectContent<'a> {
     /// UTF8String: decoded string
     UTF8String(Cow<'a, str>),
     /// T61String: raw object bytes
-    T61String(&'a [u8]),
+    T61String(Cow<'a, [u8]>),
     /// VideotexString: raw object bytes
-    VideotexString(&'a [u8]),
+    VideotexString(Cow<'a, [u8]>),
 
     /// BmpString: raw object bytes
-    BmpString(&'a [u8]),
+    BmpString(Cow<'a, [u8]>),
     /// UniversalString: raw object bytes
-    UniversalString(&'a [u8]),
+    UniversalString(Cow<'a, [u8]>),
 
     /// SEQUENCE: list of objects
     Sequence(Vec<BerObject<'a>>),
@@ -172,11 +172,11 @@ pub enum BerObjectContent<'a> {
     GeneralizedTime(Cow<'a, str>),
 
     /// Object descriptor: raw object bytes
-    ObjectDescriptor(&'a [u8]),
+    ObjectDescriptor(Cow<'a, [u8]>),
     /// GraphicString: raw object bytes
-    GraphicString(&'a [u8]),
+    GraphicString(Cow<'a, [u8]>),
     /// GeneralString: raw object bytes
-    GeneralString(&'a [u8]),
+    GeneralString(Cow<'a, [u8]>),
 
     /// Optional object
     Optional(Option<Box<BerObject<'a>>>),
@@ -296,6 +296,7 @@ impl<'a> BerObjectHeader<'a> {
     /// Update header to add reference to raw tag
     #[inline]
     pub fn with_raw_tag(self, raw_tag: Option<&'a [u8]>) -> Self {
+        let raw_tag = raw_tag.map(Cow::Borrowed);
         BerObjectHeader { raw_tag, ..self }
     }
 
@@ -329,6 +330,16 @@ impl<'a> BerObjectHeader<'a> {
     #[inline]
     pub fn is_constructed(&self) -> bool {
         self.structured == 1
+    }
+
+    pub fn to_owned(&self) -> BerObjectHeader<'static> {
+        BerObjectHeader {
+            tag: self.tag,
+            structured: self.structured,
+            class: self.class,
+            len: self.len,
+            raw_tag: self.raw_tag.as_ref().map(|t| Cow::Owned(t.to_vec())),
+        }
     }
 }
 
@@ -373,6 +384,7 @@ impl<'a> BerObject<'a> {
 
     /// Set a tag for the BER object
     pub fn set_raw_tag(self, raw_tag: Option<&'a [u8]>) -> BerObject {
+        let raw_tag = raw_tag.map(Cow::Borrowed);
         let header = BerObjectHeader {
             raw_tag,
             ..self.header
@@ -555,6 +567,13 @@ impl<'a> BerObject<'a> {
     pub fn is_constructed(&self) -> bool {
         self.header.structured == 1
     }
+
+    pub fn to_owned(&self) -> BerObject<'static> {
+        BerObject {
+            header: self.header.to_owned(),
+            content: self.content.to_owned(),
+        }
+    }
 }
 
 /// Build a DER object from an OID.
@@ -596,7 +615,7 @@ impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
             }
             && {
                 // it tag is present for both, compare it
-                if xor_option(self.raw_tag, other.raw_tag).is_none() {
+                if xor_option(self.raw_tag.as_ref(), other.raw_tag.as_ref()).is_none() {
                     self.raw_tag == other.raw_tag
                 } else {
                     true
@@ -733,8 +752,8 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::UniversalString(s)
             | BerObjectContent::ObjectDescriptor(s)
             | BerObjectContent::GraphicString(s)
-            | BerObjectContent::GeneralString(s) => Ok(s),
-            BerObjectContent::BitString(_, BitStringObject { data: s })
+            | BerObjectContent::GeneralString(s)
+            | BerObjectContent::BitString(_, BitStringObject { data: s })
             | BerObjectContent::Integer(s)
             | BerObjectContent::OctetString(s)
             | BerObjectContent::Unknown(_, s) => Ok(s.as_ref()),
@@ -748,40 +767,40 @@ impl<'a> BerObjectContent<'a> {
     /// (consuming object prevents returning a reference in that case).
     pub fn into_bytes(self) -> Result<&'a [u8], BerError> {
         match self {
-            BerObjectContent::NumericString(Cow::Borrowed(s))
-            | BerObjectContent::VisibleString(Cow::Borrowed(s))
+            BerObjectContent::IA5String(Cow::Borrowed(s))
+            | BerObjectContent::NumericString(Cow::Borrowed(s))
             | BerObjectContent::PrintableString(Cow::Borrowed(s))
             | BerObjectContent::UTF8String(Cow::Borrowed(s))
-            | BerObjectContent::IA5String(Cow::Borrowed(s)) => Ok(s.as_ref()),
+            | BerObjectContent::VisibleString(Cow::Borrowed(s)) => Ok(s.as_ref()),
             BerObjectContent::GeneralizedTime(Cow::Borrowed(s))
             | BerObjectContent::UTCTime(Cow::Borrowed(s)) => Ok(s.as_bytes()),
-            BerObjectContent::T61String(s)
-            | BerObjectContent::VideotexString(s)
-            | BerObjectContent::BmpString(s)
-            | BerObjectContent::UniversalString(s)
-            | BerObjectContent::ObjectDescriptor(s)
-            | BerObjectContent::GraphicString(s)
-            | BerObjectContent::GeneralString(s) => Ok(s),
             BerObjectContent::BitString(
                 _,
                 BitStringObject {
                     data: Cow::Borrowed(s),
                 },
             )
+            | BerObjectContent::BmpString(Cow::Borrowed(s))
+            | BerObjectContent::GeneralString(Cow::Borrowed(s))
+            | BerObjectContent::GraphicString(Cow::Borrowed(s))
             | BerObjectContent::Integer(Cow::Borrowed(s))
+            | BerObjectContent::ObjectDescriptor(Cow::Borrowed(s))
             | BerObjectContent::OctetString(Cow::Borrowed(s))
-            | BerObjectContent::Unknown(_, Cow::Borrowed(s)) => Ok(s),
+            | BerObjectContent::T61String(Cow::Borrowed(s))
+            | BerObjectContent::Unknown(_, Cow::Borrowed(s))
+            | BerObjectContent::UniversalString(Cow::Borrowed(s))
+            | BerObjectContent::VideotexString(Cow::Borrowed(s)) => Ok(s),
             _ => Err(BerError::BerTypeError),
         }
     }
 
     pub fn as_str(&'a self) -> Result<&'a str, BerError> {
         match self {
-            BerObjectContent::NumericString(s)
-            | BerObjectContent::VisibleString(s)
+            BerObjectContent::IA5String(s)
+            | BerObjectContent::NumericString(s)
             | BerObjectContent::PrintableString(s)
             | BerObjectContent::UTF8String(s)
-            | BerObjectContent::IA5String(s) => Ok(s),
+            | BerObjectContent::VisibleString(s) => Ok(s),
             BerObjectContent::GeneralizedTime(s) | BerObjectContent::UTCTime(s) => Ok(s.as_ref()),
             _ => Err(BerError::BerTypeError),
         }
@@ -819,6 +838,73 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::Unknown(x,_)         => *x,
             BerObjectContent::Optional(Some(obj))  => obj.content.tag(),
             BerObjectContent::Optional(None)       => BerTag(0x00), // XXX invalid !
+        }
+    }
+
+    pub fn to_owned(&self) -> BerObjectContent<'static> {
+        match self {
+            BerObjectContent::BitString(n, s) => BerObjectContent::BitString(*n, s.to_owned()),
+            BerObjectContent::BmpString(s) => BerObjectContent::BmpString(Cow::Owned(s.to_vec())),
+            BerObjectContent::Boolean(b) => BerObjectContent::Boolean(*b),
+            BerObjectContent::EndOfContent => BerObjectContent::EndOfContent,
+            BerObjectContent::Enum(n) => BerObjectContent::Enum(*n),
+            BerObjectContent::GeneralString(s) => {
+                BerObjectContent::GeneralString(Cow::Owned(s.to_vec()))
+            }
+            BerObjectContent::GeneralizedTime(s) => {
+                BerObjectContent::GeneralizedTime(Cow::Owned(s.to_string()))
+            }
+            BerObjectContent::GraphicString(s) => {
+                BerObjectContent::GraphicString(Cow::Owned(s.to_vec()))
+            }
+            BerObjectContent::IA5String(s) => {
+                BerObjectContent::IA5String(Cow::Owned(s.to_string()))
+            }
+            BerObjectContent::Integer(s) => BerObjectContent::Integer(Cow::Owned(s.to_vec())),
+            BerObjectContent::Null => BerObjectContent::Null,
+            BerObjectContent::NumericString(s) => {
+                BerObjectContent::NumericString(Cow::Owned(s.to_string()))
+            }
+            BerObjectContent::OID(oid) => BerObjectContent::OID(oid.to_owned()),
+            BerObjectContent::ObjectDescriptor(s) => {
+                BerObjectContent::ObjectDescriptor(Cow::Owned(s.to_vec()))
+            }
+            BerObjectContent::OctetString(s) => {
+                BerObjectContent::OctetString(Cow::Owned(s.to_vec()))
+            }
+            BerObjectContent::Optional(o) => {
+                BerObjectContent::Optional(o.as_ref().map(|x| Box::new(x.as_ref().to_owned())))
+            }
+            BerObjectContent::PrintableString(s) => {
+                BerObjectContent::PrintableString(Cow::Owned(s.to_string()))
+            }
+            BerObjectContent::RelativeOID(oid) => BerObjectContent::RelativeOID(oid.to_owned()),
+            BerObjectContent::Sequence(v) => {
+                BerObjectContent::Sequence(v.iter().map(|o| o.to_owned()).collect::<Vec<_>>())
+            }
+            BerObjectContent::Set(v) => {
+                BerObjectContent::Set(v.iter().map(|o| o.to_owned()).collect::<Vec<_>>())
+            }
+            BerObjectContent::T61String(s) => BerObjectContent::T61String(Cow::Owned(s.to_vec())),
+            BerObjectContent::Tagged(c, t, o) => {
+                BerObjectContent::Tagged(*c, *t, Box::new(o.as_ref().to_owned()))
+            }
+            BerObjectContent::UTCTime(s) => BerObjectContent::UTCTime(Cow::Owned(s.to_string())),
+            BerObjectContent::UTF8String(s) => {
+                BerObjectContent::UTF8String(Cow::Owned(s.to_string()))
+            }
+            BerObjectContent::UniversalString(s) => {
+                BerObjectContent::UniversalString(Cow::Owned(s.to_vec()))
+            }
+            BerObjectContent::Unknown(t, b) => {
+                BerObjectContent::Unknown(*t, Cow::Owned(b.to_vec()))
+            }
+            BerObjectContent::VideotexString(s) => {
+                BerObjectContent::VideotexString(Cow::Owned(s.to_vec()))
+            }
+            BerObjectContent::VisibleString(s) => {
+                BerObjectContent::VisibleString(Cow::Owned(s.to_string()))
+            }
         }
     }
 }
@@ -958,6 +1044,12 @@ impl<'a> BitStringObject<'a> {
     pub const fn from_bytes(b: &'a [u8]) -> Self {
         BitStringObject {
             data: Cow::Borrowed(b),
+        }
+    }
+
+    pub fn to_owned(&self) -> BitStringObject<'static> {
+        BitStringObject {
+            data: Cow::Owned(self.data.to_vec()),
         }
     }
 

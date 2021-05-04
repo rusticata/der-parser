@@ -401,7 +401,9 @@ fn test_ber_relativeoid() {
 fn test_ber_bmpstring() {
     let empty = &b""[..];
     let bytes = hex!("1e 08 00 55 00 73 00 65 00 72");
-    let expected = BerObject::from_obj(BerObjectContent::BmpString(b"\x00U\x00s\x00e\x00r"));
+    let expected = BerObject::from_obj(BerObjectContent::BmpString(Cow::Borrowed(
+        b"\x00U\x00s\x00e\x00r",
+    )));
     assert_eq!(parse_ber_bmpstring(&bytes), Ok((empty, expected)));
 }
 
@@ -412,14 +414,14 @@ fn test_ber_customtags() {
         .expect("ber_read_element_header")
         .1;
     // println!("{:?}", hdr);
-    let expected: &[u8] = &[0x8f];
+    let expected: Cow<[u8]> = Cow::Borrowed(&[0x8f]);
     assert_eq!(hdr.raw_tag, Some(expected));
     let bytes = hex!("9f 0f 02 12 34");
     let hdr = ber_read_element_header(&bytes)
         .expect("ber_read_element_header")
         .1;
     // println!("{:?}", hdr);
-    let expected: &[u8] = &[0x9f, 0x0f];
+    let expected: Cow<[u8]> = Cow::Borrowed(&[0x9f, 0x0f]);
     assert_eq!(hdr.raw_tag, Some(expected));
 }
 
@@ -474,4 +476,17 @@ fn test_parse_ber_content2() {
     assert!(rem.is_empty());
     assert_eq!(tag, BerTag::Integer);
     assert_eq!(content.as_u32(), Ok(0x10001));
+}
+
+#[test]
+fn test_owned() {
+    fn test_static(obj: &BerObject<'static>) {
+        assert!(obj.is_primitive());
+    }
+    let ret = {
+        let v = vec![1, 2, 3, 4];
+        let obj = ber_int!(&v);
+        obj.to_owned()
+    };
+    test_static(&ret);
 }

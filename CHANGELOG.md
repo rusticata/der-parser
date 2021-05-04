@@ -13,6 +13,8 @@
 ### Changed/Fixed
 
 - BerObject: add method `as_bytes` and deprecate `as_slice`
+- BerObject and all similar structs now use `Cow`, and implement `to_owned`
+  to return an object with static lifetime.
 
 ### Added
 
