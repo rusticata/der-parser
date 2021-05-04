@@ -29,7 +29,7 @@ fn test_der_bool() {
 fn test_der_int() {
     let empty = &b""[..];
     let bytes = hex!("02 03 01 00 01");
-    let expected = DerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
+    let expected = DerObject::from_obj(BerObjectContent::Integer(Cow::Borrowed(b"\x01\x00\x01")));
     assert_eq!(parse_der_integer(&bytes), Ok((empty, expected)));
     let res = parse_der_u64(&bytes);
     assert_eq!(res.expect("integer").1, 0x10001);

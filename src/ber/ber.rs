@@ -128,7 +128,7 @@ pub enum BerObjectContent<'a> {
     /// spec, and also that the raw encoding is also important for some applications.
     ///
     /// To extract the number, see the `as_u64`, `as_u32`, `as_bigint` and `as_biguint` methods.
-    Integer(&'a [u8]),
+    Integer(Cow<'a, [u8]>),
     /// BIT STRING: number of unused bits, and object
     BitString(u8, BitStringObject<'a>),
     /// OCTET STRING: slice
@@ -367,7 +367,7 @@ impl<'a> BerObject<'a> {
         );
         BerObject {
             header,
-            content: BerObjectContent::Integer(i),
+            content: BerObjectContent::Integer(Cow::Borrowed(i)),
         }
     }
 
@@ -419,8 +419,8 @@ impl<'a> BerObject<'a> {
     ///
     /// ```rust
     /// # extern crate der_parser;
-    /// # use der_parser::ber::{BerObject,BerObjectContent};
-    /// let der_int  = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
+    /// # use der_parser::ber_int;
+    /// let der_int  = ber_int!(b"\x01\x00\x01");
     /// assert_eq!(
     ///     der_int.as_u32(),
     ///     Ok(0x10001)
@@ -727,8 +727,7 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::UTF8String(s)
             | BerObjectContent::IA5String(s) => Ok(s.as_ref()),
             BerObjectContent::GeneralizedTime(s) | BerObjectContent::UTCTime(s) => Ok(s.as_bytes()),
-            BerObjectContent::Integer(s)
-            | BerObjectContent::BitString(_, BitStringObject { data: s })
+            BerObjectContent::BitString(_, BitStringObject { data: s })
             | BerObjectContent::OctetString(s)
             | BerObjectContent::T61String(s)
             | BerObjectContent::VideotexString(s)
@@ -737,7 +736,7 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::ObjectDescriptor(s)
             | BerObjectContent::GraphicString(s)
             | BerObjectContent::GeneralString(s) => Ok(s),
-            BerObjectContent::Unknown(_, s) => Ok(s.as_ref()),
+            BerObjectContent::Integer(s) | BerObjectContent::Unknown(_, s) => Ok(s.as_ref()),
             _ => Err(BerError::BerTypeError),
         }
     }
@@ -755,8 +754,7 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::IA5String(s) => Ok(s.as_ref()),
             BerObjectContent::GeneralizedTime(Cow::Borrowed(s))
             | BerObjectContent::UTCTime(Cow::Borrowed(s)) => Ok(s.as_bytes()),
-            BerObjectContent::Integer(s)
-            | BerObjectContent::BitString(_, BitStringObject { data: s })
+            BerObjectContent::BitString(_, BitStringObject { data: s })
             | BerObjectContent::OctetString(s)
             | BerObjectContent::T61String(s)
             | BerObjectContent::VideotexString(s)
@@ -765,7 +763,8 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::ObjectDescriptor(s)
             | BerObjectContent::GraphicString(s)
             | BerObjectContent::GeneralString(s) => Ok(s),
-            BerObjectContent::Unknown(_, Cow::Borrowed(s)) => Ok(s),
+            BerObjectContent::Integer(Cow::Borrowed(s))
+            | BerObjectContent::Unknown(_, Cow::Borrowed(s)) => Ok(s),
             _ => Err(BerError::BerTypeError),
         }
     }
@@ -818,6 +817,15 @@ impl<'a> BerObjectContent<'a> {
     }
 }
 
+#[macro_export]
+macro_rules! ber_int {
+    ( $x:expr ) => {
+        $crate::ber::BerObject::from_obj($crate::ber::BerObjectContent::Integer(
+            std::borrow::Cow::Borrowed($x),
+        ))
+    };
+}
+
 #[cfg(feature = "bigint")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]
 use num_bigint::{BigInt, BigUint, Sign};
@@ -826,15 +834,15 @@ use num_bigint::{BigInt, BigUint, Sign};
 #[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]
 impl<'a> BerObject<'a> {
     pub fn as_bigint(&self) -> Option<BigInt> {
-        match self.content {
-            BerObjectContent::Integer(s) => Some(BigInt::from_bytes_be(Sign::Plus, s)),
+        match &self.content {
+            BerObjectContent::Integer(s) => Some(BigInt::from_bytes_be(Sign::Plus, &s)),
             _ => None,
         }
     }
 
     pub fn as_biguint(&self) -> Option<BigUint> {
-        match self.content {
-            BerObjectContent::Integer(s) => Some(BigUint::from_bytes_be(s)),
+        match &self.content {
+            BerObjectContent::Integer(s) => Some(BigUint::from_bytes_be(&s)),
             _ => None,
         }
     }
@@ -965,6 +973,8 @@ impl<'a> AsRef<[u8]> for BitStringObject<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use crate::ber::*;
     use crate::oid::*;
 
@@ -1053,7 +1063,7 @@ mod tests {
     #[cfg(feature = "bigint")]
     #[test]
     fn test_der_to_bigint() {
-        let obj = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
+        let obj = BerObject::from_obj(BerObjectContent::Integer(Cow::Borrowed(b"\x01\x00\x01")));
         let expected = ::num_bigint::BigInt::from(0x10001);
 
         assert_eq!(obj.as_bigint(), Some(expected));
@@ -1062,7 +1072,7 @@ mod tests {
     #[cfg(feature = "bigint")]
     #[test]
     fn test_der_to_biguint() {
-        let obj = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
+        let obj = BerObject::from_obj(BerObjectContent::Integer(Cow::Borrowed(b"\x01\x00\x01")));
         let expected = ::num_bigint::BigUint::from(0x10001_u32);
 
         assert_eq!(obj.as_biguint(), Some(expected));

@@ -234,7 +234,7 @@ fn ber_read_content_bool(i: &[u8]) -> BerResult<BerObjectContent> {
 
 #[inline]
 fn ber_read_content_integer(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::Integer)(i)
+    map(take(len), |b| BerObjectContent::Integer(Cow::Borrowed(b)))(i)
 }
 
 #[inline]
@@ -807,10 +807,10 @@ pub fn parse_ber_bool(i: &[u8]) -> BerResult {
 /// ```rust
 /// # extern crate nom;
 /// # use der_parser::ber::parse_ber_integer;
-/// # use der_parser::ber::{BerObject,BerObjectContent};
+/// # use der_parser::ber_int;
 /// let empty = &b""[..];
 /// let bytes = [0x02, 0x03, 0x01, 0x00, 0x01];
-/// let expected  = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
+/// let expected  = ber_int!(b"\x01\x00\x01");
 /// assert_eq!(
 ///     parse_ber_integer(&bytes),
 ///     Ok((empty, expected))

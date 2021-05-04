@@ -124,10 +124,11 @@ pub fn parse_der_bool(i: &[u8]) -> DerResult {
 /// # Examples
 ///
 /// ```rust
-/// # use der_parser::der::{parse_der_integer, DerObject, DerObjectContent};
+/// # use der_parser::der::parse_der_integer;
+/// # use der_parser::ber_int;
 /// let empty = &b""[..];
 /// let bytes = [0x02, 0x03, 0x01, 0x00, 0x01];
-/// let expected  = DerObject::from_obj(DerObjectContent::Integer(b"\x01\x00\x01"));
+/// let expected  = ber_int!(b"\x01\x00\x01");
 /// assert_eq!(
 ///     parse_der_integer(&bytes),
 ///     Ok((empty, expected))

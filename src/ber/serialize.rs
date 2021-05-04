@@ -225,6 +225,7 @@ mod test {
     use crate::error::BerResult;
     use cookie_factory::gen_simple;
     use hex_literal::hex;
+    use std::borrow::Cow;
 
     macro_rules! encode_and_parse {
         ($obj:ident, $encode:ident, $parse:ident) => {{
@@ -267,7 +268,7 @@ mod test {
 
     #[test]
     fn test_encode_integer() {
-        let i = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
+        let i = BerObject::from_obj(BerObjectContent::Integer(Cow::Borrowed(b"\x01\x00\x01")));
         encode_and_parse!(i, ber_encode_object, parse_ber_integer);
     }
 

@@ -1,8 +1,10 @@
 use der_parser::ber::*;
+use der_parser::ber_int;
 use der_parser::error::*;
 use der_parser::oid::*;
 use hex_literal::hex;
 use nom::Err;
+use std::borrow::Cow;
 // use pretty_assertions::assert_eq;
 use test_case::test_case;
 
@@ -90,8 +92,8 @@ fn test_ber_set_of_v() {
         0x31, 0x0a, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00,
     ];
     let expected = vec![
-        BerObject::from_int_slice(b"\x01\x00\x01"),
-        BerObject::from_int_slice(b"\x01\x00\x00"),
+        ber_int!(b"\x01\x00\x01"),
+        ber_int!(b"\x01\x00\x00"),
     ];
     fn parser(i: &[u8]) -> BerResult<Vec<BerObject>> {
         parse_ber_set_of_v(parse_ber_integer)(i)
@@ -132,7 +134,7 @@ fn test_set_indefinite_length() {
 fn test_ber_int() {
     let empty = &b""[..];
     let bytes = [0x02, 0x03, 0x01, 0x00, 0x01];
-    let expected = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
+    let expected = BerObject::from_obj(BerObjectContent::Integer(Cow::Borrowed(b"\x01\x00\x01")));
     assert_eq!(parse_ber_integer(&bytes), Ok((empty, expected)));
 }
 
