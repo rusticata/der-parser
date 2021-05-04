@@ -431,7 +431,7 @@ fn ber_read_content_utctime<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectC
     }
     let s = std::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::UTCTime(s))?;
+        .map(|s| BerObjectContent::UTCTime(Cow::Borrowed(s)))?;
     Ok((i, s))
 }
 
@@ -450,7 +450,7 @@ fn ber_read_content_generalizedtime<'a>(
     }
     let s = std::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::GeneralizedTime(s))?;
+        .map(|s| BerObjectContent::GeneralizedTime(Cow::Borrowed(s)))?;
     Ok((i, s))
 }
 
@@ -1174,7 +1174,7 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
         BerClass::Universal | BerClass::Private => (),
         _ => {
             let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
-            let content = BerObjectContent::Unknown(hdr.tag, content);
+            let content = BerObjectContent::Unknown(hdr.tag, Cow::Borrowed(content));
             let obj = BerObject::from_header_and_content(hdr, content);
             return Ok((rem, obj));
         }
@@ -1183,7 +1183,7 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => {
             let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
-            let content = BerObjectContent::Unknown(hdr.tag, content);
+            let content = BerObjectContent::Unknown(hdr.tag, Cow::Borrowed(content));
             let obj = BerObject::from_header_and_content(hdr, content);
             Ok((rem, obj))
         }

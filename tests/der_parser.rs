@@ -9,6 +9,7 @@ use hex_literal::hex;
 use nom::error::ErrorKind;
 use nom::{alt, call, Err};
 use pretty_assertions::assert_eq;
+use std::borrow::Cow;
 use test_case::test_case;
 
 #[test]
@@ -258,9 +259,9 @@ fn test_der_set_of() {
 #[test]
 fn test_der_utctime() {
     let bytes = hex!("17 0D 30 32 31 32 31 33 31 34 32 39 32 33 5A FF");
-    let expected = DerObject::from_obj(BerObjectContent::UTCTime(
+    let expected = DerObject::from_obj(BerObjectContent::UTCTime(Cow::Borrowed(
         std::str::from_utf8(&bytes[2..(2 + 0x0d)]).unwrap(),
-    ));
+    )));
     assert_eq!(parse_der_utctime(&bytes), Ok((&[0xff][..], expected)));
     let bytes = hex!("17 0c 30 32 31 32 31 33 31 34 32 39 32 33");
     parse_der_utctime(&bytes).err().expect("expected error");
@@ -272,9 +273,9 @@ fn test_der_generalizedtime() {
     let bytes = [
         0x18, 0x0D, 0x30, 0x32, 0x31, 0x32, 0x31, 0x33, 0x31, 0x34, 0x32, 0x39, 0x32, 0x33, 0x5A,
     ];
-    let expected = DerObject::from_obj(BerObjectContent::GeneralizedTime(
+    let expected = DerObject::from_obj(BerObjectContent::GeneralizedTime(Cow::Borrowed(
         std::str::from_utf8(&bytes[2..]).unwrap(),
-    ));
+    )));
     assert_eq!(parse_der_generalizedtime(&bytes), Ok((empty, expected)));
 }
 
@@ -293,7 +294,7 @@ fn test_der_contextspecific() {
     let expected = DerObject {
         header: BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3)
             .with_raw_tag(Some(&[0xa0])),
-        content: BerObjectContent::Unknown(BerTag(0), &bytes[2..]),
+        content: BerObjectContent::Unknown(BerTag(0), Cow::Borrowed(&bytes[2..])),
     };
     assert_eq!(parse_der(&bytes), Ok((empty, expected)));
 }

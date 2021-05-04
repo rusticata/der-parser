@@ -3,6 +3,7 @@ use crate::error::BerError;
 use crate::oid::Oid;
 use nom::bitvec::{order::Msb0, slice::BitSlice};
 use rusticata_macros::newtype_enum;
+use std::borrow::Cow;
 use std::convert::AsRef;
 use std::convert::From;
 use std::convert::TryFrom;
@@ -166,9 +167,9 @@ pub enum BerObjectContent<'a> {
     Set(Vec<BerObject<'a>>),
 
     /// UTCTime: decoded string
-    UTCTime(&'a str),
+    UTCTime(Cow<'a, str>),
     /// GeneralizedTime: decoded string
-    GeneralizedTime(&'a str),
+    GeneralizedTime(Cow<'a, str>),
 
     /// Object descriptor: raw object bytes
     ObjectDescriptor(&'a [u8]),
@@ -183,7 +184,7 @@ pub enum BerObjectContent<'a> {
     Tagged(BerClass, BerTag, Box<BerObject<'a>>),
 
     /// Unknown object: object tag (copied from header), and raw content
-    Unknown(BerTag, &'a [u8]),
+    Unknown(BerTag, Cow<'a, [u8]>),
 }
 
 impl fmt::Display for BerClass {
@@ -495,8 +496,12 @@ impl<'a> BerObject<'a> {
     /// This can fail if the object does not contain a type directly equivalent to a slice (e.g a
     /// sequence).
     /// This function mostly concerns string types, integers, or unknown DER objects.
-    pub fn as_slice(&self) -> Result<&'a [u8], BerError> {
+    pub fn as_slice(&'a self) -> Result<&'a [u8], BerError> {
         self.content.as_slice()
+    }
+
+    pub fn into_bytes(self) -> Result<&'a [u8], BerError> {
+        self.content.into_bytes()
     }
 
     /// Attempt to get the content from a DER object, as a str.
@@ -505,7 +510,7 @@ impl<'a> BerObject<'a> {
     /// Only NumericString, VisibleString, UTCTime, GeneralizedTime,
     /// PrintableString, UTF8String and IA5String are considered here. Other
     /// string types can be read using `as_slice`.
-    pub fn as_str(&self) -> Result<&'a str, BerError> {
+    pub fn as_str(&'a self) -> Result<&'a str, BerError> {
         self.content.as_str()
     }
 
@@ -693,41 +698,64 @@ impl<'a> BerObjectContent<'a> {
         }
     }
 
-    #[rustfmt::skip]
-    pub fn as_slice(&self) -> Result<&'a [u8],BerError> {
-        match *self {
-            BerObjectContent::NumericString(s) |
-            BerObjectContent::GeneralizedTime(s) |
-            BerObjectContent::UTCTime(s) |
-            BerObjectContent::VisibleString(s) |
-            BerObjectContent::PrintableString(s) |
-            BerObjectContent::UTF8String(s) |
-            BerObjectContent::IA5String(s) => Ok(s.as_ref()),
-            BerObjectContent::Integer(s) |
-            BerObjectContent::BitString(_,BitStringObject{data:s}) |
-            BerObjectContent::OctetString(s) |
-            BerObjectContent::T61String(s) |
-            BerObjectContent::VideotexString(s) |
-            BerObjectContent::BmpString(s) |
-            BerObjectContent::UniversalString(s) |
-            BerObjectContent::ObjectDescriptor(s) |
-            BerObjectContent::GraphicString(s) |
-            BerObjectContent::GeneralString(s) |
-            BerObjectContent::Unknown(_,s) => Ok(s),
+    pub fn as_slice(&'a self) -> Result<&'a [u8], BerError> {
+        match self {
+            BerObjectContent::NumericString(s)
+            | BerObjectContent::VisibleString(s)
+            | BerObjectContent::PrintableString(s)
+            | BerObjectContent::UTF8String(s)
+            | BerObjectContent::IA5String(s) => Ok(s.as_ref()),
+            BerObjectContent::GeneralizedTime(s) | BerObjectContent::UTCTime(s) => Ok(s.as_bytes()),
+            BerObjectContent::Integer(s)
+            | BerObjectContent::BitString(_, BitStringObject { data: s })
+            | BerObjectContent::OctetString(s)
+            | BerObjectContent::T61String(s)
+            | BerObjectContent::VideotexString(s)
+            | BerObjectContent::BmpString(s)
+            | BerObjectContent::UniversalString(s)
+            | BerObjectContent::ObjectDescriptor(s)
+            | BerObjectContent::GraphicString(s)
+            | BerObjectContent::GeneralString(s) => Ok(s),
+            BerObjectContent::Unknown(_, s) => Ok(s.as_ref()),
             _ => Err(BerError::BerTypeError),
         }
     }
 
-    #[rustfmt::skip]
-    pub fn as_str(&self) -> Result<&'a str,BerError> {
-        match *self {
-            BerObjectContent::NumericString(s) |
-            BerObjectContent::GeneralizedTime(s) |
-            BerObjectContent::UTCTime(s) |
-            BerObjectContent::VisibleString(s) |
-            BerObjectContent::PrintableString(s) |
-            BerObjectContent::UTF8String(s) |
-            BerObjectContent::IA5String(s) => Ok(s),
+    /// Try to consume object and return a reference to object data.
+    ///
+    /// This will fail if object does not contain bytes data, or if the object is owned
+    /// (consuming object prevents returning a reference in that case).
+    pub fn into_bytes(self) -> Result<&'a [u8], BerError> {
+        match self {
+            BerObjectContent::NumericString(s)
+            | BerObjectContent::VisibleString(s)
+            | BerObjectContent::PrintableString(s)
+            | BerObjectContent::UTF8String(s)
+            | BerObjectContent::IA5String(s) => Ok(s.as_ref()),
+            BerObjectContent::GeneralizedTime(Cow::Borrowed(s)) | BerObjectContent::UTCTime(Cow::Borrowed(s)) => Ok(s.as_bytes()),
+            BerObjectContent::Integer(s)
+            | BerObjectContent::BitString(_, BitStringObject { data: s })
+            | BerObjectContent::OctetString(s)
+            | BerObjectContent::T61String(s)
+            | BerObjectContent::VideotexString(s)
+            | BerObjectContent::BmpString(s)
+            | BerObjectContent::UniversalString(s)
+            | BerObjectContent::ObjectDescriptor(s)
+            | BerObjectContent::GraphicString(s)
+            | BerObjectContent::GeneralString(s) => Ok(s),
+            BerObjectContent::Unknown(_, Cow::Borrowed(s)) => Ok(s),
+            _ => Err(BerError::BerTypeError),
+        }
+    }
+
+    pub fn as_str(&'a self) -> Result<&'a str, BerError> {
+        match self {
+            BerObjectContent::NumericString(s)
+            | BerObjectContent::VisibleString(s)
+            | BerObjectContent::PrintableString(s)
+            | BerObjectContent::UTF8String(s)
+            | BerObjectContent::IA5String(s) => Ok(s),
+            BerObjectContent::GeneralizedTime(s) | BerObjectContent::UTCTime(s) => Ok(s.as_ref()),
             _ => Err(BerError::BerTypeError),
         }
     }
@@ -1013,7 +1041,7 @@ mod tests {
     #[test]
     fn test_der_to_biguint() {
         let obj = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
-        let expected = ::num_bigint::BigUint::from(0x10001 as u32);
+        let expected = ::num_bigint::BigUint::from(0x10001_u32);
 
         assert_eq!(obj.as_biguint(), Some(expected));
     }

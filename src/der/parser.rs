@@ -5,6 +5,7 @@ use nom::bytes::streaming::take;
 use nom::number::streaming::be_u8;
 use nom::{Err, Needed};
 use rusticata_macros::custom_check;
+use std::borrow::Cow;
 use std::convert::{Into, TryFrom};
 
 use crate::ber::MAX_RECURSION;
@@ -559,7 +560,7 @@ fn der_read_element_content_recursive<'a>(
         DerClass::Universal | DerClass::Private => (),
         _ => {
             let (i, content) = ber_get_object_content(i, &hdr, max_depth)?;
-            let content = DerObjectContent::Unknown(hdr.tag, content);
+            let content = DerObjectContent::Unknown(hdr.tag, Cow::Borrowed(content));
             let obj = DerObject::from_header_and_content(hdr, content);
             return Ok((i, obj));
         }
@@ -568,7 +569,7 @@ fn der_read_element_content_recursive<'a>(
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => {
             let (rem, content) = ber_get_object_content(i, &hdr, max_depth)?;
-            let content = DerObjectContent::Unknown(hdr.tag, content);
+            let content = DerObjectContent::Unknown(hdr.tag, Cow::Borrowed(content));
             let obj = DerObject::from_header_and_content(hdr, content);
             Ok((rem, obj))
         }

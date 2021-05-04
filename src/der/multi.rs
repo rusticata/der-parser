@@ -200,7 +200,7 @@ where
 ///         |i:&[u8], _| {
 ///             let (i, a) = parse_der_u32(i)?;
 ///             let (i, obj) = parse_der_octetstring(i)?;
-///             let b = obj.as_slice().unwrap();
+///             let b = obj.into_bytes().unwrap();
 ///             Ok((i, MyObject{ a, b }))
 ///         }
 ///     )(i)
@@ -425,7 +425,7 @@ where
 ///         |i:&[u8], _| {
 ///             let (i, a) = parse_der_u32(i)?;
 ///             let (i, obj) = parse_der_octetstring(i)?;
-///             let b = obj.as_slice().unwrap();
+///             let b = obj.into_bytes().unwrap();
 ///             Ok((i, MyObject{ a, b }))
 ///         }
 ///     )(i)
@@ -497,7 +497,7 @@ where
 ///             }
 ///             let (i, a) = parse_der_u32(i)?;
 ///             let (i, obj) = parse_der_octetstring(i)?;
-///             let b = obj.as_slice().unwrap();
+///             let b = obj.into_bytes().unwrap();
 ///             Ok((i, MyObject{ a, b }))
 ///         }
 ///     )(i)

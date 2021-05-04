@@ -85,7 +85,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
                 None => writeln!(f, "{}({:?}) <error decoding utf32 string>", ty, s),
             }
         }
-        match self.obj.content {
+        match &self.obj.content {
             BerObjectContent::EndOfContent           => writeln!(f, "EndOfContent"),
             BerObjectContent::Boolean(b)             => writeln!(f, "Boolean({:?})", b),
             BerObjectContent::Integer(i)             => writeln!(f, "Integer({:?})", debug::HexSlice(i)),

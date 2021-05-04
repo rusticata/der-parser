@@ -4,6 +4,7 @@ use der_parser::error::*;
 use der_parser::oid::Oid;
 use hex_literal::hex;
 use nom::*;
+use std::borrow::Cow;
 
 #[test]
 fn test_flat_take() {
@@ -88,13 +89,19 @@ fn test_unknown_tag() {
     assert!(res.0.is_empty());
     assert_eq!(
         res.1,
-        BerObject::from_obj(BerObjectContent::Unknown(BerTag(0x1d), &bytes[2..]))
+        BerObject::from_obj(BerObjectContent::Unknown(
+            BerTag(0x1d),
+            Cow::Borrowed(&bytes[2..])
+        ))
     );
     let res = parse_der(&bytes).expect("parsing failed");
     assert!(res.0.is_empty());
     assert_eq!(
         res.1,
-        BerObject::from_obj(BerObjectContent::Unknown(BerTag(0x1d), &bytes[2..]))
+        BerObject::from_obj(BerObjectContent::Unknown(
+            BerTag(0x1d),
+            Cow::Borrowed(&bytes[2..])
+        ))
     );
 }
 
@@ -108,7 +115,7 @@ fn test_unknown_context_specific() {
         BerObject {
             header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(0), 1)
                 .with_raw_tag(Some(&[0x80])),
-            content: BerObjectContent::Unknown(BerTag(0x0), &bytes[2..]),
+            content: BerObjectContent::Unknown(BerTag(0x0), Cow::Borrowed(&bytes[2..])),
         }
     );
 }
@@ -123,7 +130,7 @@ fn test_unknown_long_tag() {
         BerObject {
             header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(0x22), 1)
                 .with_raw_tag(Some(&[0x9f, 0x22])),
-            content: BerObjectContent::Unknown(BerTag(0x22), &bytes[3..]),
+            content: BerObjectContent::Unknown(BerTag(0x22), Cow::Borrowed(&bytes[3..])),
         }
     );
 }
@@ -138,7 +145,7 @@ fn test_unknown_longer_tag() {
         BerObject {
             header: BerObjectHeader::new(BerClass::ContextSpecific, 0, BerTag(0x1122), 1)
                 .with_raw_tag(Some(&[0x9f, 0xa2, 0x22])),
-            content: BerObjectContent::Unknown(BerTag(0x1122), &bytes[4..]),
+            content: BerObjectContent::Unknown(BerTag(0x1122), Cow::Borrowed(&bytes[4..])),
         }
     );
 }
