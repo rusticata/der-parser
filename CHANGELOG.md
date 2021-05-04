@@ -8,6 +8,16 @@
 
 ### Thanks
 
+## 6.0.0
+
+### Changed/Fixed
+
+- BerObject: add method `as_bytes` and deprecate `as_slice`
+
+### Added
+
+### Thanks
+
 ## 5.1.0
 
 ### Changed/Fixed

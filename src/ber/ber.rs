@@ -492,14 +492,30 @@ impl<'a> BerObject<'a> {
         self.content.as_set()
     }
 
-    /// Attempt to get the content from a DER object, as a slice.
+    /// Attempt to get the content from a DER object as a slice.
+    ///
     /// This can fail if the object does not contain a type directly equivalent to a slice (e.g a
     /// sequence).
     /// This function mostly concerns string types, integers, or unknown DER objects.
+    #[deprecated(since = "6.0.0", note = "Please use `as_bytes` instead")]
     pub fn as_slice(&'a self) -> Result<&'a [u8], BerError> {
-        self.content.as_slice()
+        self.content.as_bytes()
     }
 
+    /// Attempt to get the content from a DER object as a slice.
+    ///
+    /// This can fail if the object does not contain a type directly equivalent to a slice (e.g a
+    /// sequence).
+    /// This function mostly concerns string types, integers, or unknown DER objects.
+    pub fn as_bytes(&'a self) -> Result<&'a [u8], BerError> {
+        self.content.as_bytes()
+    }
+
+    /// Attempt to get the content from a DER object as a slice, consuming the object.
+    ///
+    /// This can fail if the object does not contain a type directly equivalent to a slice (e.g a
+    /// sequence) or is an owned object.
+    /// This function mostly concerns string types, integers, or unknown DER objects.
     pub fn into_bytes(self) -> Result<&'a [u8], BerError> {
         self.content.into_bytes()
     }
@@ -680,7 +696,7 @@ impl<'a> BerObjectContent<'a> {
 
     /// Constructs a shared `&BitSlice` reference over the object data, if available as slice.
     pub fn as_bitslice(&self) -> Result<&BitSlice<Msb0, u8>, BerError> {
-        self.as_slice()
+        self.as_bytes()
             .and_then(|s| BitSlice::<Msb0, _>::from_slice(s).ok_or(BerError::BerValueError))
     }
 
@@ -698,7 +714,12 @@ impl<'a> BerObjectContent<'a> {
         }
     }
 
+    #[deprecated(since = "6.0.0", note = "Please use `as_bytes` instead")]
     pub fn as_slice(&'a self) -> Result<&'a [u8], BerError> {
+        self.as_bytes()
+    }
+
+    pub fn as_bytes(&'a self) -> Result<&'a [u8], BerError> {
         match self {
             BerObjectContent::NumericString(s)
             | BerObjectContent::VisibleString(s)
@@ -732,7 +753,8 @@ impl<'a> BerObjectContent<'a> {
             | BerObjectContent::PrintableString(s)
             | BerObjectContent::UTF8String(s)
             | BerObjectContent::IA5String(s) => Ok(s.as_ref()),
-            BerObjectContent::GeneralizedTime(Cow::Borrowed(s)) | BerObjectContent::UTCTime(Cow::Borrowed(s)) => Ok(s.as_bytes()),
+            BerObjectContent::GeneralizedTime(Cow::Borrowed(s))
+            | BerObjectContent::UTCTime(Cow::Borrowed(s)) => Ok(s.as_bytes()),
             BerObjectContent::Integer(s)
             | BerObjectContent::BitString(_, BitStringObject { data: s })
             | BerObjectContent::OctetString(s)

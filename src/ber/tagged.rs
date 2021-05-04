@@ -206,7 +206,7 @@ where
 /// # match res {
 /// #     Ok((rem, val)) => {
 /// #         assert!(rem.is_empty());
-/// #         let s = val.as_slice().unwrap();
+/// #         let s = val.as_bytes().unwrap();
 /// #         assert_eq!(s, b"hello");
 /// #     },
 /// #     _ => assert!(false)
