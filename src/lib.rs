@@ -208,7 +208,7 @@
 //!   (DER)."
 
 #![deny(/*missing_docs,*/
-        unstable_features,
+        /*unstable_features,*/
         unused_import_braces,
         unused_qualifications,
         unreachable_pub)]
@@ -226,8 +226,11 @@
     attr(deny(warnings/*, rust_2018_idioms*/), allow(dead_code, unused_variables))
 ))]
 
+#![feature(const_precise_live_drops)]
+
 #[macro_use]
 mod macros;
+mod oid_append;
 
 #[allow(clippy::module_inception)]
 pub mod ber;
