@@ -56,8 +56,8 @@ macro_rules! oid_append(
 
 #[cfg(test)]
 mod tests {
-    use crate::oid::Oid;
     use crate::oid;
+    use crate::oid::Oid;
     // oid!() macro used crate as `der_parser`
     use crate as der_parser;
 
@@ -67,6 +67,7 @@ mod tests {
     const D: Oid = oid_append!(C, C);
 
     #[test]
+    #[rustfmt::skip]
     fn test_oid_inheritance() {
         assert_eq!(B, oid!(1.2.3.4.5));
         assert_eq!(C, oid!(1.2.3.1.2.3.4.5));
@@ -78,6 +79,7 @@ mod tests {
     const G: Oid = oid_append!(oid!(3.7.32452), oid!(2.29.34536));
 
     #[test]
+    #[rustfmt::skip]
     fn test_oid_correct_concatenated() {
         assert_eq!(E, oid!(1.2.3.3.0));
         assert_eq!(F, oid!(0.0.3.0.3.0));

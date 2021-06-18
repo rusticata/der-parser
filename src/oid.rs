@@ -119,7 +119,7 @@ impl<'a> Oid<'a> {
     pub const fn bytes_from_borrowed(&self) -> &[u8] {
         match &self.asn1 {
             Cow::Borrowed(b) => *b,
-            _ => &[]
+            _ => &[],
         }
     }
 
