@@ -1013,7 +1013,7 @@ mod tests {
     #[test]
     fn test_der_to_biguint() {
         let obj = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
-        let expected = ::num_bigint::BigUint::from(0x10001 as u32);
+        let expected = ::num_bigint::BigUint::from(0x10001_u32);
 
         assert_eq!(obj.as_biguint(), Some(expected));
     }
