@@ -34,6 +34,9 @@ pub(crate) fn ber_skip_object_content<'a>(
             Ok((i, false))
         }
         BerSize::Indefinite => {
+            if hdr.is_primitive() {
+                return Err(Err::Error(BerError::ConstructExpected));
+            }
             // read objects until EndOfContent (00 00)
             // this is recursive
             let mut i = i;
