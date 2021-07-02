@@ -476,3 +476,11 @@ fn test_parse_ber_content2() {
     assert_eq!(tag, BerTag::Integer);
     assert_eq!(content.as_u32(), Ok(0x10001));
 }
+
+#[test]
+fn parse_ber_private() {
+    let bytes = &hex!("c0 03 01 00 01");
+    let (rem, res) = parse_ber(bytes).expect("parsing failed");
+    assert!(rem.is_empty());
+    assert!(matches!(res.content, BerObjectContent::Private(_, _)));
+}

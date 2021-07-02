@@ -1174,7 +1174,13 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
     }
     match hdr.class {
-        BerClass::Universal | BerClass::Private => (),
+        BerClass::Universal => (),
+        BerClass::Private => {
+            let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
+            let content = BerObjectContent::Private(hdr.clone(), content);
+            let obj = BerObject::from_header_and_content(hdr, content);
+            return Ok((rem, obj));
+        }
         _ => {
             let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
             let content = BerObjectContent::Unknown(hdr.tag, content);

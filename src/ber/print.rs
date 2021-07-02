@@ -116,6 +116,9 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
                     None => writeln!(f, "NONE"),
                 }
             }
+            BerObjectContent::Private(ref hdr, bytes) => {
+                writeln!(f, "Private(c:{} s:{} t:{}): {:?}", hdr.class, hdr.structured, hdr.tag.0, debug::HexSlice(bytes))
+            },
             BerObjectContent::Tagged(class, tag, ref obj) => {
                 writeln!(f, "ContextSpecific [{} {}] {{", class, tag)?;
                 write!(f, "{:?}", self.next_indent(obj))?;
