@@ -114,6 +114,15 @@ impl<'a> Oid<'a> {
         }
     }
 
+    /// Get the encoded oid without the header. Const version.
+    /// Only works when memory is not allocated on the heap, otherwise it returns an empty array.
+    pub const fn bytes_from_borrowed(&self) -> &[u8] {
+        match &self.asn1 {
+            Cow::Borrowed(b) => *b,
+            _ => &[],
+        }
+    }
+
     /// Build an OID from an array of object identifier components.
     /// This method allocates memory on the heap.
     // we do not use .copied() for compatibility with 1.34
