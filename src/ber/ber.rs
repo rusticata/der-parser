@@ -3,12 +3,14 @@ use crate::error::BerError;
 use crate::oid::Oid;
 use nom::bitvec::{order::Msb0, slice::BitSlice};
 use rusticata_macros::newtype_enum;
-use std::convert::AsRef;
-use std::convert::From;
-use std::convert::TryFrom;
-use std::fmt;
-use std::ops::Index;
-use std::vec::Vec;
+use core::convert::AsRef;
+use core::convert::From;
+use core::convert::TryFrom;
+use core::fmt;
+use core::ops::Index;
+use alloc::vec::Vec;
+use alloc::boxed::Box;
+use alloc::borrow::ToOwned;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct BerClassFromIntError(pub(crate) ());
@@ -601,7 +603,7 @@ impl<'a> BerObjectContent<'a> {
     pub fn as_u32(&self) -> Result<u32, BerError> {
         match self {
             BerObjectContent::Integer(i) => bytes_to_u64(i).and_then(|x| {
-                if x > u64::from(std::u32::MAX) {
+                if x > u64::from(core::u32::MAX) {
                     Err(BerError::IntegerTooLarge)
                 } else {
                     Ok(x as u32)
@@ -609,7 +611,7 @@ impl<'a> BerObjectContent<'a> {
             }),
             BerObjectContent::BitString(ignored_bits, data) => {
                 bitstring_to_u64(*ignored_bits as usize, data).and_then(|x| {
-                    if x > u64::from(std::u32::MAX) {
+                    if x > u64::from(core::u32::MAX) {
                         Err(BerError::IntegerTooLarge)
                     } else {
                         Ok(x as u32)
@@ -617,7 +619,7 @@ impl<'a> BerObjectContent<'a> {
                 })
             }
             BerObjectContent::Enum(i) => {
-                if *i > u64::from(std::u32::MAX) {
+                if *i > u64::from(core::u32::MAX) {
                     Err(BerError::IntegerTooLarge)
                 } else {
                     Ok(*i as u32)
@@ -921,6 +923,7 @@ impl<'a> AsRef<[u8]> for BitStringObject<'a> {
 mod tests {
     use crate::ber::*;
     use crate::oid::*;
+    use std::string::String;
 
     #[test]
     fn test_der_as_u64() {

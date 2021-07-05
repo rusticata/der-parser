@@ -47,12 +47,14 @@
 //! ```
 //! *Attention*, be aware that the latter version might not handle the case of a relative oid correctly. An
 //! extra check might be necessary.
-use std::borrow::Cow;
-use std::convert::From;
-use std::fmt;
-use std::iter::{ExactSizeIterator, FusedIterator, Iterator};
-use std::ops::Shl;
-use std::str::FromStr;
+use alloc::vec::Vec;
+use alloc::string::{String, ToString};
+use alloc::borrow::Cow;
+use core::convert::From;
+use alloc::fmt;
+use core::iter::{ExactSizeIterator, FusedIterator, Iterator};
+use core::ops::Shl;
+use alloc::str::FromStr;
 
 #[cfg(feature = "bigint")]
 use num_bigint::BigUint;
@@ -212,7 +214,7 @@ impl<'a> Oid<'a> {
             oid: &self,
             pos: 0,
             first: false,
-            n: std::marker::PhantomData,
+            n: core::marker::PhantomData,
         }
     }
 
@@ -248,7 +250,7 @@ impl<'a> Oid<'a> {
             oid: &self,
             pos: 0,
             first: false,
-            n: std::marker::PhantomData,
+            n: core::marker::PhantomData,
         })
     }
 }
@@ -260,7 +262,7 @@ struct SubIdentifierIterator<'a, N: Repr> {
     oid: &'a Oid<'a>,
     pos: usize,
     first: bool,
-    n: std::marker::PhantomData<&'a N>,
+    n: core::marker::PhantomData<&'a N>,
 }
 
 impl<'a, N: Repr> Iterator for SubIdentifierIterator<'a, N> {
@@ -359,6 +361,7 @@ mod tests {
     use crate::oid::Oid;
     use std::borrow::Cow;
     use std::str::FromStr;
+    use std::borrow::ToOwned;
 
     #[test]
     fn test_oid_fmt() {
@@ -444,6 +447,7 @@ mod tests {
             assert_eq!(oid_raw.iter_bigint().len(), 1);
         }
         {
+            use std::vec::Vec;
             let oid_raw = Oid::new(Cow::Borrowed(&[0]));
             let ids: Vec<u64> = oid_raw.iter().unwrap().collect();
             assert_eq!(vec![0], ids);
