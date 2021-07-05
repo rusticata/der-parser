@@ -41,10 +41,11 @@ num-bigint = { version = "0.4", optional = true }
 der-oid-macro = { version = "0.4", path = "./der-oid-macro" }
 
 [features]
-default = []
+default = ["std"]
 bigint = ["num-bigint"]
 serialize = ["cookie-factory"]
 unstable = []
+std = []
 
 [dev-dependencies]
 hex-literal = "0.3"

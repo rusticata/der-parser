@@ -126,12 +126,12 @@ pub fn oid(item: TokenStream) -> TokenStream {
         s
     } else if relative {
         format!(
-            "der_parser::oid::Oid::new_relative(std::borrow::Cow::Borrowed(&{}))",
+            "der_parser::oid::Oid::new_relative(alloc::borrow::Cow::Borrowed(&{}))",
             s
         )
     } else {
         format!(
-            "der_parser::oid::Oid::new(std::borrow::Cow::Borrowed(&{}))",
+            "der_parser::oid::Oid::new(alloc::borrow::Cow::Borrowed(&{}))",
             s
         )
     };

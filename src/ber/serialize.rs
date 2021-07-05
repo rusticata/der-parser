@@ -6,7 +6,7 @@ use cookie_factory::gen_simple;
 use cookie_factory::multi::many_ref;
 use cookie_factory::sequence::tuple;
 use cookie_factory::{GenError, SerializeFn};
-use std::io::Write;
+use core::io::Write;
 
 // we do not use .copied() for compatibility with 1.34
 #[allow(clippy::map_clone)]

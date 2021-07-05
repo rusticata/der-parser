@@ -61,3 +61,8 @@ pub use crate::ber::print::*;
 #[cfg(feature = "serialize")]
 pub use crate::ber::serialize::*;
 pub use crate::ber::tagged::*;
+
+use alloc::vec::Vec;
+use alloc::boxed::Box;
+use alloc::borrow::Cow;
+use core::convert::{Into, TryFrom};
