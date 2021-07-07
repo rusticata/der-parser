@@ -22,7 +22,7 @@ pub type BerResult<'a, O = BerObject<'a>> = IResult<&'a [u8], O, BerError>;
 pub type DerResult<'a> = BerResult<'a, DerObject<'a>>;
 
 /// Error for BER/DER parsers
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum BerError {
     /// BER object does not have the expected type
     BerTypeError,
