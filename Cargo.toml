@@ -43,7 +43,7 @@ der-oid-macro = { version = "0.4", path = "./der-oid-macro" }
 [features]
 default = ["std"]
 bigint = ["num-bigint"]
-serialize = ["cookie-factory"]
+serialize = ["std", "cookie-factory"]
 unstable = []
 std = []
 

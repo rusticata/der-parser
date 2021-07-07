@@ -1,5 +1,6 @@
 #![allow(deprecated)]
 
+extern crate alloc;
 use der_parser::ber::{parse_ber_integer, BerObject};
 use der_parser::der::{parse_der_enum, parse_der_integer};
 use der_parser::error::{BerResult, DerResult};

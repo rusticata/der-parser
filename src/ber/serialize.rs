@@ -1,3 +1,4 @@
+#![cfg(feature = "std")]
 use crate::ber::*;
 use crate::oid::Oid;
 use cookie_factory::bytes::be_u8;
@@ -6,7 +7,7 @@ use cookie_factory::gen_simple;
 use cookie_factory::multi::many_ref;
 use cookie_factory::sequence::tuple;
 use cookie_factory::{GenError, SerializeFn};
-use core::io::Write;
+use std::io::Write;
 
 // we do not use .copied() for compatibility with 1.34
 #[allow(clippy::map_clone)]
