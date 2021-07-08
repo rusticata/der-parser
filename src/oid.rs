@@ -18,7 +18,6 @@
 //! thing done with oids in your code. The `oid!` macro can be used in expression positions for
 //! this purpose. For example
 //! ```
-//! extern crate alloc;
 //! use der_parser::{oid, oid::Oid};
 //!
 //! # let some_oid: Oid<'static> = oid!(1.2.456);
@@ -32,7 +31,6 @@
 //! the `oid` macro can not directly be used in patterns, also not through constants.
 //! You can do this, though:
 //! ```
-//! extern crate alloc;
 //! # use der_parser::{oid, oid::Oid};
 //! # let some_oid: Oid<'static> = oid!(1.2.456);
 //! const SOME_OID: Oid<'static> = oid!(1.2.456);

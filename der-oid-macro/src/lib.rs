@@ -123,17 +123,18 @@ pub fn oid(item: TokenStream) -> TokenStream {
     s.push(']');
 
     let code = if raw {
-        s
+        format!("{{extern crate alloc; {}}}", s)
     } else if relative {
         format!(
-            "der_parser::oid::Oid::new_relative(alloc::borrow::Cow::Borrowed(&{}))",
+            "{{extern crate alloc; der_parser::oid::Oid::new_relative(alloc::borrow::Cow::Borrowed(&{}))}}",
             s
         )
     } else {
         format!(
-            "der_parser::oid::Oid::new(alloc::borrow::Cow::Borrowed(&{}))",
+            "{{extern crate alloc; der_parser::oid::Oid::new(alloc::borrow::Cow::Borrowed(&{}))}}",
             s
         )
     };
     code.parse().unwrap()
 }
+
