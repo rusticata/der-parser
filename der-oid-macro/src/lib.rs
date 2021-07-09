@@ -1,47 +1,5 @@
 use proc_macro::TokenStream;
 
-fn parse_arg(arg: &str) -> (bool, bool, Vec<&str>) {
-    use nom::{
-        bytes::complete::{tag, take_while},
-        call,
-        character::complete::{char, digit1},
-        combinator::{map, opt, recognize, verify},
-        error::{ErrorKind, ParseError},
-        exact,
-        multi::separated_list1,
-        sequence::{delimited, terminated, tuple},
-        IResult,
-    };
-
-    fn uint<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-        verify(recognize(separated_list1(char('_'), digit1)), |s: &str| {
-            s.len() == 1 || !s.starts_with('0')
-        })(i)
-    }
-
-    fn ws<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-        take_while(|c| c == ' ')(i)
-    }
-
-    fn ws_dot_ws<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, char, E> {
-        delimited(ws, char('.'), ws)(i)
-    }
-
-    fn root<'a, E: ParseError<&'a str>>(
-        i: &'a str,
-    ) -> IResult<&'a str, (bool, bool, Vec<&'a str>), E> {
-        tuple((
-            map(opt(terminated(tag("raw "), ws)), |x| x.is_some()),
-            map(opt(terminated(tag("rel "), ws)), |x| x.is_some()),
-            separated_list1(ws_dot_ws, uint),
-        ))(i)
-    }
-
-    exact!(arg.trim(), call!(root::<(&str, ErrorKind)>))
-        .expect("could not parse oid")
-        .1
-}
-
 fn encode_components(components: &[num_bigint::BigUint], relative: bool) -> Vec<u8> {
     use num_traits::cast::ToPrimitive;
 
@@ -105,13 +63,21 @@ fn encode_components(components: &[num_bigint::BigUint], relative: bool) -> Vec<
 }
 
 #[proc_macro]
-pub fn encode_oid(item: TokenStream) -> TokenStream {
-    let arg = item.to_string();
-    let (_raw, relative, int_strings) = parse_arg(&arg);
-    let ints: Vec<num_bigint::BigUint> = int_strings
-        .into_iter()
+pub fn encode_oid(input: TokenStream) -> TokenStream {
+    let s = input.to_string();
+
+    let (rem, relative) = if s.starts_with("rel ") {
+        (&s[4..], true)
+    } else {
+        (s.as_ref(), false)
+    };
+
+    let ints: Vec<num_bigint::BigUint> = rem
+        .split('.')
+        .map(|segment| segment.trim())
         .map(|s| s.parse().unwrap())
         .collect();
+
     let enc = encode_components(&ints, relative);
 
     let mut s = String::with_capacity(2 + 6 * enc.len());

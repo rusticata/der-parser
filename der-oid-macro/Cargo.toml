@@ -12,7 +12,6 @@ authors = ["Pierre Chifflier <chifflier@wzdftpd.net>", "Jannik Schürg <schuerg@
 proc-macro = true
 
 [dependencies]
-nom = "6.0"
 num-bigint = "0.4"
 num-traits = "0.2"
 syn = "1.0"
