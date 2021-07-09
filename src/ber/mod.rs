@@ -62,7 +62,7 @@ pub use crate::ber::print::*;
 pub use crate::ber::serialize::*;
 pub use crate::ber::tagged::*;
 
-use alloc::vec::Vec;
-use alloc::boxed::Box;
 use alloc::borrow::Cow;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 use core::convert::{Into, TryFrom};

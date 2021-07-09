@@ -1,16 +1,16 @@
 use crate::ber::{bitstring_to_u64, bytes_to_u64};
 use crate::error::BerError;
 use crate::oid::Oid;
-use nom::bitvec::{order::Msb0, slice::BitSlice};
-use rusticata_macros::newtype_enum;
+use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 use core::convert::AsRef;
 use core::convert::From;
 use core::convert::TryFrom;
 use core::fmt;
 use core::ops::Index;
-use alloc::vec::Vec;
-use alloc::boxed::Box;
-use alloc::borrow::ToOwned;
+use nom::bitvec::{order::Msb0, slice::BitSlice};
+use rusticata_macros::newtype_enum;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct BerClassFromIntError(pub(crate) ());

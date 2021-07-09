@@ -225,10 +225,9 @@
     no_crate_inject,
     attr(deny(warnings/*, rust_2018_idioms*/), allow(dead_code, unused_variables))
 ))]
-
 #![no_std]
 
-#[cfg(any(test, feature="std"))]
+#[cfg(any(test, feature = "std"))]
 #[macro_use]
 extern crate std;
 

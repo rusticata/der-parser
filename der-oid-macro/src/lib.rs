@@ -137,4 +137,3 @@ pub fn oid(item: TokenStream) -> TokenStream {
     };
     code.parse().unwrap()
 }
-

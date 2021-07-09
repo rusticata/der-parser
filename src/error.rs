@@ -2,9 +2,9 @@
 
 use crate::ber::BerObject;
 use crate::der::DerObject;
+use alloc::fmt;
 use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::IResult;
-use alloc::fmt;
 
 /// Holds the result of parsing functions
 ///
@@ -97,11 +97,11 @@ impl fmt::Display for BerError {
 #[cfg(feature = "std")]
 impl std::error::Error for BerError {}
 
-#[cfg(all(test, feature="std"))]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use super::*;
-    use std::error::Error;
     use std::boxed::Box;
+    use std::error::Error;
 
     #[test]
     fn test_unwrap_bererror() {

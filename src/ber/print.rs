@@ -1,11 +1,10 @@
 use crate::ber::BitStringObject;
 use crate::ber::{BerObject, BerObjectContent, BerTag};
+use alloc::string::String;
+use alloc::vec::Vec;
 use core::fmt;
 use core::iter::FromIterator;
 use core::str;
-use alloc::string::String;
-use alloc::vec::Vec;
-
 
 use rusticata_macros::debug;
 
