@@ -1,6 +1,5 @@
-extern crate proc_macro;
-
 use proc_macro::TokenStream;
+
 fn parse_arg(arg: &str) -> (bool, bool, Vec<&str>) {
     use nom::{
         bytes::complete::{tag, take_while},
@@ -106,9 +105,9 @@ fn encode_components(components: &[num_bigint::BigUint], relative: bool) -> Vec<
 }
 
 #[proc_macro]
-pub fn oid(item: TokenStream) -> TokenStream {
+pub fn encode_oid(item: TokenStream) -> TokenStream {
     let arg = item.to_string();
-    let (raw, relative, int_strings) = parse_arg(&arg);
+    let (_raw, relative, int_strings) = parse_arg(&arg);
     let ints: Vec<num_bigint::BigUint> = int_strings
         .into_iter()
         .map(|s| s.parse().unwrap())
@@ -121,19 +120,5 @@ pub fn oid(item: TokenStream) -> TokenStream {
         s.insert_str(s.len(), &format!("0x{:02x}, ", byte));
     }
     s.push(']');
-
-    let code = if raw {
-        format!("{{extern crate alloc; {}}}", s)
-    } else if relative {
-        format!(
-            "{{extern crate alloc; der_parser::oid::Oid::new_relative(alloc::borrow::Cow::Borrowed(&{}))}}",
-            s
-        )
-    } else {
-        format!(
-            "{{extern crate alloc; der_parser::oid::Oid::new(alloc::borrow::Cow::Borrowed(&{}))}}",
-            s
-        )
-    };
-    code.parse().unwrap()
+    s.parse().unwrap()
 }

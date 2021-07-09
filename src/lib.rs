@@ -256,5 +256,30 @@ pub use nom::IResult;
 #[doc(hidden)]
 pub use rusticata_macros::{custom_check, flat_take};
 
+#[doc(hidden)]
+pub mod exports {
+    pub use alloc::borrow;
+    pub use der_oid_macro;
+}
+
 /// Procedural macro to get encoded oids, see the [oid module](oid/index.html).
-pub use der_oid_macro::oid;
+#[macro_export]
+macro_rules! oid {
+    (raw $($args:tt)*) => {{
+        $crate::exports::der_oid_macro::encode_oid!($($args)*)
+    }};
+    (rel $($args:tt)*) => {{
+        $crate::oid::Oid::new_relative(
+            $crate::exports::borrow::Cow::Borrowed(&
+                $crate::exports::der_oid_macro::encode_oid!(rel $($args)*)
+            )
+        )
+    }};
+    ($($args:tt)*) => {{
+        $crate::oid::Oid::new(
+            $crate::exports::borrow::Cow::Borrowed(&
+                $crate::exports::der_oid_macro::encode_oid!($($args)*)
+            )
+        )
+    }};
+}
