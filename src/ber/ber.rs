@@ -840,14 +840,25 @@ use num_bigint::{BigInt, BigUint, Sign};
 impl<'a> BerObject<'a> {
     pub fn as_bigint(&self) -> Option<BigInt> {
         match self.content {
-            BerObjectContent::Integer(s) => Some(BigInt::from_bytes_be(Sign::Plus, s)),
+            BerObjectContent::Integer(s) => {
+                if is_highest_bit_set(s) {
+                    Some(BigInt::from_signed_bytes_be(s))
+                } else {
+                    Some(BigInt::from_bytes_be(Sign::Plus, s))
+                }
+            }
             _ => None,
         }
     }
 
     pub fn as_biguint(&self) -> Option<BigUint> {
         match self.content {
-            BerObjectContent::Integer(s) => Some(BigUint::from_bytes_be(s)),
+            BerObjectContent::Integer(s) => {
+                if is_highest_bit_set(s) {
+                    return None;
+                }
+                Some(BigUint::from_bytes_be(s))
+            }
             _ => None,
         }
     }
