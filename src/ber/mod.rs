@@ -47,6 +47,7 @@
 //! ```
 
 mod ber;
+mod integer;
 mod multi;
 mod parser;
 mod print;

@@ -44,6 +44,8 @@ pub enum BerError {
 
     /// BER integer is too large to fit in a native type. Use `as_bigint()`
     IntegerTooLarge,
+    /// BER integer is negative, while an unsigned integer was requested
+    IntegerNegative,
 
     /// BER recursive parsing reached maximum depth (See
     /// [MAX_RECURSION](../ber/constant.MAX_RECURSION.html))
