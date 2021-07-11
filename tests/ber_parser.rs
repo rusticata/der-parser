@@ -220,22 +220,19 @@ fn tc_ber_bigint(i: &[u8], out: Result<BigInt, BerError>) {
 }
 
 #[cfg(feature = "bigint")]
-#[test_case(&hex!("02 01 01"), Ok(Some(BigUint::from(1_u8))) ; "biguint-1")]
-#[test_case(&hex!("02 02 00 ff"), Ok(Some(BigUint::from(255_u8))) ; "biguint-255")]
-#[test_case(&hex!("02 01 ff"), Ok(None) ; "biguint-neg1")]
-#[test_case(&hex!("02 01 80"), Ok(None) ; "biguint-neg128")]
-#[test_case(&hex!("02 02 ff 7f"), Ok(None) ; "biguint-neg129")]
-#[test_case(&hex!("02 09 00 ff ff ff ff ff ff ff ff"), Ok(Some(BigUint::from(0xffff_ffff_ffff_ffff_u64))) ; "biguint-long2-ok")]
-#[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Ok(Some(BigUint::from_bytes_be(&hex!("01 23 45 67 01 23 45 67 ab")))) ; "biguint-longer1")]
+#[test_case(&hex!("02 01 01"), Ok(BigUint::from(1_u8)) ; "biguint-1")]
+#[test_case(&hex!("02 02 00 ff"), Ok(BigUint::from(255_u8)) ; "biguint-255")]
+#[test_case(&hex!("02 01 ff"), Err(BerError::IntegerNegative) ; "biguint-neg1")]
+#[test_case(&hex!("02 01 80"), Err(BerError::IntegerNegative) ; "biguint-neg128")]
+#[test_case(&hex!("02 02 ff 7f"), Err(BerError::IntegerNegative) ; "biguint-neg129")]
+#[test_case(&hex!("02 09 00 ff ff ff ff ff ff ff ff"), Ok(BigUint::from(0xffff_ffff_ffff_ffff_u64)) ; "biguint-long2-ok")]
+#[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Ok(BigUint::from_bytes_be(&hex!("01 23 45 67 01 23 45 67 ab"))) ; "biguint-longer1")]
 #[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
-fn tc_ber_biguint(i: &[u8], out: Result<Option<BigUint>, BerError>) {
-    let res = parse_ber_integer(i);
+fn tc_ber_biguint(i: &[u8], out: Result<BigUint, BerError>) {
+    let res = parse_ber_integer(i).and_then(|(rem, ber)| Ok((rem, ber.as_biguint()?)));
     match out {
         Ok(expected) => {
-            let (rem, ber) = res.expect("parsing failed");
-            assert!(rem.is_empty());
-            let uint = ber.as_biguint();
-            pretty_assertions::assert_eq!(uint, expected);
+            pretty_assertions::assert_eq!(res, Ok((&b""[..], expected)));
         }
         Err(e) => {
             pretty_assertions::assert_eq!(res, Err(Err::Error(e)));

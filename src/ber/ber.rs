@@ -838,28 +838,28 @@ use num_bigint::{BigInt, BigUint, Sign};
 #[cfg(feature = "bigint")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]
 impl<'a> BerObject<'a> {
-    pub fn as_bigint(&self) -> Option<BigInt> {
+    pub fn as_bigint(&self) -> Result<BigInt, BerError> {
         match self.content {
             BerObjectContent::Integer(s) => {
                 if is_highest_bit_set(s) {
-                    Some(BigInt::from_signed_bytes_be(s))
+                    Ok(BigInt::from_signed_bytes_be(s))
                 } else {
-                    Some(BigInt::from_bytes_be(Sign::Plus, s))
+                    Ok(BigInt::from_bytes_be(Sign::Plus, s))
                 }
             }
-            _ => None,
+            _ => Err(BerError::InvalidTag),
         }
     }
 
-    pub fn as_biguint(&self) -> Option<BigUint> {
+    pub fn as_biguint(&self) -> Result<BigUint, BerError> {
         match self.content {
             BerObjectContent::Integer(s) => {
                 if is_highest_bit_set(s) {
-                    return None;
+                    return Err(BerError::IntegerNegative);
                 }
-                Some(BigUint::from_bytes_be(s))
+                Ok(BigUint::from_bytes_be(s))
             }
-            _ => None,
+            _ => Err(BerError::InvalidTag),
         }
     }
 }
@@ -1081,7 +1081,7 @@ mod tests {
         let obj = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
         let expected = ::num_bigint::BigInt::from(0x10001);
 
-        assert_eq!(obj.as_bigint(), Some(expected));
+        assert_eq!(obj.as_bigint(), Ok(expected));
     }
 
     #[cfg(feature = "bigint")]
@@ -1090,6 +1090,6 @@ mod tests {
         let obj = BerObject::from_obj(BerObjectContent::Integer(b"\x01\x00\x01"));
         let expected = ::num_bigint::BigUint::from(0x10001_u32);
 
-        assert_eq!(obj.as_biguint(), Some(expected));
+        assert_eq!(obj.as_biguint(), Ok(expected));
     }
 }
