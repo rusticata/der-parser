@@ -6,6 +6,9 @@ use nom::Err;
 // use pretty_assertions::assert_eq;
 use test_case::test_case;
 
+#[cfg(feature = "bigint")]
+use num_bigint::{BigInt, BigUint, Sign};
+
 #[test_case(&hex!("01 01 00"), Some(false) ; "val true")]
 #[test_case(&hex!("01 01 ff"), Some(true) ; "val false")]
 #[test_case(&hex!("01 01 7f"), Some(true) ; "true not ff")]
@@ -186,6 +189,53 @@ fn tc_ber_i64(i: &[u8], out: Result<i64, BerError>) {
     match out {
         Ok(expected) => {
             pretty_assertions::assert_eq!(res, Ok((&b""[..], expected)));
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(Err::Error(e)));
+        }
+    }
+}
+
+#[cfg(feature = "bigint")]
+#[test_case(&hex!("02 01 01"), Ok(BigInt::from(1)) ; "bigint-1")]
+#[test_case(&hex!("02 02 00 ff"), Ok(BigInt::from(255)) ; "bigint-255")]
+#[test_case(&hex!("02 01 ff"), Ok(BigInt::from(-1)) ; "bigint-neg1")]
+#[test_case(&hex!("02 01 80"), Ok(BigInt::from(-128)) ; "bigint-neg128")]
+#[test_case(&hex!("02 02 ff 7f"), Ok(BigInt::from(-129)) ; "bigint-neg129")]
+#[test_case(&hex!("02 09 00 ff ff ff ff ff ff ff ff"), Ok(BigInt::from(0xffff_ffff_ffff_ffff_u64)) ; "bigint-long2-ok")]
+#[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Ok(BigInt::from_bytes_be(Sign::Plus, &hex!("01 23 45 67 01 23 45 67 ab"))) ; "bigint-longer1")]
+fn tc_ber_bigint(i: &[u8], out: Result<BigInt, BerError>) {
+    let res = parse_ber_integer(i);
+    match out {
+        Ok(expected) => {
+            let (rem, ber) = res.expect("parsing failed");
+            assert!(rem.is_empty());
+            let int = ber.as_bigint().expect("failed to convert to bigint");
+            pretty_assertions::assert_eq!(int, expected);
+        }
+        Err(e) => {
+            pretty_assertions::assert_eq!(res, Err(Err::Error(e)));
+        }
+    }
+}
+
+#[cfg(feature = "bigint")]
+#[test_case(&hex!("02 01 01"), Ok(Some(BigUint::from(1_u8))) ; "biguint-1")]
+#[test_case(&hex!("02 02 00 ff"), Ok(Some(BigUint::from(255_u8))) ; "biguint-255")]
+#[test_case(&hex!("02 01 ff"), Ok(None) ; "biguint-neg1")]
+#[test_case(&hex!("02 01 80"), Ok(None) ; "biguint-neg128")]
+#[test_case(&hex!("02 02 ff 7f"), Ok(None) ; "biguint-neg129")]
+#[test_case(&hex!("02 09 00 ff ff ff ff ff ff ff ff"), Ok(Some(BigUint::from(0xffff_ffff_ffff_ffff_u64))) ; "biguint-long2-ok")]
+#[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Ok(Some(BigUint::from_bytes_be(&hex!("01 23 45 67 01 23 45 67 ab")))) ; "biguint-longer1")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+fn tc_ber_biguint(i: &[u8], out: Result<Option<BigUint>, BerError>) {
+    let res = parse_ber_integer(i);
+    match out {
+        Ok(expected) => {
+            let (rem, ber) = res.expect("parsing failed");
+            assert!(rem.is_empty());
+            let uint = ber.as_biguint();
+            pretty_assertions::assert_eq!(uint, expected);
         }
         Err(e) => {
             pretty_assertions::assert_eq!(res, Err(Err::Error(e)));
