@@ -7,8 +7,6 @@ use nom::{Err, Needed};
 use rusticata_macros::custom_check;
 use std::convert::{Into, TryFrom};
 
-use crate::ber::MAX_RECURSION;
-
 /// Parse DER object recursively
 ///
 /// Return a tuple containing the remaining (unparsed) bytes and the DER Object, or an error.
@@ -383,22 +381,36 @@ where
     parse_ber_implicit(i, tag, f)
 }
 
+/// Parse DER object and try to decode it as a 32-bits signed integer
+///
+/// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
+/// integer type.
+#[inline]
+pub fn parse_der_i32(i: &[u8]) -> BerResult<i32> {
+    let (rem, der) = parse_der_integer(i)?;
+    let int = der.as_i32().map_err(nom::Err::Error)?;
+    Ok((rem, int))
+}
+
+/// Parse DER object and try to decode it as a 64-bits signed integer
+///
+/// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
+/// integer type.
+#[inline]
+pub fn parse_der_i64(i: &[u8]) -> BerResult<i64> {
+    let (rem, der) = parse_der_integer(i)?;
+    let int = der.as_i64().map_err(nom::Err::Error)?;
+    Ok((rem, int))
+}
+
 /// Parse DER object and try to decode it as a 32-bits unsigned integer
 ///
 /// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
 /// integer type.
 pub fn parse_der_u32(i: &[u8]) -> BerResult<u32> {
-    parse_der_container(|content, hdr| {
-        if hdr.tag != DerTag::Integer {
-            return Err(Err::Error(BerError::InvalidTag));
-        }
-        let l = bytes_to_u64(content)?;
-        if l > 0xffff_ffff {
-            Err(Err::Error(BerError::IntegerTooLarge))
-        } else {
-            Ok((&b""[..], l as u32))
-        }
-    })(i)
+    let (rem, der) = parse_der_integer(i)?;
+    let int = der.as_u32().map_err(nom::Err::Error)?;
+    Ok((rem, int))
 }
 
 /// Parse DER object and try to decode it as a 64-bits unsigned integer
@@ -406,13 +418,9 @@ pub fn parse_der_u32(i: &[u8]) -> BerResult<u32> {
 /// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
 /// integer type.
 pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
-    parse_der_container(|content, hdr| {
-        if hdr.tag != DerTag::Integer {
-            return Err(Err::Error(BerError::InvalidTag));
-        }
-        let l = bytes_to_u64(content)?;
-        Ok((&b""[..], l))
-    })(i)
+    let (rem, der) = parse_der_integer(i)?;
+    let int = der.as_u64().map_err(nom::Err::Error)?;
+    Ok((rem, int))
 }
 
 /// Parse DER object and get content as slice
@@ -518,6 +526,17 @@ pub fn der_read_element_content_as(
             der_constraint_fail_if!(i, constructed);
             // exception: read and verify padding bits
             return der_read_content_bitstring(i, l);
+        }
+        DerTag::Integer => {
+            // verify leading zeros
+            match i[..l] {
+                [] => return Err(nom::Err::Error(BerError::DerConstraintFailed)),
+                [0, 0, ..] => return Err(nom::Err::Error(BerError::DerConstraintFailed)),
+                [0, byte, ..] if byte < 0x80 => {
+                    return Err(nom::Err::Error(BerError::DerConstraintFailed));
+                }
+                _ => (),
+            }
         }
         DerTag::NumericString
         | DerTag::VisibleString

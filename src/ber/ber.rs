@@ -1,4 +1,5 @@
-use crate::ber::{bitstring_to_u64, bytes_to_u64};
+use crate::ber::bitstring_to_u64;
+use crate::ber::integer::*;
 use crate::error::BerError;
 use crate::oid::Oid;
 use nom::bitvec::{order::Msb0, slice::BitSlice};
@@ -413,6 +414,21 @@ impl<'a> BerObject<'a> {
         self.content.as_u64()
     }
 
+    /// Attempt to read a signed integer value from DER object.
+    /// This can fail if the object is not an integer, or if it is too large.
+    ///
+    /// ```rust
+    /// # use der_parser::ber::BerObject;
+    /// let der_int  = BerObject::from_int_slice(b"\x80");
+    /// assert_eq!(
+    ///     der_int.as_i64(),
+    ///     Ok(-128)
+    /// );
+    /// ```
+    pub fn as_i64(&self) -> Result<i64, BerError> {
+        self.content.as_i64()
+    }
+
     /// Attempt to read integer value from DER object.
     /// This can fail if the object is not an integer, or if it is too large.
     ///
@@ -427,6 +443,21 @@ impl<'a> BerObject<'a> {
     /// ```
     pub fn as_u32(&self) -> Result<u32, BerError> {
         self.content.as_u32()
+    }
+
+    /// Attempt to read a signed integer value from DER object.
+    /// This can fail if the object is not an integer, or if it is too large.
+    ///
+    /// ```rust
+    /// # use der_parser::ber::BerObject;
+    /// let der_int  = BerObject::from_int_slice(b"\x80");
+    /// assert_eq!(
+    ///     der_int.as_i32(),
+    ///     Ok(-128)
+    /// );
+    /// ```
+    pub fn as_i32(&self) -> Result<i32, BerError> {
+        self.content.as_i32()
     }
 
     /// Attempt to read integer value from DER object.
@@ -585,9 +616,38 @@ impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
 }
 
 impl<'a> BerObjectContent<'a> {
+    pub fn as_i64(&self) -> Result<i64, BerError> {
+        if let BerObjectContent::Integer(bytes) = self {
+            let result = if is_highest_bit_set(bytes) {
+                <i64>::from_be_bytes(decode_array_int8(bytes)?)
+            } else {
+                <u64>::from_be_bytes(decode_array_uint8(bytes)?) as i64
+            };
+            Ok(result)
+        } else {
+            Err(BerError::InvalidTag)
+        }
+    }
+
+    pub fn as_i32(&self) -> Result<i32, BerError> {
+        if let BerObjectContent::Integer(bytes) = self {
+            let result = if is_highest_bit_set(bytes) {
+                <i32>::from_be_bytes(decode_array_int4(bytes)?)
+            } else {
+                <u32>::from_be_bytes(decode_array_uint4(bytes)?) as i32
+            };
+            Ok(result)
+        } else {
+            Err(BerError::InvalidTag)
+        }
+    }
+
     pub fn as_u64(&self) -> Result<u64, BerError> {
         match self {
-            BerObjectContent::Integer(i) => bytes_to_u64(i),
+            BerObjectContent::Integer(i) => {
+                let result = <u64>::from_be_bytes(decode_array_uint8(i)?);
+                Ok(result)
+            }
             BerObjectContent::BitString(ignored_bits, data) => {
                 bitstring_to_u64(*ignored_bits as usize, data)
             }
@@ -598,13 +658,10 @@ impl<'a> BerObjectContent<'a> {
 
     pub fn as_u32(&self) -> Result<u32, BerError> {
         match self {
-            BerObjectContent::Integer(i) => bytes_to_u64(i).and_then(|x| {
-                if x > u64::from(std::u32::MAX) {
-                    Err(BerError::IntegerTooLarge)
-                } else {
-                    Ok(x as u32)
-                }
-            }),
+            BerObjectContent::Integer(i) => {
+                let result = <u32>::from_be_bytes(decode_array_uint4(i)?);
+                Ok(result)
+            }
             BerObjectContent::BitString(ignored_bits, data) => {
                 bitstring_to_u64(*ignored_bits as usize, data).and_then(|x| {
                     if x > u64::from(std::u32::MAX) {

@@ -1101,23 +1101,37 @@ where
     }
 }
 
+/// Parse BER object and try to decode it as a 32-bits signed integer
+///
+/// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
+/// integer type.
+#[inline]
+pub fn parse_ber_i32(i: &[u8]) -> BerResult<i32> {
+    let (rem, ber) = parse_ber_integer(i)?;
+    let int = ber.as_i32().map_err(nom::Err::Error)?;
+    Ok((rem, int))
+}
+
+/// Parse BER object and try to decode it as a 64-bits signed integer
+///
+/// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
+/// integer type.
+#[inline]
+pub fn parse_ber_i64(i: &[u8]) -> BerResult<i64> {
+    let (rem, ber) = parse_ber_integer(i)?;
+    let int = ber.as_i64().map_err(nom::Err::Error)?;
+    Ok((rem, int))
+}
+
 /// Parse BER object and try to decode it as a 32-bits unsigned integer
 ///
 /// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
 /// integer type.
 #[inline]
 pub fn parse_ber_u32(i: &[u8]) -> BerResult<u32> {
-    parse_ber_container(|content, hdr| {
-        if hdr.tag != BerTag::Integer {
-            return Err(Err::Error(BerError::InvalidTag));
-        }
-        let l = bytes_to_u64(content)?;
-        if l > 0xffff_ffff {
-            Err(Err::Error(BerError::IntegerTooLarge))
-        } else {
-            Ok((&b""[..], l as u32))
-        }
-    })(i)
+    let (rem, ber) = parse_ber_integer(i)?;
+    let int = ber.as_u32().map_err(nom::Err::Error)?;
+    Ok((rem, int))
 }
 
 /// Parse BER object and try to decode it as a 64-bits unsigned integer
@@ -1126,13 +1140,9 @@ pub fn parse_ber_u32(i: &[u8]) -> BerResult<u32> {
 /// integer type.
 #[inline]
 pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
-    parse_ber_container(|content, hdr| {
-        if hdr.tag != BerTag::Integer {
-            return Err(Err::Error(BerError::InvalidTag));
-        }
-        let l = bytes_to_u64(content)?;
-        Ok((&b""[..], l))
-    })(i)
+    let (rem, ber) = parse_ber_integer(i)?;
+    let int = ber.as_u64().map_err(nom::Err::Error)?;
+    Ok((rem, int))
 }
 
 /// Parse BER object and get content as slice
