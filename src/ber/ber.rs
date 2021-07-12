@@ -833,20 +833,14 @@ impl<'a> BerObjectContent<'a> {
 
 #[cfg(feature = "bigint")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]
-use num_bigint::{BigInt, BigUint, Sign};
+use num_bigint::{BigInt, BigUint};
 
 #[cfg(feature = "bigint")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]
 impl<'a> BerObject<'a> {
     pub fn as_bigint(&self) -> Result<BigInt, BerError> {
         match self.content {
-            BerObjectContent::Integer(s) => {
-                if is_highest_bit_set(s) {
-                    Ok(BigInt::from_signed_bytes_be(s))
-                } else {
-                    Ok(BigInt::from_bytes_be(Sign::Plus, s))
-                }
-            }
+            BerObjectContent::Integer(s) => Ok(BigInt::from_signed_bytes_be(s)),
             _ => Err(BerError::InvalidTag),
         }
     }
