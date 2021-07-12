@@ -45,7 +45,7 @@
 //!
 //! ## Examples
 //!
-//! Parse two BER integers:
+//! Parse two BER integers (see [BER/DER Integers](#berder-integers)):
 //!
 //! ```rust
 //! use der_parser::ber::parse_ber_integer;
@@ -149,10 +149,19 @@
 //! DER integers can be of any size, so it is not possible to store them as simple integers (they
 //! are stored as raw bytes).
 //!
-//! To get a simple value, use [`BerObject::as_u32`](ber/struct.BerObject.html#method.as_u32)
-//! (knowning that this method will return an error if the integer is too large),
-//! [`BerObject::as_u64`](ber/struct.BerObject.html#method.as_u64), or use the `bigint` feature of
-//! this crate and use [`BerObject::as_bigint`](ber/struct.BerObject.html#method.as_bigint).
+//! Note that, by default, BER/DER integers are signed. Functions are provided to request reading
+//! unsigned values, but they will fail if the integer value is negative.
+//!
+//! To get the integer value for all possible integer sign and size, use
+//! [`BerObject::as_bigint`](ber/struct.BerObject.html#method.as_bigint)) (requires the `bigint` feature).
+//!
+//! To get a simple value expected to be in a known range, use methods like
+//! [`BerObject::as_i32`](ber/struct.BerObject.html#method.as_i32)) and
+//! [`BerObject::as_i64`](ber/struct.BerObject.html#method.as_i64) (or the unsigned versions
+//! [`BerObject::as_u32`](ber/struct.BerObject.html#method.as_u32) and
+//! [`BerObject::as_u64`](ber/struct.BerObject.html#method.as_u64)
+//!),
+//! which will return the value, or an error if the integer is too large (or is negative).
 //!
 //! ```rust
 //! use der_parser::ber::*;
@@ -161,6 +170,9 @@
 //!
 //! let (_, object) = parse_ber_integer(data).expect("parsing failed");
 //! assert_eq!(object.as_u64(), Ok(65537));
+//!
+//! #[cfg(feature = "bigint")]
+//! assert_eq!(object.as_bigint(), Ok(65537.into()))
 //! ```
 //!
 //! Access to the raw value is possible using the `as_slice` method.
