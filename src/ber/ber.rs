@@ -394,15 +394,6 @@ impl<'a> BerObject<'a> {
         BerObject::from_obj(BerObjectContent::Set(l))
     }
 
-    /// Build a BER header from this object content
-    #[deprecated(
-        since = "0.5.0",
-        note = "please use `obj.header` or `obj.header.clone()` instead"
-    )]
-    pub fn to_header(&self) -> BerObjectHeader {
-        self.header.clone()
-    }
-
     /// Attempt to read a signed integer value from DER object.
     ///
     /// This can fail if the object is not an integer, or if it is too large.

@@ -993,22 +993,6 @@ where
     }))(i)
 }
 
-/// Parse an optional tagged object, applying function to get content
-///
-/// This function is deprecated, use
-/// [parse_ber_explicit_optional](fn.parse_ber_explicit_optional.html) instead.
-#[deprecated(
-    since = "5.0.0",
-    note = "Please use `parse_ber_explicit_optional` instead"
-)]
-#[inline]
-pub fn parse_ber_explicit<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
-where
-    F: Fn(&[u8]) -> BerResult,
-{
-    parse_ber_explicit_optional(i, tag, f)
-}
-
 /// Parse an implicit tagged object, applying function to read content
 ///
 /// Note: unlike explicit tagged functions, the callback must be a *content* parsing function,

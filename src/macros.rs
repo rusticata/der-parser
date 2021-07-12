@@ -67,32 +67,6 @@ macro_rules! parse_ber_defined_m(
     );
 );
 
-/// Parse a defined sequence of DER elements (deprecated)
-///
-/// Given a list of expected parsers, apply them to build a DER sequence.
-///
-/// Deprecated, use [`parse_der_sequence_defined`](macro.parse_der_sequence_defined.html) instead.
-#[macro_export]
-#[deprecated(since = "3.0.0", note = "Use parse_der_sequence_defined")]
-macro_rules! parse_der_sequence_defined_m(
-    ($i:expr, $($args:tt)*) => ({
-        parse_der_sequence_defined!($i, $($args)*)
-    });
-);
-
-/// Parse a defined set of DER elements (deprecated)
-///
-/// Given a list of expected parsers, apply them to build a DER set.
-///
-/// Deprecated, use [`parse_der_set_defined`](macro.parse_der_set_defined.html) instead.
-#[macro_export]
-#[deprecated(since = "3.0.0", note = "Use parse_der_set_defined")]
-macro_rules! parse_der_set_defined_m(
-    ($i:expr, $($args:tt)*) => ({
-        parse_der_set_defined!($i, $($args)*)
-    });
-);
-
 /// Internal parser, do not use directly
 #[doc(hidden)]
 #[macro_export]

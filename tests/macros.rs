@@ -20,7 +20,7 @@ struct MyStruct<'a> {
 
 #[allow(dead_code)]
 fn parse_seq_m(i: &[u8]) -> DerResult {
-    parse_der_sequence_defined_m! {
+    parse_der_sequence_defined! {
         i,
         parse_der_integer >>
         parse_der_integer
@@ -29,7 +29,7 @@ fn parse_seq_m(i: &[u8]) -> DerResult {
 
 #[allow(dead_code)]
 fn parse_set_m(i: &[u8]) -> DerResult {
-    parse_der_set_defined_m! {
+    parse_der_set_defined! {
         i,
         parse_der_integer >>
         parse_der_integer

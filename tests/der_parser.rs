@@ -299,7 +299,7 @@ fn test_der_contextspecific() {
 }
 
 #[test]
-fn test_der_explicit() {
+fn test_der_explicit_optional() {
     let empty = &b""[..];
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let header = BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3)
@@ -316,12 +316,12 @@ fn test_der_explicit() {
         )))),
     };
     assert_eq!(
-        parse_der_explicit(&bytes, BerTag(0), parse_der_integer),
+        parse_der_explicit_optional(&bytes, BerTag(0), parse_der_integer),
         Ok((empty, expected))
     );
     let expected2 = DerObject::from_obj(BerObjectContent::Optional(None));
     assert_eq!(
-        parse_der_explicit(&bytes, BerTag(1), parse_der_integer),
+        parse_der_explicit_optional(&bytes, BerTag(1), parse_der_integer),
         Ok((&bytes[..], expected2))
     );
 }
@@ -481,7 +481,7 @@ fn test_der_seq_dn_defined() {
 #[test]
 fn test_der_defined_seq_macros() {
     fn localparse_seq(i: &[u8]) -> DerResult {
-        parse_der_sequence_defined_m! {
+        parse_der_sequence_defined! {
             i,
             parse_der_integer >>
             call!(parse_der_integer)
@@ -501,7 +501,7 @@ fn test_der_defined_seq_macros() {
 #[test]
 fn test_der_defined_set_macros() {
     fn localparse_set(i: &[u8]) -> DerResult {
-        parse_der_set_defined_m! {
+        parse_der_set_defined! {
             i,
             parse_der_integer >>
             call!(parse_der_integer)
