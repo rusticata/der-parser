@@ -9,8 +9,6 @@ use cookie_factory::sequence::tuple;
 use cookie_factory::{GenError, SerializeFn};
 use std::io::Write;
 
-// we do not use .copied() for compatibility with 1.34
-#[allow(clippy::map_clone)]
 fn encode_length<'a, W: Write + 'a, Len: Into<BerSize>>(len: Len) -> impl SerializeFn<W> + 'a {
     let l = len.into();
     move |out| {
@@ -24,7 +22,7 @@ fn encode_length<'a, W: Write + 'a, Len: Into<BerSize>>(len: Len) -> impl Serial
                     let v: Vec<u8> = sz
                         .to_be_bytes()
                         .iter()
-                        .map(|&x| x)
+                        .cloned()
                         .skip_while(|&b| b == 0)
                         .collect();
                     let b0 = 0b1000_0000 | (v.len() as u8);
@@ -109,8 +107,6 @@ pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     }
 }
 
-// we do not use .copied() for compatibility with 1.34
-#[allow(clippy::map_clone)]
 fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     c: &'a BerObjectContent,
 ) -> impl SerializeFn<W> + 'a {
@@ -130,7 +126,7 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
             let v: Vec<u8> = i
                 .to_be_bytes()
                 .iter()
-                .map(|&x| x)
+                .cloned()
                 .skip_while(|&b| b == 0)
                 .collect();
             slice(v)(out)
