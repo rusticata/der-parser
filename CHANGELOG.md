@@ -8,6 +8,29 @@
 
 ### Thanks
 
+## 6.0.0
+
+### Changed/Fixed
+
+- Do not attempt to parse PRIVATE object contents (closes #48)
+- BER: raise error if using Indefinite length and not constructed
+- Fix `oid!` macro to be independant of `der_parser` crate name and path (#46)
+- Simplify `der-oid-macro`, do not depend on `nom`
+- Fix `INTEGER` signed/unsigned parsing (#49)
+- Change `as_bigint()` and `as_uint()` to return a `Result`
+- Remove deprecated functions
+
+### Added
+
+- Added support for `no_std` (#50)
+- Make `BerError` Copy + Clone (#51)
+
+### Thanks
+
+- @yoguorui for `no_std` support
+- @SergioBenitez for `BerError` traits
+- @lilyball for `INTEGER` parsing
+
 ## 5.1.0
 
 ### Changed/Fixed

@@ -5,7 +5,7 @@ keywords = ["BER","DER","ASN1","parser","nom"]
 homepage = "https://github.com/rusticata/der-parser"
 repository = "https://github.com/rusticata/der-parser.git"
 name = "der-parser"
-version = "5.1.0"
+version = "6.0.0"
 authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
 categories = ["parser-implementations"]
 readme = "README.md"
@@ -38,7 +38,7 @@ rusticata-macros = "3.1"
 num-traits = "0.2"
 num-bigint = { version = "0.4", optional = true }
 
-der-oid-macro = { version = "0.4", path = "./der-oid-macro" }
+der-oid-macro = { version = "0.5", path = "./der-oid-macro" }
 
 [features]
 default = ["std"]
