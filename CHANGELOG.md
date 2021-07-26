@@ -8,6 +8,15 @@
 
 ### Thanks
 
+## 5.1.1
+
+### Changed/Fixed
+
+- BER: raise error if using Indefinite length and not constructed
+- Fix `INTEGER` signed/unsigned parsing (#49)
+- Fix INTEGER signed/unsigned parsing for bigint/biguint (#49)
+- Doc: clarify documentation for parsing integers (#49)
+
 ## 5.1.0
 
 ### Changed/Fixed
