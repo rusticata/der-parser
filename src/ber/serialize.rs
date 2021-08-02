@@ -79,7 +79,7 @@ pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
 ) -> impl SerializeFn<W> + 'a {
     move |out| {
         // encode inner object
-        let v = gen_simple(ber_encode_object(&obj), W::default())?;
+        let v = gen_simple(ber_encode_object(obj), W::default())?;
         let len = v.as_ref().len();
         // encode the application header, using the tag
         let hdr = BerObjectHeader::new(class, 1 /* X.690 8.14.2 */, tag, len);
@@ -149,7 +149,7 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         | BerObjectContent::ObjectDescriptor(s)
         | BerObjectContent::GraphicString(s)
         | BerObjectContent::GeneralString(s) => slice(s)(out),
-        BerObjectContent::Sequence(v) | BerObjectContent::Set(v) => ber_encode_sequence(&v)(out),
+        BerObjectContent::Sequence(v) | BerObjectContent::Set(v) => ber_encode_sequence(v)(out),
         // best we can do is tagged-explicit, but we don't know
         BerObjectContent::Optional(inner) => {
             // directly encode inner object
@@ -178,7 +178,7 @@ pub fn ber_encode_object_raw<'a, 'b: 'a, 'c: 'a, W: Write + Default + AsRef<[u8]
     hdr: &'b BerObjectHeader,
     content: &'c BerObjectContent,
 ) -> impl SerializeFn<W> + 'a {
-    tuple((ber_encode_header(&hdr), ber_encode_object_content(&content)))
+    tuple((ber_encode_header(hdr), ber_encode_object_content(content)))
 }
 
 /// Encode object as BER

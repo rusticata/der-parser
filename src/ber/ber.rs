@@ -772,7 +772,7 @@ impl<'a> BerObjectContent<'a> {
 
     pub fn as_optional(&'a self) -> Result<Option<&'_ BerObject<'a>>, BerError> {
         match *self {
-            BerObjectContent::Optional(Some(ref o)) => Ok(Some(&o)),
+            BerObjectContent::Optional(Some(ref o)) => Ok(Some(o)),
             BerObjectContent::Optional(None) => Ok(None),
             _ => Err(BerError::BerTypeError),
         }
@@ -1064,7 +1064,7 @@ impl<'a> BitStringObject<'a> {
 
     /// Constructs a shared `&BitSlice` reference over the object data.
     pub fn as_bitslice(&self) -> Option<&BitSlice<Msb0, u8>> {
-        BitSlice::<Msb0, _>::from_slice(&self.data)
+        BitSlice::<Msb0, _>::from_slice(self.data)
     }
 }
 
