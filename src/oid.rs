@@ -214,7 +214,7 @@ impl<'a> Oid<'a> {
         &'_ self,
     ) -> impl Iterator<Item = BigUint> + FusedIterator + ExactSizeIterator + '_ {
         SubIdentifierIterator {
-            oid: &self,
+            oid: self,
             pos: 0,
             first: false,
             n: core::marker::PhantomData,
@@ -250,7 +250,7 @@ impl<'a> Oid<'a> {
         }
 
         Some(SubIdentifierIterator {
-            oid: &self,
+            oid: self,
             pos: 0,
             first: false,
             n: core::marker::PhantomData,
