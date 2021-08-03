@@ -8,6 +8,13 @@
 
 ### Thanks
 
+## 5.1.2
+
+### Changed/Fixed
+
+- Make `BerError` Copy + Clone
+- Fix clippy warnings (rustc 1.54)
+
 ## 5.1.1
 
 ### Changed/Fixed
