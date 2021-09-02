@@ -10,6 +10,12 @@
 
 ## 6.0.0
 
+This release has several major changes:
+- upgrade to nom 7
+- add support for `no_std`
+- remove all macros
+- update MSRV to 1.48
+
 ### Changed/Fixed
 
 - Do not attempt to parse PRIVATE object contents (closes #48)
@@ -24,6 +30,7 @@
 
 - Added support for `no_std` (#50)
 - Make `BerError` Copy + Clone (#51)
+- Add feature 'bitvec' for `.as_bitslice()` methods
 
 ### Removed
 

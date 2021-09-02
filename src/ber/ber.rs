@@ -5,12 +5,13 @@ use crate::oid::Oid;
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+#[cfg(feature = "bitvec")]
+use bitvec::{order::Msb0, slice::BitSlice};
 use core::convert::AsRef;
 use core::convert::From;
 use core::convert::TryFrom;
 use core::fmt;
 use core::ops::Index;
-use nom::bitvec::{order::Msb0, slice::BitSlice};
 use rusticata_macros::newtype_enum;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -513,6 +514,7 @@ impl<'a> BerObject<'a> {
     }
 
     /// Constructs a shared `&BitSlice` reference over the object data, if available as slice.
+    #[cfg(feature = "bitvec")]
     pub fn as_bitslice(&self) -> Result<&BitSlice<Msb0, u8>, BerError> {
         self.content.as_bitslice()
     }
@@ -785,9 +787,10 @@ impl<'a> BerObjectContent<'a> {
     }
 
     /// Constructs a shared `&BitSlice` reference over the object data, if available as slice.
+    #[cfg(feature = "bitvec")]
     pub fn as_bitslice(&self) -> Result<&BitSlice<Msb0, u8>, BerError> {
         self.as_slice()
-            .and_then(|s| BitSlice::<Msb0, _>::from_slice(s).ok_or(BerError::BerValueError))
+            .and_then(|s| BitSlice::<Msb0, _>::from_slice(s).map_err(|_| BerError::BerValueError))
     }
 
     pub fn as_sequence(&self) -> Result<&Vec<BerObject<'a>>, BerError> {
@@ -1050,8 +1053,9 @@ impl<'a> BitStringObject<'a> {
     }
 
     /// Constructs a shared `&BitSlice` reference over the object data.
+    #[cfg(feature = "bitvec")]
     pub fn as_bitslice(&self) -> Option<&BitSlice<Msb0, u8>> {
-        BitSlice::<Msb0, _>::from_slice(self.data)
+        BitSlice::<Msb0, _>::from_slice(self.data).ok()
     }
 }
 
@@ -1065,7 +1069,6 @@ impl<'a> AsRef<[u8]> for BitStringObject<'a> {
 mod tests {
     use crate::ber::*;
     use crate::oid::*;
-    use std::string::String;
 
     #[test]
     fn test_der_as_u64() {
@@ -1122,16 +1125,18 @@ mod tests {
         assert!(obj.is_set(17));
     }
 
+    #[cfg(feature = "bitvec")]
     #[test]
     fn test_der_bitslice() {
+        use std::string::String;
         let obj = BitStringObject {
             data: &[0x0f, 0x00, 0x40],
         };
         let slice = obj.as_bitslice().expect("as_bitslice");
-        assert_eq!(slice.get(0), Some(&false));
-        assert_eq!(slice.get(7), Some(&true));
-        assert_eq!(slice.get(9), Some(&false));
-        assert_eq!(slice.get(17), Some(&true));
+        assert_eq!(slice.get(0).as_deref(), Some(&false));
+        assert_eq!(slice.get(7).as_deref(), Some(&true));
+        assert_eq!(slice.get(9).as_deref(), Some(&false));
+        assert_eq!(slice.get(17).as_deref(), Some(&true));
         let s = slice.iter().fold(String::with_capacity(24), |mut acc, b| {
             acc += if *b { "1" } else { "0" };
             acc
