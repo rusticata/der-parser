@@ -25,6 +25,10 @@
 - Added support for `no_std` (#50)
 - Make `BerError` Copy + Clone (#51)
 
+### Removed
+
+- Remove all macros
+
 ### Thanks
 
 - @yoguorui for `no_std` support

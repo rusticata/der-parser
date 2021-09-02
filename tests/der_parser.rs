@@ -6,8 +6,11 @@ use der_parser::error::*;
 use der_parser::oid::*;
 use der_parser::*;
 use hex_literal::hex;
+use nom::branch::alt;
+use nom::combinator::map;
 use nom::error::ErrorKind;
-use nom::{alt, call, Err};
+use nom::sequence::tuple;
+use nom::Err;
 use pretty_assertions::assert_eq;
 use test_case::test_case;
 
@@ -175,7 +178,13 @@ fn test_der_seq_defined() {
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]);
     fn parser(i: &[u8]) -> DerResult {
-        parse_der_sequence_defined!(i, parse_der_integer >> parse_der_integer)
+        parse_der_sequence_defined(
+            // the nom `tuple` combinator returns a tuple, so we have to map it
+            // to a list
+            map(tuple((parse_der_integer, parse_der_integer)), |(a, b)| {
+                vec![a, b]
+            }),
+        )(i)
     }
     assert_eq!(parser(&bytes), Ok((empty, expected)));
 }
@@ -191,7 +200,13 @@ fn test_der_set_defined() {
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]);
     fn parser(i: &[u8]) -> DerResult {
-        parse_der_set_defined!(i, parse_der_integer >> parse_der_integer)
+        parse_der_set_defined(
+            // the nom `tuple` combinator returns a tuple, so we have to map it
+            // to a list
+            map(tuple((parse_der_integer, parse_der_integer)), |(a, b)| {
+                vec![a, b]
+            }),
+        )(i)
     }
     assert_eq!(parser(&bytes), Ok((empty, expected)));
 }
@@ -207,7 +222,7 @@ fn test_der_seq_of() {
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]);
     fn parser(i: &[u8]) -> DerResult {
-        parse_der_sequence_of!(i, parse_der_integer)
+        parse_der_sequence_of(parse_der_integer)(i)
     }
     assert_eq!(parser(&bytes), Ok((empty, expected.clone())));
     //
@@ -222,7 +237,7 @@ fn test_der_seq_of() {
 fn test_der_seq_of_incomplete() {
     let bytes = [0x30, 0x07, 0x02, 0x03, 0x01, 0x00, 0x01, 0x00, 0x00];
     fn parser(i: &[u8]) -> DerResult {
-        parse_der_sequence_of!(i, parse_der_integer)
+        parse_der_sequence_of(parse_der_integer)(i)
     }
     assert_eq!(parser(&bytes), Err(Err::Failure(BerError::InvalidTag)));
     //
@@ -250,7 +265,7 @@ fn test_der_set_of() {
         DerObject::from_int_slice(b"\x01\x00\x00"),
     ]);
     fn parser(i: &[u8]) -> DerResult {
-        parse_der_set_of!(i, parse_der_integer)
+        parse_der_set_of(parse_der_integer)(i)
     }
     assert_eq!(parser(&bytes), Ok((empty, expected)));
 }
@@ -396,10 +411,16 @@ fn test_der_optional() {
         DerObject::from_int_slice(b"\x01\x00\x01"),
     ]);
     fn parse_optional_enum(i: &[u8]) -> DerResult {
-        parse_der_optional!(i, parse_der_enum)
+        parse_ber_optional(parse_der_enum)(i)
     }
     fn parser(i: &[u8]) -> DerResult {
-        parse_der_sequence_defined!(i, parse_optional_enum >> parse_der_integer)
+        parse_der_sequence_defined(
+            // the nom `tuple` combinator returns a tuple, so we have to map it
+            // to a list
+            map(tuple((parse_optional_enum, parse_der_integer)), |(a, b)| {
+                vec![a, b]
+            }),
+        )(i)
     }
     assert_eq!(parser(&bytes1), Ok((empty, expected1)));
     assert_eq!(parser(&bytes2), Ok((empty, expected2)));
@@ -458,64 +479,31 @@ fn test_der_seq_dn_defined() {
     ]);
     #[inline]
     fn parse_directory_string(i: &[u8]) -> DerResult {
-        alt!(
-            i,
-            parse_der_utf8string | parse_der_printablestring | parse_der_ia5string
-        )
+        alt((
+            parse_der_utf8string,
+            parse_der_printablestring,
+            parse_der_ia5string,
+        ))(i)
     }
     #[inline]
     fn parse_attr_type_and_value(i: &[u8]) -> DerResult {
-        parse_der_sequence_defined!(i, parse_der_oid >> parse_directory_string)
+        parse_der_sequence_defined(
+            // the nom `tuple` combinator returns a tuple, so we have to map it
+            // to a list
+            map(tuple((parse_der_oid, parse_directory_string)), |(a, b)| {
+                vec![a, b]
+            }),
+        )(i)
     }
     #[inline]
     fn parse_rdn(i: &[u8]) -> DerResult {
-        parse_der_set_defined!(i, parse_attr_type_and_value)
+        parse_der_set_of(parse_attr_type_and_value)(i)
     }
     #[inline]
     fn parse_name(i: &[u8]) -> DerResult {
-        parse_der_sequence_defined!(i, parse_rdn >> parse_rdn >> parse_rdn)
+        parse_der_sequence_of(parse_rdn)(i)
     }
     assert_eq!(parse_name(&bytes), Ok((empty, expected)));
-}
-
-#[test]
-fn test_der_defined_seq_macros() {
-    fn localparse_seq(i: &[u8]) -> DerResult {
-        parse_der_sequence_defined! {
-            i,
-            parse_der_integer >>
-            call!(parse_der_integer)
-        }
-    }
-    let empty = &b""[..];
-    let bytes = [
-        0x30, 0x0a, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00,
-    ];
-    let expected = DerObject::from_seq(vec![
-        DerObject::from_int_slice(b"\x01\x00\x01"),
-        DerObject::from_int_slice(b"\x01\x00\x00"),
-    ]);
-    assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
-}
-
-#[test]
-fn test_der_defined_set_macros() {
-    fn localparse_set(i: &[u8]) -> DerResult {
-        parse_der_set_defined! {
-            i,
-            parse_der_integer >>
-            call!(parse_der_integer)
-        }
-    }
-    let empty = &b""[..];
-    let bytes = [
-        0x31, 0x0a, 0x02, 0x03, 0x01, 0x00, 0x01, 0x02, 0x03, 0x01, 0x00, 0x00,
-    ];
-    let expected = DerObject::from_set(vec![
-        DerObject::from_int_slice(b"\x01\x00\x01"),
-        DerObject::from_int_slice(b"\x01\x00\x00"),
-    ]);
-    assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
 }
 
 #[test_case(&hex!("02 01 01"), Ok(1) ; "u32-1")]

@@ -1,9 +1,12 @@
 use der_parser::ber::*;
+use der_parser::der::*;
 use der_parser::error::*;
 use der_parser::*;
 use hex_literal::hex;
-use nom::combinator::map;
+use nom::branch::alt;
+use nom::combinator::{complete, eof, map, map_res};
 use nom::error::ErrorKind;
+use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::*;
 use oid::Oid;
@@ -17,44 +20,33 @@ struct MyStruct<'a> {
 }
 
 fn parse_struct01(i: &[u8]) -> BerResult<MyStruct> {
-    parse_der_struct!(
-        i,
-        a: parse_ber_integer >> b: parse_ber_integer >> (MyStruct { a, b })
-    )
+    parse_der_sequence_defined_g(|i: &[u8], _| {
+        let (i, a) = parse_ber_integer(i)?;
+        let (i, b) = parse_ber_integer(i)?;
+        Ok((i, MyStruct { a, b }))
+    })(i)
 }
 
 fn parse_struct01_complete(i: &[u8]) -> BerResult<MyStruct> {
-    parse_der_struct!(
-        i,
-        a: parse_ber_integer >> b: parse_ber_integer >> eof!() >> (MyStruct { a, b })
-    )
-}
-
-// calling user function
-#[allow(dead_code)]
-fn parse_struct02(i: &[u8]) -> BerResult<()> {
-    parse_der_struct!(i, _a: parse_ber_integer >> _b: parse_struct01 >> (()))
-}
-
-// embedded DER structs
-#[allow(dead_code)]
-fn parse_struct03(i: &[u8]) -> BerResult<()> {
-    parse_der_struct!(
-        i,
-        _a: parse_ber_integer >> _b: parse_der_struct!(parse_ber_integer >> (())) >> (())
-    )
+    parse_der_sequence_defined_g(|i: &[u8], _| {
+        let (i, a) = parse_ber_integer(i)?;
+        let (i, b) = parse_ber_integer(i)?;
+        eof(i)?;
+        Ok((i, MyStruct { a, b }))
+    })(i)
 }
 
 // verifying tag
 fn parse_struct04(i: &[u8], tag: BerTag) -> BerResult<MyStruct> {
-    parse_der_struct!(
-        i,
-        TAG tag,
-        a: parse_ber_integer >>
-        b: parse_ber_integer >>
-           eof!() >>
-        ( MyStruct{ a, b } )
-    )
+    parse_der_container(|i: &[u8], hdr| {
+        if hdr.tag != tag {
+            return Err(Err::Error(BerError::InvalidTag));
+        }
+        let (i, a) = parse_ber_integer(i)?;
+        let (i, b) = parse_ber_integer(i)?;
+        eof(i)?;
+        Ok((i, MyStruct { a, b }))
+    })(i)
 }
 
 #[test_case(&hex!("30 00"), Ok(&[]) ; "empty seq")]
@@ -247,27 +239,33 @@ fn struct02() {
         ],
     };
     fn parse_directory_string(i: &[u8]) -> BerResult {
-        alt!(
-            i,
-            parse_ber_utf8string | parse_ber_printablestring | parse_ber_ia5string
-        )
+        alt((
+            parse_ber_utf8string,
+            parse_ber_printablestring,
+            parse_ber_ia5string,
+        ))(i)
     }
     fn parse_attr_type_and_value(i: &[u8]) -> BerResult<Attr> {
         fn clone_oid(x: BerObject) -> Result<Oid, BerError> {
             x.as_oid().map(|o| o.clone())
         }
-        parse_der_struct!(
-            i,
-            o: map_res!(parse_ber_oid, clone_oid)
-                >> s: parse_directory_string
-                >> (Attr { oid: o, val: s })
-        )
+        parse_der_sequence_defined_g(|i: &[u8], _| {
+            let (i, o) = map_res(parse_ber_oid, clone_oid)(i)?;
+            let (i, s) = parse_directory_string(i)?;
+            Ok((i, Attr { oid: o, val: s }))
+        })(i)
     }
     fn parse_rdn(i: &[u8]) -> BerResult<Rdn> {
-        parse_der_struct!(i, a: parse_attr_type_and_value >> (Rdn { a }))
+        parse_der_set_defined_g(|i: &[u8], _| {
+            let (i, a) = parse_attr_type_and_value(i)?;
+            Ok((i, Rdn { a }))
+        })(i)
     }
     fn parse_name(i: &[u8]) -> BerResult<Name> {
-        parse_der_struct!(i, l: many0!(complete!(parse_rdn)) >> (Name { l }))
+        parse_der_sequence_defined_g(|i: &[u8], _| {
+            let (i, l) = many0(complete(parse_rdn))(i)?;
+            Ok((i, Name { l }))
+        })(i)
     }
     let parsed = parse_name(&bytes).unwrap();
     assert_eq!(parsed, (empty, expected));
@@ -337,36 +335,24 @@ fn tc_ber_tagged_explicit_g(i: &[u8], out: Result<u32, BerError>) {
 #[test]
 fn tagged_explicit() {
     fn parse_int_explicit(i: &[u8]) -> BerResult<u32> {
-        map_res!(
-            i,
-            parse_der_tagged!(EXPLICIT 2, parse_ber_integer),
-            |x: BerObject| x.as_tagged()?.2.as_u32()
-        )
-    }
-    fn parse_int_noexplicit(i: &[u8]) -> BerResult<u32> {
-        map_res!(
-            i,
-            parse_der_tagged!(2, parse_ber_integer),
-            |x: BerObject| x.as_tagged()?.2.as_u32()
-        )
+        map_res(
+            parse_der_tagged_explicit(2, parse_der_integer),
+            |x: BerObject| x.as_tagged()?.2.as_u32(),
+        )(i)
     }
     let bytes = &[0xa2, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
     // EXPLICIT tagged value parsing
     let (rem, val) = parse_int_explicit(bytes).expect("Could not parse explicit int");
     assert!(rem.is_empty());
     assert_eq!(val, 0x10001);
-    // omitting EXPLICIT keyword
-    let a = parse_int_explicit(bytes);
-    let b = parse_int_noexplicit(bytes);
-    assert_eq!(a, b);
     // wrong tag
     assert_eq!(
-        parse_der_tagged!(bytes as &[u8], 3, parse_ber_integer),
+        parse_der_tagged_explicit(3, parse_der_integer)(bytes as &[u8]),
         Err(Err::Error(BerError::InvalidTag))
     );
     // wrong type
     assert_eq!(
-        parse_der_tagged!(bytes as &[u8], 2, parse_ber_bool),
+        parse_der_tagged_explicit(2, parse_der_bool)(bytes as &[u8]),
         Err(Err::Error(BerError::InvalidTag))
     );
 }
@@ -395,11 +381,10 @@ fn tc_ber_tagged_implicit_g(i: &[u8], out: Result<u32, BerError>) {
 #[test]
 fn tagged_implicit() {
     fn parse_int_implicit(i: &[u8]) -> BerResult<u32> {
-        map_res!(
-            i,
-            parse_der_tagged!(IMPLICIT 2, BerTag::Integer),
-            |x: BerObject| x.as_u32()
-        )
+        map_res(
+            parse_der_tagged_implicit(2, parse_der_content(DerTag::Integer)),
+            |x: BerObject| x.as_u32(),
+        )(i)
     }
     let bytes = &[0x82, 0x03, 0x01, 0x00, 0x01];
     // IMPLICIT tagged value parsing
@@ -408,7 +393,7 @@ fn tagged_implicit() {
     assert_eq!(val, 0x10001);
     // wrong tag
     assert_eq!(
-        parse_der_tagged!(bytes as &[u8], IMPLICIT 3, BerTag::Integer),
+        parse_der_tagged_implicit(3, parse_der_content(DerTag::Integer))(bytes as &[u8]),
         Err(Err::Error(BerError::InvalidTag))
     );
 }
@@ -420,12 +405,16 @@ fn application() {
         a: u32,
     }
     fn parse_app01(i: &[u8]) -> BerResult<SimpleStruct> {
-        parse_der_application!(
-            i,
-            APPLICATION 2,
-            a: map_res!(parse_ber_integer,|x: BerObject| x.as_u32()) >>
-            ( SimpleStruct{ a } )
-        )
+        parse_der_container(|i, hdr| {
+            if hdr.class != BerClass::Application {
+                return Err(Err::Error(BerError::InvalidClass));
+            }
+            if hdr.tag != BerTag(2) {
+                return Err(Err::Error(BerError::InvalidTag));
+            }
+            let (i, a) = map_res(parse_ber_integer, |x: BerObject| x.as_u32())(i)?;
+            Ok((i, SimpleStruct { a }))
+        })(i)
     }
     let bytes = &[0x62, 0x05, 0x02, 0x03, 0x01, 0x00, 0x01];
     let (rem, app) = parse_app01(bytes).expect("could not parse application");

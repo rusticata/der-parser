@@ -245,9 +245,6 @@ extern crate std;
 
 extern crate alloc;
 
-#[macro_use]
-mod macros;
-
 #[allow(clippy::module_inception)]
 pub mod ber;
 pub mod der;
@@ -266,7 +263,7 @@ pub use num_bigint;
 // re-exports nom macros, so this crate's macros can be used without importing nom
 pub use nom::IResult;
 #[doc(hidden)]
-pub use rusticata_macros::{custom_check, flat_take};
+pub use rusticata_macros::custom_check;
 
 #[doc(hidden)]
 pub mod exports {
