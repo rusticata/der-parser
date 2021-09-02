@@ -7,7 +7,7 @@
 [![Download numbers](https://img.shields.io/crates/d/der-parser.svg)](https://crates.io/crates/der-parser)
 [![dependency status](https://deps.rs/crate/der-parser/5.0.0/status.svg)](https://deps.rs/crate/der-parser/5.0.1)
 [![Github CI](https://github.com/rusticata/der-parser/workflows/Continuous%20integration/badge.svg)](https://github.com/rusticata/der-parser/actions)
-[![Minimum rustc version](https://img.shields.io/badge/rustc-1.44.0+-lightgray.svg)](#rust-version-requirements)
+[![Minimum rustc version](https://img.shields.io/badge/rustc-1.48.0+-lightgray.svg)](#rust-version-requirements)
 
 # BER/DER Parser
 
@@ -198,7 +198,7 @@ Some parsing tools (for ex for tagged objects) are available in different forms:
 
 ## Rust version requirements
 
-The 5.0 series of `der-parser` requires **Rustc version 1.44 or greater**, based on nom 6
+The 6.0 series of `der-parser` requires **Rustc version 1.48 or greater**, based on nom 7
 dependencies.
 
 # Serialization
