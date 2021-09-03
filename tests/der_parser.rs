@@ -308,7 +308,7 @@ fn test_der_contextspecific() {
     let expected = DerObject {
         header: BerObjectHeader::new(BerClass::ContextSpecific, 1, BerTag(0), 3)
             .with_raw_tag(Some(&[0xa0])),
-        content: BerObjectContent::Unknown(BerTag(0), &bytes[2..]),
+        content: BerObjectContent::Unknown(BerClass::ContextSpecific, BerTag(0), &bytes[2..]),
     };
     assert_eq!(parse_der(&bytes), Ok((empty, expected)));
 }

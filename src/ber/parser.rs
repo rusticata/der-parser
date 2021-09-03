@@ -1175,7 +1175,7 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
         }
         _ => {
             let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
-            let content = BerObjectContent::Unknown(hdr.tag, content);
+            let content = BerObjectContent::Unknown(hdr.class, hdr.tag, content);
             let obj = BerObject::from_header_and_content(hdr, content);
             return Ok((rem, obj));
         }
@@ -1184,7 +1184,7 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => {
             let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
-            let content = BerObjectContent::Unknown(hdr.tag, content);
+            let content = BerObjectContent::Unknown(hdr.class, hdr.tag, content);
             let obj = BerObject::from_header_and_content(hdr, content);
             Ok((rem, obj))
         }

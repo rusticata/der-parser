@@ -567,7 +567,7 @@ fn der_read_element_content_recursive<'a>(
         }
         _ => {
             let (i, content) = ber_get_object_content(i, &hdr, max_depth)?;
-            let content = DerObjectContent::Unknown(hdr.tag, content);
+            let content = DerObjectContent::Unknown(hdr.class, hdr.tag, content);
             let obj = DerObject::from_header_and_content(hdr, content);
             return Ok((i, obj));
         }
@@ -576,7 +576,7 @@ fn der_read_element_content_recursive<'a>(
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => {
             let (rem, content) = ber_get_object_content(i, &hdr, max_depth)?;
-            let content = DerObjectContent::Unknown(hdr.tag, content);
+            let content = DerObjectContent::Unknown(hdr.class, hdr.tag, content);
             let obj = DerObject::from_header_and_content(hdr, content);
             Ok((rem, obj))
         }

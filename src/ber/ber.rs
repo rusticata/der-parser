@@ -189,7 +189,7 @@ pub enum BerObjectContent<'a> {
     Private(BerObjectHeader<'a>, &'a [u8]),
 
     /// Unknown object: object tag (copied from header), and raw content
-    Unknown(BerTag, &'a [u8]),
+    Unknown(BerClass, BerTag, &'a [u8]),
 }
 
 impl fmt::Display for BerClass {
@@ -827,7 +827,7 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::ObjectDescriptor(s) |
             BerObjectContent::GraphicString(s) |
             BerObjectContent::GeneralString(s) |
-            BerObjectContent::Unknown(_,s) |
+            BerObjectContent::Unknown(_, _,s) |
             BerObjectContent::Private(_,s) => Ok(s),
             _ => Err(BerError::BerTypeError),
         }
@@ -876,7 +876,7 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::GraphicString(_)     => BerTag::GraphicString,
             BerObjectContent::GeneralString(_)     => BerTag::GeneralString,
             BerObjectContent::Tagged(_,x,_) |
-            BerObjectContent::Unknown(x,_)         => *x,
+            BerObjectContent::Unknown(_, x,_)         => *x,
             &BerObjectContent::Private(ref hdr, _) => hdr.tag,
             BerObjectContent::Optional(Some(obj))  => obj.content.tag(),
             BerObjectContent::Optional(None)       => BerTag(0x00), // XXX invalid !
