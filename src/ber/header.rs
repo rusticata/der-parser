@@ -4,7 +4,7 @@ use super::{Class, Length, Tag};
 #[derive(Clone, Debug)]
 pub struct BerObjectHeader<'a> {
     /// Object class: universal, application, context-specific, or private
-    pub class: Class,
+    pub(crate) class: Class,
     /// Constructed attribute: 1 if constructed, else 0
     pub structured: u8,
     /// Tag number
