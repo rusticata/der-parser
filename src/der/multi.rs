@@ -1,4 +1,4 @@
-use crate::ber::BerSize;
+use crate::ber::Length;
 use crate::der::*;
 use crate::error::*;
 use nom::bytes::complete::take;
@@ -524,8 +524,8 @@ where
         let (i, hdr) = der_read_element_header(i).map_err(nom::Err::convert)?;
         // X.690 10.1: the definitive form of length encoding shall be used
         let (i, data) = match hdr.len {
-            BerSize::Definite(len) => take(len)(i)?,
-            BerSize::Indefinite => {
+            Length::Definite(len) => take(len)(i)?,
+            Length::Indefinite => {
                 return Err(Err::Error(BerError::DerConstraintFailed.into()));
             }
         };

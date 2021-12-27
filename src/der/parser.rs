@@ -44,7 +44,7 @@ pub fn parse_der(i: &[u8]) -> DerResult {
 pub fn parse_der_recursive(i: &[u8], max_depth: usize) -> DerResult {
     let (i, hdr) = der_read_element_header(i)?;
     // safety check: length cannot be more than 2^32 bytes
-    if let BerSize::Definite(l) = hdr.len {
+    if let Length::Definite(l) = hdr.len {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
     }
     der_read_element_content_recursive(i, hdr, max_depth)
@@ -491,7 +491,7 @@ pub fn parse_der_content2<'a>(
 pub fn der_read_element_content_as(
     i: &[u8],
     tag: DerTag,
-    len: BerSize,
+    len: Length,
     constructed: bool,
     max_depth: usize,
 ) -> BerResult<DerObjectContent> {
@@ -635,7 +635,7 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<DerObjectHeader> {
     let (i3, len) = match (len.0, len.1) {
         (0, l1) => {
             // Short form: MSB is 0, the rest encodes the length (which can be 0) (8.1.3.4)
-            (i2, BerSize::Definite(usize::from(l1)))
+            (i2, Length::Definite(usize::from(l1)))
         }
         (_, 0) => {
             // Indefinite form is not allowed in DER (10.1)
@@ -655,7 +655,7 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<DerObjectHeader> {
                     der_constraint_fail_if!(i, l < 127);
                     let l =
                         usize::try_from(l).or(Err(::nom::Err::Error(BerError::InvalidLength)))?;
-                    (i3, BerSize::Definite(l))
+                    (i3, Length::Definite(l))
                 }
                 Err(_) => {
                     return Err(::nom::Err::Error(BerError::InvalidTag));

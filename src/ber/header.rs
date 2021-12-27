@@ -1,4 +1,4 @@
-use super::{BerClass, BerSize, BerTag};
+use super::{BerClass, Length, BerTag};
 
 /// BER object header (identifier and length)
 #[derive(Clone, Debug)]
@@ -10,7 +10,7 @@ pub struct BerObjectHeader<'a> {
     /// Tag number
     pub tag: BerTag,
     /// Object length: definite or indefinite
-    pub len: BerSize,
+    pub len: Length,
 
     /// Optionally, the raw encoding of the tag
     ///
