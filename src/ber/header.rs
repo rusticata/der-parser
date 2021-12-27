@@ -18,3 +18,96 @@ pub struct BerObjectHeader<'a> {
     /// BER tags have different meanings (BER only)
     pub raw_tag: Option<&'a [u8]>,
 }
+
+impl<'a> BerObjectHeader<'a> {
+    /// Build a new BER header
+    pub fn new<Len: Into<Length>>(class: Class, structured: u8, tag: Tag, len: Len) -> Self {
+        BerObjectHeader {
+            tag,
+            structured,
+            class,
+            len: len.into(),
+            raw_tag: None,
+        }
+    }
+
+    /// Update header class
+    #[inline]
+    pub fn with_class(self, class: Class) -> Self {
+        BerObjectHeader { class, ..self }
+    }
+
+    /// Update header tag
+    #[inline]
+    pub fn with_tag(self, tag: Tag) -> Self {
+        BerObjectHeader { tag, ..self }
+    }
+
+    /// Update header length
+    #[inline]
+    pub fn with_len(self, len: Length) -> Self {
+        BerObjectHeader { len, ..self }
+    }
+
+    /// Update header to add reference to raw tag
+    #[inline]
+    pub fn with_raw_tag(self, raw_tag: Option<&'a [u8]>) -> Self {
+        BerObjectHeader { raw_tag, ..self }
+    }
+
+    /// Test if object class is Universal
+    #[inline]
+    pub fn is_universal(&self) -> bool {
+        self.class == Class::Universal
+    }
+    /// Test if object class is Application
+    #[inline]
+    pub fn is_application(&self) -> bool {
+        self.class == Class::Application
+    }
+    /// Test if object class is Context-specific
+    #[inline]
+    pub fn is_contextspecific(&self) -> bool {
+        self.class == Class::ContextSpecific
+    }
+    /// Test if object class is Private
+    #[inline]
+    pub fn is_private(&self) -> bool {
+        self.class == Class::Private
+    }
+
+    /// Test if object is primitive
+    #[inline]
+    pub fn is_primitive(&self) -> bool {
+        self.structured == 0
+    }
+    /// Test if object is constructed
+    #[inline]
+    pub fn is_constructed(&self) -> bool {
+        self.structured == 1
+    }
+}
+
+/// Compare two BER headers. `len` fields are compared only if both objects have it set (same for `raw_tag`)
+impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
+    fn eq(&self, other: &BerObjectHeader) -> bool {
+        self.class == other.class
+            && self.tag == other.tag
+            && self.structured == other.structured
+            && {
+                if self.len.is_null() && other.len.is_null() {
+                    self.len == other.len
+                } else {
+                    true
+                }
+            }
+            && {
+                // it tag is present for both, compare it
+                if self.raw_tag.xor(other.raw_tag).is_none() {
+                    self.raw_tag == other.raw_tag
+                } else {
+                    true
+                }
+            }
+    }
+}

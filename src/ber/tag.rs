@@ -45,3 +45,9 @@ impl debug Tag {
     Invalid = 0xff,
 }
 }
+
+impl From<u32> for Tag {
+    fn from(v: u32) -> Self {
+        Tag(v)
+    }
+}

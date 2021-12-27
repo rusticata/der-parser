@@ -1,4 +1,4 @@
-use super::{BerSizeError, Class, ClassFromIntError, Length, Tag};
+use super::{Class, Length, Tag};
 use crate::ber::bitstring_to_u64;
 use crate::ber::header::*;
 use crate::ber::integer::*;
@@ -11,8 +11,6 @@ use alloc::vec::Vec;
 use bitvec::{order::Msb0, slice::BitSlice};
 use core::convert::AsRef;
 use core::convert::From;
-use core::convert::TryFrom;
-use core::fmt;
 use core::ops::Index;
 
 /// Representation of a BER-encoded (X.690) object
@@ -101,151 +99,6 @@ pub enum BerObjectContent<'a> {
 
     /// Unknown object: object tag (copied from header), and raw content
     Unknown(Class, Tag, &'a [u8]),
-}
-
-impl fmt::Display for Class {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Class::Universal => "UNIVERSAL",
-            Class::Application => "APPLICATION",
-            Class::ContextSpecific => "CONTEXT-SPECIFIC",
-            Class::Private => "PRIVATE",
-        };
-        write!(f, "{}", s)
-    }
-}
-
-impl From<u32> for Tag {
-    fn from(v: u32) -> Self {
-        Tag(v)
-    }
-}
-
-impl Length {
-    /// Return true if length is definite and equal to 0
-    pub fn is_null(&self) -> bool {
-        *self == Length::Definite(0)
-    }
-
-    /// Get length of primitive object
-    #[inline]
-    pub fn primitive(&self) -> Result<usize, BerError> {
-        match self {
-            Length::Definite(sz) => Ok(*sz),
-            Length::Indefinite => Err(BerError::IndefiniteLengthUnexpected),
-        }
-    }
-}
-
-impl From<usize> for Length {
-    fn from(v: usize) -> Self {
-        Length::Definite(v)
-    }
-}
-
-impl TryFrom<u64> for Length {
-    type Error = BerSizeError;
-
-    fn try_from(value: u64) -> Result<Self, Self::Error> {
-        let v = usize::try_from(value).or(Err(BerSizeError(())))?;
-        Ok(Length::Definite(v))
-    }
-}
-
-impl TryFrom<Length> for usize {
-    type Error = BerSizeError;
-
-    #[inline]
-    fn try_from(value: Length) -> Result<Self, Self::Error> {
-        match value {
-            Length::Definite(sz) => Ok(sz),
-            Length::Indefinite => Err(BerSizeError(())),
-        }
-    }
-}
-
-impl TryFrom<u8> for Class {
-    type Error = ClassFromIntError;
-
-    #[inline]
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0b00 => Ok(Class::Universal),
-            0b01 => Ok(Class::Application),
-            0b10 => Ok(Class::ContextSpecific),
-            0b11 => Ok(Class::Private),
-            _ => Err(ClassFromIntError(())),
-        }
-    }
-}
-
-impl<'a> BerObjectHeader<'a> {
-    /// Build a new BER header
-    pub fn new<Len: Into<Length>>(class: Class, structured: u8, tag: Tag, len: Len) -> Self {
-        BerObjectHeader {
-            tag,
-            structured,
-            class,
-            len: len.into(),
-            raw_tag: None,
-        }
-    }
-
-    /// Update header class
-    #[inline]
-    pub fn with_class(self, class: Class) -> Self {
-        BerObjectHeader { class, ..self }
-    }
-
-    /// Update header tag
-    #[inline]
-    pub fn with_tag(self, tag: Tag) -> Self {
-        BerObjectHeader { tag, ..self }
-    }
-
-    /// Update header length
-    #[inline]
-    pub fn with_len(self, len: Length) -> Self {
-        BerObjectHeader { len, ..self }
-    }
-
-    /// Update header to add reference to raw tag
-    #[inline]
-    pub fn with_raw_tag(self, raw_tag: Option<&'a [u8]>) -> Self {
-        BerObjectHeader { raw_tag, ..self }
-    }
-
-    /// Test if object class is Universal
-    #[inline]
-    pub fn is_universal(&self) -> bool {
-        self.class == Class::Universal
-    }
-    /// Test if object class is Application
-    #[inline]
-    pub fn is_application(&self) -> bool {
-        self.class == Class::Application
-    }
-    /// Test if object class is Context-specific
-    #[inline]
-    pub fn is_contextspecific(&self) -> bool {
-        self.class == Class::ContextSpecific
-    }
-    /// Test if object class is Private
-    #[inline]
-    pub fn is_private(&self) -> bool {
-        self.class == Class::Private
-    }
-
-    /// Test if object is primitive
-    #[inline]
-    pub fn is_primitive(&self) -> bool {
-        self.structured == 0
-    }
-    /// Test if object is constructed
-    #[inline]
-    pub fn is_constructed(&self) -> bool {
-        self.structured == 1
-    }
 }
 
 impl<'a> BerObject<'a> {
@@ -493,30 +346,6 @@ impl<'a> From<Oid<'a>> for BerObject<'a> {
 impl<'a> From<BerObjectContent<'a>> for BerObject<'a> {
     fn from(obj: BerObjectContent<'a>) -> BerObject<'a> {
         BerObject::from_obj(obj)
-    }
-}
-
-/// Compare two BER headers. `len` fields are compared only if both objects have it set (same for `raw_tag`)
-impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
-    fn eq(&self, other: &BerObjectHeader) -> bool {
-        self.class == other.class
-            && self.tag == other.tag
-            && self.structured == other.structured
-            && {
-                if self.len.is_null() && other.len.is_null() {
-                    self.len == other.len
-                } else {
-                    true
-                }
-            }
-            && {
-                // it tag is present for both, compare it
-                if self.raw_tag.xor(other.raw_tag).is_none() {
-                    self.raw_tag == other.raw_tag
-                } else {
-                    true
-                }
-            }
     }
 }
 
