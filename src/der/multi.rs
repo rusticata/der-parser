@@ -523,7 +523,7 @@ where
     move |i: &[u8]| {
         let (i, hdr) = der_read_element_header(i).map_err(nom::Err::convert)?;
         // X.690 10.1: the definitive form of length encoding shall be used
-        let (i, data) = match hdr.len {
+        let (i, data) = match hdr.length {
             Length::Definite(len) => take(len)(i)?,
             Length::Indefinite => {
                 return Err(Err::Error(BerError::DerConstraintFailed.into()));

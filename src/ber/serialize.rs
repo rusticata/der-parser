@@ -50,7 +50,7 @@ pub fn ber_encode_header<'a, 'b: 'a, W: Write + 'a>(
         }
         let byte_0 = class_u8 | pc_u8 | (hdr.tag.0 as u8);
         // length octets (X.690 8.1.3)
-        tuple((be_u8(byte_0), encode_length(hdr.len)))(out)
+        tuple((be_u8(byte_0), encode_length(hdr.length)))(out)
     }
 }
 
@@ -371,7 +371,7 @@ mod test {
             hdr: &BerObjectHeader,
             depth: usize,
         ) -> BerResult<'a, BerObjectContent<'a>> {
-            ber_read_element_content_as(i, Tag::Integer, hdr.len, false, depth)
+            ber_read_element_content_as(i, Tag::Integer, hdr.length, false, depth)
         }
         fn local_parse(i: &[u8]) -> BerResult<BerObject> {
             parse_ber_implicit(i, Tag(3), der_read_integer_content)

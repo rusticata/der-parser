@@ -44,7 +44,7 @@ pub fn parse_der(i: &[u8]) -> DerResult {
 pub fn parse_der_recursive(i: &[u8], max_depth: usize) -> DerResult {
     let (i, hdr) = der_read_element_header(i)?;
     // safety check: length cannot be more than 2^32 bytes
-    if let Length::Definite(l) = hdr.len {
+    if let Length::Definite(l) = hdr.length {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
     }
     der_read_element_content_recursive(i, hdr, max_depth)
@@ -83,7 +83,7 @@ pub fn parse_der_with_tag<Tag: Into<DerTag>>(i: &[u8], tag: Tag) -> DerResult {
         return Err(nom::Err::Error(BerError::InvalidTag));
     }
     let (i, content) =
-        der_read_element_content_as(i, hdr.tag, hdr.len, hdr.is_constructed(), MAX_RECURSION)?;
+        der_read_element_content_as(i, hdr.tag, hdr.length, hdr.is_constructed(), MAX_RECURSION)?;
     Ok((i, DerObject::from_header_and_content(hdr, content)))
 }
 
@@ -447,7 +447,7 @@ pub fn parse_der_content<'a>(
     tag: DerTag,
 ) -> impl Fn(&'a [u8], &'_ DerObjectHeader, usize) -> BerResult<'a, DerObjectContent<'a>> {
     move |i: &[u8], hdr: &DerObjectHeader, max_recursion: usize| {
-        der_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
+        der_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
     }
 }
 
@@ -479,7 +479,7 @@ pub fn parse_der_content2<'a>(
     tag: DerTag,
 ) -> impl Fn(&'a [u8], DerObjectHeader<'a>, usize) -> BerResult<'a, DerObjectContent<'a>> {
     move |i: &[u8], hdr: DerObjectHeader, max_recursion: usize| {
-        der_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
+        der_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
     }
 }
 
@@ -572,7 +572,7 @@ fn der_read_element_content_recursive<'a>(
             return Ok((i, obj));
         }
     }
-    match der_read_element_content_as(i, hdr.tag, hdr.len, hdr.is_constructed(), max_depth) {
+    match der_read_element_content_as(i, hdr.tag, hdr.length, hdr.is_constructed(), max_depth) {
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => {
             let (rem, content) = ber_get_object_content(i, &hdr, max_depth)?;

@@ -11,7 +11,7 @@ pub struct BerObjectHeader<'a> {
     /// Tag number
     pub(crate) tag: Tag,
     /// Object length: definite or indefinite
-    pub len: Length,
+    pub(crate) length: Length,
 
     /// Optionally, the raw encoding of the tag
     ///
@@ -22,12 +22,12 @@ pub struct BerObjectHeader<'a> {
 
 impl<'a> BerObjectHeader<'a> {
     /// Build a new BER header
-    pub fn new<Len: Into<Length>>(class: Class, constructed: bool, tag: Tag, len: Len) -> Self {
+    pub fn new<Len: Into<Length>>(class: Class, constructed: bool, tag: Tag, length: Len) -> Self {
         BerObjectHeader {
             tag,
             constructed,
             class,
-            len: len.into(),
+            length: length.into(),
             raw_tag: None,
         }
     }
@@ -69,13 +69,16 @@ impl<'a> BerObjectHeader<'a> {
     /// Get the BER object header's length.
     #[inline]
     pub const fn length(&self) -> Length {
-        self.len
+        self.length
     }
 
     /// Update header length
     #[inline]
     pub fn with_len(self, len: Length) -> Self {
-        BerObjectHeader { len, ..self }
+        BerObjectHeader {
+            length: len,
+            ..self
+        }
     }
 
     /// Get a reference to the BER object header's tag.
@@ -150,8 +153,8 @@ impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
             && self.tag == other.tag
             && self.constructed == other.constructed
             && {
-                if self.len.is_null() && other.len.is_null() {
-                    self.len == other.len
+                if self.length.is_null() && other.length.is_null() {
+                    self.length == other.length
                 } else {
                     true
                 }
