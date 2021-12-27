@@ -44,7 +44,7 @@ pub fn ber_encode_header<'a, 'b: 'a, W: Write + 'a>(
     move |out| {
         // identifier octets (X.690 8.1.2)
         let class_u8 = (hdr.class as u8) << 6;
-        let pc_u8 = (hdr.structured & 1) << 5;
+        let pc_u8 = (hdr.constructed & 1) << 5;
         if hdr.tag.0 >= 30 {
             unimplemented!();
         }
@@ -99,9 +99,9 @@ pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     move |out| {
         // encode inner object content
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
-        // but replace the tag (keep structured attribute)
+        // but replace the tag (keep constructed attribute)
         let len = v.as_ref().len();
-        let hdr = BerObjectHeader::new(class, obj.header.structured, tag, len);
+        let hdr = BerObjectHeader::new(class, obj.header.constructed, tag, len);
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }

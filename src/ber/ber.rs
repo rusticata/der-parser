@@ -114,15 +114,15 @@ impl<'a> BerObject<'a> {
     }
 
     /// Build a BerObject from its content, using default flags (no class, correct tag,
-    /// and structured flag set only for Set and Sequence)
+    /// and constructed flag set only for Set and Sequence)
     pub fn from_obj(c: BerObjectContent) -> BerObject {
         let class = Class::Universal;
         let tag = c.tag();
-        let structured = match tag {
+        let constructed = match tag {
             Tag::Sequence | Tag::Set => 1,
             _ => 0,
         };
-        let header = BerObjectHeader::new(class, structured, tag, Length::Definite(0));
+        let header = BerObjectHeader::new(class, constructed, tag, Length::Definite(0));
         BerObject { header, content: c }
     }
 
@@ -327,11 +327,11 @@ impl<'a> BerObject<'a> {
 
     /// Test if object is primitive
     pub fn is_primitive(&self) -> bool {
-        self.header.structured == 0
+        self.header.constructed == 0
     }
     /// Test if object is constructed
     pub fn is_constructed(&self) -> bool {
-        self.header.structured == 1
+        self.header.constructed == 1
     }
 }
 
@@ -760,7 +760,7 @@ impl<'a> Index<usize> for BerObject<'a> {
         match (*self).content {
             BerObjectContent::Sequence(ref v) if idx < v.len() => &v[idx],
             BerObjectContent::Set(ref v) if idx < v.len() => &v[idx],
-            _ => panic!("Try to index BerObjectContent which is not structured"),
+            _ => panic!("Try to index BerObjectContent which is not constructed"),
         }
         // XXX the following
         // self.ref_iter().nth(idx).unwrap()

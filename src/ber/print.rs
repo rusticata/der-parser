@@ -57,7 +57,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
             write!(f, "{:1$}", " ", self.indent)?;
         };
         if self.flags.contains(&PrettyPrinterFlag::ShowHeader) {
-            write!(f, "[c:{:?}, s:{}, t:{}] ", self.obj.header.class, self.obj.header.structured, self.obj.header.tag)?;
+            write!(f, "[c:{:?}, s:{}, t:{}] ", self.obj.header.class, self.obj.header.constructed, self.obj.header.tag)?;
         };
         fn print_utf8_string_with_type(f: &mut fmt::Formatter, s: &[u8], ty: &str) -> fmt::Result {
             match str::from_utf8(s) {
@@ -119,7 +119,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
                 }
             }
             BerObjectContent::Private(ref hdr, bytes) => {
-                writeln!(f, "Private(c:{} s:{} t:{}): {:?}", hdr.class, hdr.structured, hdr.tag.0, debug::HexSlice(bytes))
+                writeln!(f, "Private(c:{} s:{} t:{}): {:?}", hdr.class, hdr.constructed, hdr.tag.0, debug::HexSlice(bytes))
             },
             BerObjectContent::Tagged(class, tag, ref obj) => {
                 writeln!(f, "ContextSpecific [{} {}] {{", class, tag)?;

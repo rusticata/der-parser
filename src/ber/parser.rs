@@ -867,7 +867,7 @@ pub fn parse_ber_relative_oid(i: &[u8]) -> BerResult {
 /// Parse a sequence of BER elements
 ///
 /// Read a sequence of BER objects, without any constraint on the types.
-/// Sequence is parsed recursively, so if structured elements are found, they are parsed using the
+/// Sequence is parsed recursively, so if constructed elements are found, they are parsed using the
 /// same function.
 ///
 /// To read a specific sequence of objects (giving the expected types), use the
@@ -880,7 +880,7 @@ pub fn parse_ber_sequence(i: &[u8]) -> BerResult {
 /// Parse a set of BER elements
 ///
 /// Read a set of BER objects, without any constraint on the types.
-/// Set is parsed recursively, so if structured elements are found, they are parsed using the
+/// Set is parsed recursively, so if constructed elements are found, they are parsed using the
 /// same function.
 ///
 /// To read a specific set of objects (giving the expected types), use the

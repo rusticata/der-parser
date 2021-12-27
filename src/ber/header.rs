@@ -6,7 +6,7 @@ pub struct BerObjectHeader<'a> {
     /// Object class: universal, application, context-specific, or private
     pub(crate) class: Class,
     /// Constructed attribute: 1 if constructed, else 0
-    pub structured: u8,
+    pub(crate) constructed: u8,
     /// Tag number
     pub tag: Tag,
     /// Object length: definite or indefinite
@@ -21,10 +21,10 @@ pub struct BerObjectHeader<'a> {
 
 impl<'a> BerObjectHeader<'a> {
     /// Build a new BER header
-    pub fn new<Len: Into<Length>>(class: Class, structured: u8, tag: Tag, len: Len) -> Self {
+    pub fn new<Len: Into<Length>>(class: Class, constructed: u8, tag: Tag, len: Len) -> Self {
         BerObjectHeader {
             tag,
-            structured,
+            constructed,
             class,
             len: len.into(),
             raw_tag: None,
@@ -103,12 +103,12 @@ impl<'a> BerObjectHeader<'a> {
     /// Test if object is primitive
     #[inline]
     pub fn is_primitive(&self) -> bool {
-        self.structured == 0
+        self.constructed == 0
     }
     /// Test if object is constructed
     #[inline]
     pub fn is_constructed(&self) -> bool {
-        self.structured == 1
+        self.constructed == 1
     }
 }
 
@@ -117,7 +117,7 @@ impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
     fn eq(&self, other: &BerObjectHeader) -> bool {
         self.class == other.class
             && self.tag == other.tag
-            && self.structured == other.structured
+            && self.constructed == other.constructed
             && {
                 if self.len.is_null() && other.len.is_null() {
                     self.len == other.len
