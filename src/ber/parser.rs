@@ -172,7 +172,7 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
 ///
-/// assert_eq!(hdr.class, Class::Universal);
+/// assert_eq!(hdr.class(), Class::Universal);
 /// assert_eq!(hdr.tag, Tag::Integer);
 /// assert_eq!(hdr.len, Length::Definite(3));
 /// ```
