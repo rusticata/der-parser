@@ -9,11 +9,11 @@ use cookie_factory::sequence::tuple;
 use cookie_factory::{GenError, SerializeFn};
 use std::io::Write;
 
-fn encode_length<'a, W: Write + 'a, Len: Into<BerSize>>(len: Len) -> impl SerializeFn<W> + 'a {
+fn encode_length<'a, W: Write + 'a, Len: Into<Length>>(len: Len) -> impl SerializeFn<W> + 'a {
     let l = len.into();
     move |out| {
         match l {
-            BerSize::Definite(sz) => {
+            Length::Definite(sz) => {
                 if sz <= 128 {
                     // definite, short form
                     be_u8(sz as u8)(out)
@@ -29,7 +29,7 @@ fn encode_length<'a, W: Write + 'a, Len: Into<BerSize>>(len: Len) -> impl Serial
                     tuple((be_u8(b0 as u8), slice(v)))(out)
                 }
             }
-            BerSize::Indefinite => be_u8(0b1000_0000)(out),
+            Length::Indefinite => be_u8(0b1000_0000)(out),
         }
     }
 }

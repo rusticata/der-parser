@@ -1,4 +1,4 @@
-use super::{BerClass, BerClassFromIntError, BerSize, BerSizeError, BerTag};
+use super::{BerClass, BerClassFromIntError, Length, BerSizeError, BerTag};
 use crate::ber::bitstring_to_u64;
 use crate::ber::header::*;
 use crate::ber::integer::*;
@@ -121,45 +121,45 @@ impl From<u32> for BerTag {
     }
 }
 
-impl BerSize {
+impl Length {
     /// Return true if length is definite and equal to 0
     pub fn is_null(&self) -> bool {
-        *self == BerSize::Definite(0)
+        *self == Length::Definite(0)
     }
 
     /// Get length of primitive object
     #[inline]
     pub fn primitive(&self) -> Result<usize, BerError> {
         match self {
-            BerSize::Definite(sz) => Ok(*sz),
-            BerSize::Indefinite => Err(BerError::IndefiniteLengthUnexpected),
+            Length::Definite(sz) => Ok(*sz),
+            Length::Indefinite => Err(BerError::IndefiniteLengthUnexpected),
         }
     }
 }
 
-impl From<usize> for BerSize {
+impl From<usize> for Length {
     fn from(v: usize) -> Self {
-        BerSize::Definite(v)
+        Length::Definite(v)
     }
 }
 
-impl TryFrom<u64> for BerSize {
+impl TryFrom<u64> for Length {
     type Error = BerSizeError;
 
     fn try_from(value: u64) -> Result<Self, Self::Error> {
         let v = usize::try_from(value).or(Err(BerSizeError(())))?;
-        Ok(BerSize::Definite(v))
+        Ok(Length::Definite(v))
     }
 }
 
-impl TryFrom<BerSize> for usize {
+impl TryFrom<Length> for usize {
     type Error = BerSizeError;
 
     #[inline]
-    fn try_from(value: BerSize) -> Result<Self, Self::Error> {
+    fn try_from(value: Length) -> Result<Self, Self::Error> {
         match value {
-            BerSize::Definite(sz) => Ok(sz),
-            BerSize::Indefinite => Err(BerSizeError(())),
+            Length::Definite(sz) => Ok(sz),
+            Length::Indefinite => Err(BerSizeError(())),
         }
     }
 }
@@ -181,7 +181,7 @@ impl TryFrom<u8> for BerClass {
 
 impl<'a> BerObjectHeader<'a> {
     /// Build a new BER header
-    pub fn new<Len: Into<BerSize>>(class: BerClass, structured: u8, tag: BerTag, len: Len) -> Self {
+    pub fn new<Len: Into<Length>>(class: BerClass, structured: u8, tag: BerTag, len: Len) -> Self {
         BerObjectHeader {
             tag,
             structured,
@@ -205,7 +205,7 @@ impl<'a> BerObjectHeader<'a> {
 
     /// Update header length
     #[inline]
-    pub fn with_len(self, len: BerSize) -> Self {
+    pub fn with_len(self, len: Length) -> Self {
         BerObjectHeader { len, ..self }
     }
 
@@ -269,7 +269,7 @@ impl<'a> BerObject<'a> {
             BerTag::Sequence | BerTag::Set => 1,
             _ => 0,
         };
-        let header = BerObjectHeader::new(class, structured, tag, BerSize::Definite(0));
+        let header = BerObjectHeader::new(class, structured, tag, Length::Definite(0));
         BerObject { header, content: c }
     }
 
@@ -279,7 +279,7 @@ impl<'a> BerObject<'a> {
             BerClass::Universal,
             0,
             BerTag::Integer,
-            BerSize::Definite(0),
+            Length::Definite(0),
         );
         BerObject {
             header,

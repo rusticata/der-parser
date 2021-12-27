@@ -24,14 +24,14 @@ pub(crate) fn ber_skip_object_content<'a>(
         return Err(Err::Error(BerError::BerMaxDepth));
     }
     match hdr.len {
-        BerSize::Definite(l) => {
+        Length::Definite(l) => {
             if l == 0 && hdr.tag == BerTag::EndOfContent {
                 return Ok((i, true));
             }
             let (i, _) = take(l)(i)?;
             Ok((i, false))
         }
-        BerSize::Indefinite => {
+        Length::Indefinite => {
             if hdr.is_primitive() {
                 return Err(Err::Error(BerError::ConstructExpected));
             }
@@ -62,7 +62,7 @@ pub(crate) fn ber_get_object_content<'a>(
     let len = start_i.offset(i);
     let (content, i) = start_i.split_at(len);
     // if len is indefinite, there are 2 extra bytes for EOC
-    if hdr.len == BerSize::Indefinite {
+    if hdr.len == Length::Indefinite {
         let len = content.len();
         assert!(len >= 2);
         Ok((i, &content[..len - 2]))
@@ -167,14 +167,14 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
 /// ### Example
 ///
 /// ```
-/// # use der_parser::ber::{ber_read_element_header, BerClass, BerSize, BerTag};
+/// # use der_parser::ber::{ber_read_element_header, BerClass, BerTag, Length};
 /// #
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
 ///
 /// assert_eq!(hdr.class, BerClass::Universal);
 /// assert_eq!(hdr.tag, BerTag::Integer);
-/// assert_eq!(hdr.len, BerSize::Definite(3));
+/// assert_eq!(hdr.len, Length::Definite(3));
 /// ```
 pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
     let (i1, el) = parse_identifier(i)?;
@@ -186,7 +186,7 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
     let (i3, len) = match (len.0, len.1) {
         (0, l1) => {
             // Short form: MSB is 0, the rest encodes the length (which can be 0) (8.1.3.4)
-            (i2, BerSize::Definite(usize::from(l1)))
+            (i2, Length::Definite(usize::from(l1)))
         }
         (_, 0) => {
             // Indefinite form: MSB is 1, the rest is 0 (8.1.3.6)
@@ -194,7 +194,7 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
             if el.1 == 0 {
                 return Err(Err::Error(BerError::ConstructExpected));
             }
-            (i2, BerSize::Indefinite)
+            (i2, Length::Indefinite)
         }
         (_, l1) => {
             // if len is 0xff -> error (8.1.3.5)
@@ -206,7 +206,7 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
                 Ok(l) => {
                     let l =
                         usize::try_from(l).or(Err(::nom::Err::Error(BerError::InvalidLength)))?;
-                    (i3, BerSize::Definite(l))
+                    (i3, Length::Definite(l))
                 }
                 Err(_) => {
                     return Err(::nom::Err::Error(BerError::InvalidTag));
@@ -295,18 +295,18 @@ fn ber_read_content_relativeoid(i: &[u8], len: usize) -> BerResult<BerObjectCont
 
 fn ber_read_content_sequence(
     i: &[u8],
-    len: BerSize,
+    len: Length,
     max_depth: usize,
 ) -> BerResult<BerObjectContent> {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     match len {
-        BerSize::Definite(len) => {
+        Length::Definite(len) => {
             let (i, data) = take(len)(i)?;
             let (_, l) = many0(complete(r_parse_ber(max_depth - 1)))(data)?;
             // trailing bytes are ignored
             Ok((i, BerObjectContent::Sequence(l)))
         }
-        BerSize::Indefinite => {
+        Length::Indefinite => {
             // indefinite form
             // read until end-of-content
             let (rem, (l, _)) = many_till(r_parse_ber(max_depth - 1), parse_ber_endofcontent)(i)?;
@@ -315,16 +315,16 @@ fn ber_read_content_sequence(
     }
 }
 
-fn ber_read_content_set(i: &[u8], len: BerSize, max_depth: usize) -> BerResult<BerObjectContent> {
+fn ber_read_content_set(i: &[u8], len: Length, max_depth: usize) -> BerResult<BerObjectContent> {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     match len {
-        BerSize::Definite(len) => {
+        Length::Definite(len) => {
             let (i, data) = take(len)(i)?;
             let (_, l) = many0(complete(r_parse_ber(max_depth - 1)))(data)?;
             // trailing bytes are ignored
             Ok((i, BerObjectContent::Set(l)))
         }
-        BerSize::Indefinite => {
+        Length::Indefinite => {
             // indefinite form
             // read until end-of-content
             let (rem, (l, _)) = many_till(r_parse_ber(max_depth - 1), parse_ber_endofcontent)(i)?;
@@ -506,11 +506,11 @@ fn ber_read_content_universalstring(i: &[u8], len: usize) -> BerResult<BerObject
 pub fn ber_read_element_content_as(
     i: &[u8],
     tag: BerTag,
-    len: BerSize,
+    len: Length,
     constructed: bool,
     max_depth: usize,
 ) -> BerResult<BerObjectContent> {
-    if let BerSize::Definite(l) = len {
+    if let Length::Definite(l) = len {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
         if i.len() < l {
             return Err(Err::Incomplete(Needed::new(l)));
@@ -519,7 +519,7 @@ pub fn ber_read_element_content_as(
     match tag {
         // 0x00 end-of-content
         BerTag::EndOfContent => {
-            custom_check!(i, len != BerSize::Definite(0), BerError::InvalidLength)?;
+            custom_check!(i, len != Length::Definite(0), BerError::InvalidLength)?;
             ber_read_content_eoc(i)
         }
         // 0x01 bool
@@ -1162,7 +1162,7 @@ pub(crate) fn r_parse_ber(max_depth: usize) -> impl Fn(&[u8]) -> BerResult {
 pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     let (rem, hdr) = ber_read_element_header(i)?;
-    if let BerSize::Definite(l) = hdr.len {
+    if let Length::Definite(l) = hdr.len {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
     }
     match hdr.class {

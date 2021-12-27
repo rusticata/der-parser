@@ -8,6 +8,17 @@
 
 ### Thanks
 
+## [Unreleased][unreleased]
+
+### Changed/Fixed
+
+- `BerSize` has been renamed to `Length`
+
+### Added
+
+### Thanks
+
+
 ## 6.0.0
 
 This release has several major changes:
