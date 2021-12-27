@@ -38,6 +38,22 @@ impl<'a> BerObjectHeader<'a> {
         self.class
     }
 
+    /// Set the BER object header's class.
+    #[inline]
+    pub fn set_class(&mut self, class: Class) {
+        self.class = class;
+    }
+
+    /// Return error if `class` is not the expected class
+    #[inline]
+    pub const fn assert_class(&self, class: Class) -> Result<(), BerError> {
+        if self.class as u8 == class as u8 {
+            Ok(())
+        } else {
+            Err(BerError::UnexpectedClass(class))
+        }
+    }
+
     /// Update header class
     #[inline]
     pub fn with_class(self, class: Class) -> Self {
@@ -50,13 +66,19 @@ impl<'a> BerObjectHeader<'a> {
         self.tag
     }
 
+    /// Set the BER object header's tag.
+    #[inline]
+    pub fn set_tag(&mut self, tag: Tag) {
+        self.tag = tag;
+    }
+
     /// Update header tag
     #[inline]
     pub fn with_tag(self, tag: Tag) -> Self {
         BerObjectHeader { tag, ..self }
     }
 
-    /// Return error if tag is not the expected tag
+    /// Return error if `tag` is not the expected tag
     #[inline]
     pub const fn assert_tag(&self, tag: Tag) -> Result<(), BerError> {
         if self.tag.0 == tag.0 {
@@ -70,6 +92,12 @@ impl<'a> BerObjectHeader<'a> {
     #[inline]
     pub const fn length(&self) -> Length {
         self.length
+    }
+
+    /// Set the BER object header's length.
+    #[inline]
+    pub fn set_length(&mut self, length: Length) {
+        self.length = length;
     }
 
     /// Update header length
@@ -95,23 +123,23 @@ impl<'a> BerObjectHeader<'a> {
 
     /// Test if object class is Universal
     #[inline]
-    pub fn is_universal(&self) -> bool {
-        self.class == Class::Universal
+    pub const fn is_universal(&self) -> bool {
+        self.class as u8 == Class::Universal as u8
     }
     /// Test if object class is Application
     #[inline]
-    pub fn is_application(&self) -> bool {
-        self.class == Class::Application
+    pub const fn is_application(&self) -> bool {
+        self.class as u8 == Class::Application as u8
     }
     /// Test if object class is Context-specific
     #[inline]
-    pub fn is_contextspecific(&self) -> bool {
-        self.class == Class::ContextSpecific
+    pub const fn is_contextspecific(&self) -> bool {
+        self.class as u8 == Class::ContextSpecific as u8
     }
     /// Test if object class is Private
     #[inline]
-    pub fn is_private(&self) -> bool {
-        self.class == Class::Private
+    pub const fn is_private(&self) -> bool {
+        self.class as u8 == Class::Private as u8
     }
 
     /// Test if object is primitive
