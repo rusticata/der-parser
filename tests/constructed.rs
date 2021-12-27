@@ -406,7 +406,7 @@ fn application() {
     }
     fn parse_app01(i: &[u8]) -> BerResult<SimpleStruct> {
         parse_der_container(|i, hdr| {
-            if hdr.class != BerClass::Application {
+            if hdr.class != Class::Application {
                 return Err(Err::Error(BerError::InvalidClass));
             }
             if hdr.tag != BerTag(2) {

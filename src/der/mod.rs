@@ -53,7 +53,7 @@
 //!     .expect("parsing failed");
 //! ```
 
-use crate::ber::{BerClass, BerObject, BerObjectContent, BerObjectHeader, BerTag};
+use crate::ber::{BerObject, BerObjectContent, BerObjectHeader, BerTag, Class};
 
 mod multi;
 mod parser;
@@ -67,7 +67,7 @@ use alloc::vec::Vec;
 use core::convert::{Into, TryFrom};
 
 /// DER Object class of tag (same as `BerClass`)
-pub type DerClass = BerClass;
+pub type DerClass = Class;
 
 /// DER tag (same as BER tag)
 pub type DerTag = BerTag;

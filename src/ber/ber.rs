@@ -1,4 +1,4 @@
-use super::{BerClass, BerClassFromIntError, Length, BerSizeError, BerTag};
+use super::{BerSizeError, BerTag, Class, ClassFromIntError, Length};
 use crate::ber::bitstring_to_u64;
 use crate::ber::header::*;
 use crate::ber::integer::*;
@@ -95,21 +95,21 @@ pub enum BerObjectContent<'a> {
     /// Optional object
     Optional(Option<Box<BerObject<'a>>>),
     /// Tagged object (EXPLICIT): class, tag  and content of inner object
-    Tagged(BerClass, BerTag, Box<BerObject<'a>>),
+    Tagged(Class, BerTag, Box<BerObject<'a>>),
     /// Private
     Private(BerObjectHeader<'a>, &'a [u8]),
 
     /// Unknown object: object tag (copied from header), and raw content
-    Unknown(BerClass, BerTag, &'a [u8]),
+    Unknown(Class, BerTag, &'a [u8]),
 }
 
-impl fmt::Display for BerClass {
+impl fmt::Display for Class {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            BerClass::Universal => "UNIVERSAL",
-            BerClass::Application => "APPLICATION",
-            BerClass::ContextSpecific => "CONTEXT-SPECIFIC",
-            BerClass::Private => "PRIVATE",
+            Class::Universal => "UNIVERSAL",
+            Class::Application => "APPLICATION",
+            Class::ContextSpecific => "CONTEXT-SPECIFIC",
+            Class::Private => "PRIVATE",
         };
         write!(f, "{}", s)
     }
@@ -164,24 +164,24 @@ impl TryFrom<Length> for usize {
     }
 }
 
-impl TryFrom<u8> for BerClass {
-    type Error = BerClassFromIntError;
+impl TryFrom<u8> for Class {
+    type Error = ClassFromIntError;
 
     #[inline]
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0b00 => Ok(BerClass::Universal),
-            0b01 => Ok(BerClass::Application),
-            0b10 => Ok(BerClass::ContextSpecific),
-            0b11 => Ok(BerClass::Private),
-            _ => Err(BerClassFromIntError(())),
+            0b00 => Ok(Class::Universal),
+            0b01 => Ok(Class::Application),
+            0b10 => Ok(Class::ContextSpecific),
+            0b11 => Ok(Class::Private),
+            _ => Err(ClassFromIntError(())),
         }
     }
 }
 
 impl<'a> BerObjectHeader<'a> {
     /// Build a new BER header
-    pub fn new<Len: Into<Length>>(class: BerClass, structured: u8, tag: BerTag, len: Len) -> Self {
+    pub fn new<Len: Into<Length>>(class: Class, structured: u8, tag: BerTag, len: Len) -> Self {
         BerObjectHeader {
             tag,
             structured,
@@ -193,7 +193,7 @@ impl<'a> BerObjectHeader<'a> {
 
     /// Update header class
     #[inline]
-    pub fn with_class(self, class: BerClass) -> Self {
+    pub fn with_class(self, class: Class) -> Self {
         BerObjectHeader { class, ..self }
     }
 
@@ -218,22 +218,22 @@ impl<'a> BerObjectHeader<'a> {
     /// Test if object class is Universal
     #[inline]
     pub fn is_universal(&self) -> bool {
-        self.class == BerClass::Universal
+        self.class == Class::Universal
     }
     /// Test if object class is Application
     #[inline]
     pub fn is_application(&self) -> bool {
-        self.class == BerClass::Application
+        self.class == Class::Application
     }
     /// Test if object class is Context-specific
     #[inline]
     pub fn is_contextspecific(&self) -> bool {
-        self.class == BerClass::ContextSpecific
+        self.class == Class::ContextSpecific
     }
     /// Test if object class is Private
     #[inline]
     pub fn is_private(&self) -> bool {
-        self.class == BerClass::Private
+        self.class == Class::Private
     }
 
     /// Test if object is primitive
@@ -263,7 +263,7 @@ impl<'a> BerObject<'a> {
     /// Build a BerObject from its content, using default flags (no class, correct tag,
     /// and structured flag set only for Set and Sequence)
     pub fn from_obj(c: BerObjectContent) -> BerObject {
-        let class = BerClass::Universal;
+        let class = Class::Universal;
         let tag = c.tag();
         let structured = match tag {
             BerTag::Sequence | BerTag::Set => 1,
@@ -275,12 +275,8 @@ impl<'a> BerObject<'a> {
 
     /// Build a DER integer object from a slice containing an encoded integer
     pub fn from_int_slice(i: &'a [u8]) -> BerObject<'a> {
-        let header = BerObjectHeader::new(
-            BerClass::Universal,
-            0,
-            BerTag::Integer,
-            Length::Definite(0),
-        );
+        let header =
+            BerObjectHeader::new(Class::Universal, 0, BerTag::Integer, Length::Definite(0));
         BerObject {
             header,
             content: BerObjectContent::Integer(i),
@@ -405,7 +401,7 @@ impl<'a> BerObject<'a> {
 
     /// Attempt to get a reference on the content from a tagged object.
     /// This can fail if the object is not tagged.
-    pub fn as_tagged(&'a self) -> Result<(BerClass, BerTag, &'_ BerObject<'a>), BerError> {
+    pub fn as_tagged(&'a self) -> Result<(Class, BerTag, &'_ BerObject<'a>), BerError> {
         self.content.as_tagged()
     }
 
@@ -462,19 +458,19 @@ impl<'a> BerObject<'a> {
 
     /// Test if object class is Universal
     pub fn is_universal(&self) -> bool {
-        self.header.class == BerClass::Universal
+        self.header.class == Class::Universal
     }
     /// Test if object class is Application
     pub fn is_application(&self) -> bool {
-        self.header.class == BerClass::Application
+        self.header.class == Class::Application
     }
     /// Test if object class is Context-specific
     pub fn is_contextspecific(&self) -> bool {
-        self.header.class == BerClass::ContextSpecific
+        self.header.class == Class::ContextSpecific
     }
     /// Test if object class is Private
     pub fn is_private(&self) -> bool {
-        self.header.class == BerClass::Private
+        self.header.class == Class::Private
     }
 
     /// Test if object is primitive
@@ -676,7 +672,7 @@ impl<'a> BerObjectContent<'a> {
         }
     }
 
-    pub fn as_tagged(&'a self) -> Result<(BerClass, BerTag, &'_ BerObject<'a>), BerError> {
+    pub fn as_tagged(&'a self) -> Result<(Class, BerTag, &'_ BerObject<'a>), BerError> {
         match *self {
             BerObjectContent::Tagged(class, tag, ref o) => Ok((class, tag, o.as_ref())),
             _ => Err(BerError::BerTypeError),

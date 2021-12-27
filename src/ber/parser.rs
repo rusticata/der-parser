@@ -167,18 +167,18 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
 /// ### Example
 ///
 /// ```
-/// # use der_parser::ber::{ber_read_element_header, BerClass, BerTag, Length};
+/// # use der_parser::ber::{ber_read_element_header, BerTag, Class, Length};
 /// #
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
 ///
-/// assert_eq!(hdr.class, BerClass::Universal);
+/// assert_eq!(hdr.class, Class::Universal);
 /// assert_eq!(hdr.tag, BerTag::Integer);
 /// assert_eq!(hdr.len, Length::Definite(3));
 /// ```
 pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
     let (i1, el) = parse_identifier(i)?;
-    let class = match BerClass::try_from(el.0) {
+    let class = match Class::try_from(el.0) {
         Ok(c) => c,
         Err(_) => unreachable!(), // Cannot fail, we have read exactly 2 bits
     };
@@ -1166,8 +1166,8 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
     }
     match hdr.class {
-        BerClass::Universal => (),
-        BerClass::Private => {
+        Class::Universal => (),
+        Class::Private => {
             let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
             let content = BerObjectContent::Private(hdr.clone(), content);
             let obj = BerObject::from_header_and_content(hdr, content);

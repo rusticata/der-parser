@@ -558,8 +558,8 @@ fn der_read_element_content_recursive<'a>(
     max_depth: usize,
 ) -> DerResult<'a> {
     match hdr.class {
-        BerClass::Universal => (),
-        BerClass::Private => {
+        Class::Universal => (),
+        Class::Private => {
             let (rem, content) = ber_get_object_content(i, &hdr, max_depth)?;
             let content = BerObjectContent::Private(hdr.clone(), content);
             let obj = BerObject::from_header_and_content(hdr, content);

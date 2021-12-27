@@ -73,7 +73,7 @@ fn ber_encode_sequence<'a, W: Write + Default + AsRef<[u8]> + 'a>(
 #[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
 pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     tag: BerTag,
-    class: BerClass,
+    class: Class,
     obj: &'a BerObject,
 ) -> impl SerializeFn<W> + 'a {
     move |out| {
@@ -93,7 +93,7 @@ pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
 #[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
 pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
     tag: BerTag,
-    class: BerClass,
+    class: Class,
     obj: &'a BerObject,
 ) -> impl SerializeFn<W> + 'a {
     move |out| {
@@ -349,7 +349,7 @@ mod test {
         let bytes = hex!("a0 03 02 01 02");
         let obj = BerObject::from_int_slice(b"\x02");
         let v = gen_simple(
-            ber_encode_tagged_explicit(BerTag(0), BerClass::ContextSpecific, &obj),
+            ber_encode_tagged_explicit(BerTag(0), Class::ContextSpecific, &obj),
             Vec::new(),
         )
         .expect("could not encode");
@@ -378,7 +378,7 @@ mod test {
         }
         let obj = BerObject::from_int_slice(b"\x02");
         let v = gen_simple(
-            ber_encode_tagged_implicit(BerTag(3), BerClass::ContextSpecific, &obj),
+            ber_encode_tagged_implicit(BerTag(3), Class::ContextSpecific, &obj),
             Vec::new(),
         )
         .expect("could not encode");
@@ -395,7 +395,7 @@ mod test {
         }
         let obj = BerObject::from_int_slice(b"\x02");
         let v = gen_simple(
-            ber_encode_tagged_explicit(BerTag(2), BerClass::Application, &obj),
+            ber_encode_tagged_explicit(BerTag(2), Class::Application, &obj),
             Vec::new(),
         )
         .expect("could not encode");
