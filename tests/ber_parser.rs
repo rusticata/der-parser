@@ -478,14 +478,14 @@ fn test_ber_customtags() {
         .1;
     // println!("{:?}", hdr);
     let expected: &[u8] = &[0x8f];
-    assert_eq!(hdr.raw_tag, Some(expected));
+    assert_eq!(hdr.raw_tag(), Some(expected));
     let bytes = hex!("9f 0f 02 12 34");
     let hdr = ber_read_element_header(&bytes)
         .expect("ber_read_element_header")
         .1;
     // println!("{:?}", hdr);
     let expected: &[u8] = &[0x9f, 0x0f];
-    assert_eq!(hdr.raw_tag, Some(expected));
+    assert_eq!(hdr.raw_tag(), Some(expected));
 }
 
 #[test]
