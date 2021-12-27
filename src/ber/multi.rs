@@ -225,7 +225,7 @@ where
     E: ParseError<&'a [u8]> + From<BerError>,
 {
     parse_ber_container(move |i, hdr| {
-        if hdr.tag != BerTag::Sequence {
+        if hdr.tag != Tag::Sequence {
             return Err(Err::Error(BerError::InvalidTag.into()));
         }
         f(i, hdr)
@@ -450,7 +450,7 @@ where
     E: ParseError<&'a [u8]> + From<BerError>,
 {
     parse_ber_container(move |i, hdr| {
-        if hdr.tag != BerTag::Set {
+        if hdr.tag != Tag::Set {
             return Err(Err::Error(BerError::InvalidTag.into()));
         }
         f(i, hdr)
@@ -491,7 +491,7 @@ where
 /// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
 ///     parse_ber_container(
 ///         |i: &[u8], hdr: BerObjectHeader| {
-///             if hdr.tag != BerTag::Sequence {
+///             if hdr.tag != Tag::Sequence {
 ///                 return Err(nom::Err::Error(BerError::BerTypeError.into()));
 ///             }
 ///             let (i, a) = parse_ber_u32(i)?;

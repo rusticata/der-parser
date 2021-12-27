@@ -1,5 +1,5 @@
 use crate::ber::BitStringObject;
-use crate::ber::{BerObject, BerObjectContent, BerTag};
+use crate::ber::{BerObject, BerObjectContent, Tag};
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt;
@@ -132,7 +132,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
             },
             BerObjectContent::Set(ref v) |
             BerObjectContent::Sequence(ref v)        => {
-                let ty = if self.obj.header.tag == BerTag::Sequence { "Sequence" } else { "Set" };
+                let ty = if self.obj.header.tag == Tag::Sequence { "Sequence" } else { "Set" };
                 writeln!(f, "{}[", ty)?;
                 for o in v {
                     write!(f, "{:?}", self.next_indent(o))?;

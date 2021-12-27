@@ -25,7 +25,7 @@ pub(crate) fn ber_skip_object_content<'a>(
     }
     match hdr.len {
         Length::Definite(l) => {
-            if l == 0 && hdr.tag == BerTag::EndOfContent {
+            if l == 0 && hdr.tag == Tag::EndOfContent {
                 return Ok((i, true));
             }
             let (i, _) = take(l)(i)?;
@@ -167,13 +167,13 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
 /// ### Example
 ///
 /// ```
-/// # use der_parser::ber::{ber_read_element_header, BerTag, Class, Length};
+/// # use der_parser::ber::{ber_read_element_header, Class, Length, Tag};
 /// #
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
 ///
 /// assert_eq!(hdr.class, Class::Universal);
-/// assert_eq!(hdr.tag, BerTag::Integer);
+/// assert_eq!(hdr.tag, Tag::Integer);
 /// assert_eq!(hdr.len, Length::Definite(3));
 /// ```
 pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
@@ -214,7 +214,7 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
             }
         }
     };
-    let hdr = BerObjectHeader::new(class, el.1, BerTag(el.2), len).with_raw_tag(Some(el.3));
+    let hdr = BerObjectHeader::new(class, el.1, Tag(el.2), len).with_raw_tag(Some(el.3));
     Ok((i3, hdr))
 }
 
@@ -492,7 +492,7 @@ fn ber_read_content_universalstring(i: &[u8], len: usize) -> BerResult<BerObject
 /// ### Example
 ///
 /// ```
-/// # use der_parser::ber::{ber_read_element_content_as, ber_read_element_header, BerTag};
+/// # use der_parser::ber::{ber_read_element_content_as, ber_read_element_header, Tag};
 /// #
 /// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
@@ -500,12 +500,12 @@ fn ber_read_content_universalstring(i: &[u8], len: usize) -> BerResult<BerObject
 ///     i, hdr.tag, hdr.len, hdr.is_constructed(), 5
 /// ).expect("parsing failed");
 /// #
-/// # assert_eq!(hdr.tag, BerTag::Integer);
+/// # assert_eq!(hdr.tag, Tag::Integer);
 /// # assert_eq!(content.as_u32(), Ok(0x10001));
 /// ```
 pub fn ber_read_element_content_as(
     i: &[u8],
-    tag: BerTag,
+    tag: Tag,
     len: Length,
     constructed: bool,
     max_depth: usize,
@@ -518,92 +518,92 @@ pub fn ber_read_element_content_as(
     }
     match tag {
         // 0x00 end-of-content
-        BerTag::EndOfContent => {
+        Tag::EndOfContent => {
             custom_check!(i, len != Length::Definite(0), BerError::InvalidLength)?;
             ber_read_content_eoc(i)
         }
         // 0x01 bool
-        BerTag::Boolean => {
+        Tag::Boolean => {
             let len = len.primitive()?;
             custom_check!(i, len != 1, BerError::InvalidLength)?;
             ber_read_content_bool(i)
         }
         // 0x02
-        BerTag::Integer => {
+        Tag::Integer => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?;
             let len = len.primitive()?;
             ber_read_content_integer(i, len)
         }
         // 0x03: bitstring
-        BerTag::BitString => {
+        Tag::BitString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.6.3)
             let len = len.primitive()?;
             ber_read_content_bitstring(i, len)
         }
         // 0x04: octetstring
-        BerTag::OctetString => {
+        Tag::OctetString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.7.1)
             let len = len.primitive()?;
             ber_read_content_octetstring(i, len)
         }
         // 0x05: null
-        BerTag::Null => {
+        Tag::Null => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?;
             let len = len.primitive()?;
             custom_check!(i, len != 0, BerError::InvalidLength)?;
             ber_read_content_null(i)
         }
         // 0x06: object identifier
-        BerTag::Oid => {
+        Tag::Oid => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.19.1
             let len = len.primitive()?;
             ber_read_content_oid(i, len)
         }
         // 0x07: object descriptor - Alias for GraphicString with a different
         // implicit tag, see below
-        BerTag::ObjDescriptor => {
+        Tag::ObjDescriptor => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_objectdescriptor(i, len)
         }
         // 0x0a: enumerated
-        BerTag::Enumerated => {
+        Tag::Enumerated => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.4
             let len = len.primitive()?;
             ber_read_content_enum(i, len)
         }
         // 0x0c: UTF8String - Unicode encoded with the UTF-8 charset (ISO/IEC
         // 10646-1, Annex D)
-        BerTag::Utf8String => {
+        Tag::Utf8String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_utf8string(i, len)
         }
         // 0x0d: relative object identified
-        BerTag::RelativeOid => {
+        Tag::RelativeOid => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?;
             let len = len.primitive()?;
             ber_read_content_relativeoid(i, len)
         }
         // 0x10: sequence
-        BerTag::Sequence => {
+        Tag::Sequence => {
             custom_check!(i, !constructed, BerError::ConstructExpected)?;
             ber_read_content_sequence(i, len, max_depth)
         }
         // 0x11: set
-        BerTag::Set => {
+        Tag::Set => {
             custom_check!(i, !constructed, BerError::ConstructExpected)?;
             ber_read_content_set(i, len, max_depth)
         }
         // 0x12: numericstring - ASCII string with digits an spaces only
-        BerTag::NumericString => {
+        Tag::NumericString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_numericstring(i, len)
         }
         // 0x13: printablestring - ASCII string with certain printable
         // characters only (specified in Table 10 of X.680)
-        BerTag::PrintableString => {
+        Tag::PrintableString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_printablestring(i, len)
@@ -612,53 +612,53 @@ pub fn ber_read_element_content_as(
         // ASCII is possible but only when explicit escaped, as by default
         // the G0 character range (0x20-0x7f) will match the graphic character
         // set. https://en.wikipedia.org/wiki/ITU_T.61
-        BerTag::T61String => {
+        Tag::T61String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_t61string(i, len)
         }
         // 0x15: videotexstring - ISO 2022 string with a Videotex (T.100/T.101)
         // charset, excluding ASCII. https://en.wikipedia.org/wiki/Videotex_character_set
-        BerTag::VideotexString => {
+        Tag::VideotexString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_videotexstring(i, len)
         }
         // 0x16: ia5string - ASCII string
-        BerTag::Ia5String => {
+        Tag::Ia5String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_ia5string(i, len)
         }
         // 0x17: utctime - Alias for a VisibleString with a different implicit
         // tag, see below
-        BerTag::UtcTime => {
+        Tag::UtcTime => {
             let len = len.primitive()?;
             ber_read_content_utctime(i, len)
         }
         // 0x18: generalizedtime - Alias for a VisibleString with a different
         // implicit tag, see below
-        BerTag::GeneralizedTime => {
+        Tag::GeneralizedTime => {
             let len = len.primitive()?;
             ber_read_content_generalizedtime(i, len)
         }
         // 0x19: graphicstring - Generic ISO 2022 container with explicit
         // escape sequences, without control characters
-        BerTag::GraphicString => {
+        Tag::GraphicString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_graphicstring(i, len)
         }
         // 0x1a: visiblestring - ASCII string with no control characters except
         // SPACE
-        BerTag::VisibleString => {
+        Tag::VisibleString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_visiblestring(i, len)
         }
         // 0x1b: generalstring - Generic ISO 2022 container with explicit
         // escape sequences
-        BerTag::GeneralString => {
+        Tag::GeneralString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_generalstring(i, len)
@@ -666,14 +666,14 @@ pub fn ber_read_element_content_as(
         // 0x1e: bmpstring - Unicode encoded with the UCS-2 big-endian charset
         // (ISO/IEC 10646-1, section 13.1), restricted to the BMP (Basic
         // Multilingual Plane) except certain control cahracters
-        BerTag::BmpString => {
+        Tag::BmpString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_bmpstring(i, len)
         }
         // 0x1c: universalstring - Unicode encoded with the UCS-4 big-endian
         // charset (ISO/IEC 10646-1, section 13.2)
-        BerTag::UniversalString => {
+        Tag::UniversalString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_universalstring(i, len)
@@ -705,10 +705,10 @@ pub fn ber_read_element_content_as(
 /// let (rem, content) = parse_ber_content(header.tag)(i, &header, MAX_RECURSION)
 ///     .expect("parsing failed");
 /// #
-/// # assert_eq!(header.tag, BerTag::Integer);
+/// # assert_eq!(header.tag, Tag::Integer);
 /// ```
 pub fn parse_ber_content<'a>(
-    tag: BerTag,
+    tag: Tag,
 ) -> impl Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>> {
     move |i: &[u8], hdr: &BerObjectHeader, max_recursion: usize| {
         ber_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
@@ -737,10 +737,10 @@ pub fn parse_ber_content<'a>(
 /// let (rem, content) = parse_ber_content(header.tag)(i, &header, MAX_RECURSION)
 ///     .expect("parsing failed");
 /// #
-/// # assert_eq!(header.tag, BerTag::Integer);
+/// # assert_eq!(header.tag, Tag::Integer);
 /// ```
 pub fn parse_ber_content2<'a>(
-    tag: BerTag,
+    tag: Tag,
 ) -> impl Fn(&'a [u8], BerObjectHeader<'a>, usize) -> BerResult<'a, BerObjectContent<'a>> {
     move |i: &[u8], hdr: BerObjectHeader, max_recursion: usize| {
         ber_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
@@ -754,15 +754,15 @@ pub fn parse_ber_content2<'a>(
 /// ### Example
 ///
 /// ```
-/// use der_parser::ber::BerTag;
+/// use der_parser::ber::Tag;
 /// use der_parser::ber::parse_ber_with_tag;
 ///
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
-/// let (_, obj) = parse_ber_with_tag(bytes, BerTag::Integer).expect("parsing failed");
+/// let (_, obj) = parse_ber_with_tag(bytes, Tag::Integer).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, BerTag::Integer);
+/// assert_eq!(obj.header.tag, Tag::Integer);
 /// ```
-pub fn parse_ber_with_tag<Tag: Into<BerTag>>(i: &[u8], tag: Tag) -> BerResult {
+pub fn parse_ber_with_tag<T: Into<Tag>>(i: &[u8], tag: T) -> BerResult {
     let tag = tag.into();
     let (i, hdr) = ber_read_element_header(i)?;
     if hdr.tag != tag {
@@ -776,7 +776,7 @@ pub fn parse_ber_with_tag<Tag: Into<BerTag>>(i: &[u8], tag: Tag) -> BerResult {
 /// Read end of content marker
 #[inline]
 pub fn parse_ber_endofcontent(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::EndOfContent)
+    parse_ber_with_tag(i, Tag::EndOfContent)
 }
 
 /// Read a boolean value
@@ -788,7 +788,7 @@ pub fn parse_ber_endofcontent(i: &[u8]) -> BerResult {
 /// If the boolean value is TRUE, the octet shall be one byte, and have all bits set to one (0xff).
 #[inline]
 pub fn parse_ber_bool(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::Boolean)
+    parse_ber_with_tag(i, Tag::Boolean)
 }
 
 /// Read an integer value
@@ -819,49 +819,49 @@ pub fn parse_ber_bool(i: &[u8]) -> BerResult {
 /// ```
 #[inline]
 pub fn parse_ber_integer(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::Integer)
+    parse_ber_with_tag(i, Tag::Integer)
 }
 
 /// Read an bitstring value
 #[inline]
 pub fn parse_ber_bitstring(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::BitString)
+    parse_ber_with_tag(i, Tag::BitString)
 }
 
 /// Read an octetstring value
 #[inline]
 pub fn parse_ber_octetstring(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::OctetString)
+    parse_ber_with_tag(i, Tag::OctetString)
 }
 
 /// Read a null value
 #[inline]
 pub fn parse_ber_null(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::Null)
+    parse_ber_with_tag(i, Tag::Null)
 }
 
 /// Read an object identifier value
 #[inline]
 pub fn parse_ber_oid(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::Oid)
+    parse_ber_with_tag(i, Tag::Oid)
 }
 
 /// Read an enumerated value
 #[inline]
 pub fn parse_ber_enum(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::Enumerated)
+    parse_ber_with_tag(i, Tag::Enumerated)
 }
 
 /// Read a UTF-8 string value. The encoding is checked.
 #[inline]
 pub fn parse_ber_utf8string(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::Utf8String)
+    parse_ber_with_tag(i, Tag::Utf8String)
 }
 
 /// Read a relative object identifier value
 #[inline]
 pub fn parse_ber_relative_oid(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::RelativeOid)
+    parse_ber_with_tag(i, Tag::RelativeOid)
 }
 
 /// Parse a sequence of BER elements
@@ -874,7 +874,7 @@ pub fn parse_ber_relative_oid(i: &[u8]) -> BerResult {
 /// [`parse_ber_sequence_defined`](macro.parse_ber_sequence_defined.html) macro.
 #[inline]
 pub fn parse_ber_sequence(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::Sequence)
+    parse_ber_with_tag(i, Tag::Sequence)
 }
 
 /// Parse a set of BER elements
@@ -887,88 +887,88 @@ pub fn parse_ber_sequence(i: &[u8]) -> BerResult {
 /// [`parse_ber_set_defined`](macro.parse_ber_set_defined.html) macro.
 #[inline]
 pub fn parse_ber_set(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::Set)
+    parse_ber_with_tag(i, Tag::Set)
 }
 
 /// Read a numeric string value. The content is verified to
 /// contain only digits and spaces.
 #[inline]
 pub fn parse_ber_numericstring(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::NumericString)
+    parse_ber_with_tag(i, Tag::NumericString)
 }
 
 /// Read a visible string value. The content is verified to
 /// contain only the allowed characters.
 #[inline]
 pub fn parse_ber_visiblestring(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::VisibleString)
+    parse_ber_with_tag(i, Tag::VisibleString)
 }
 
 /// Read a printable string value. The content is verified to
 /// contain only the allowed characters.
 #[inline]
 pub fn parse_ber_printablestring(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::PrintableString)
+    parse_ber_with_tag(i, Tag::PrintableString)
 }
 
 /// Read a T61 string value
 #[inline]
 pub fn parse_ber_t61string(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::T61String)
+    parse_ber_with_tag(i, Tag::T61String)
 }
 
 /// Read a Videotex string value
 #[inline]
 pub fn parse_ber_videotexstring(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::VideotexString)
+    parse_ber_with_tag(i, Tag::VideotexString)
 }
 
 /// Read an IA5 string value. The content is verified to be ASCII.
 #[inline]
 pub fn parse_ber_ia5string(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::Ia5String)
+    parse_ber_with_tag(i, Tag::Ia5String)
 }
 
 /// Read an UTC time value
 #[inline]
 pub fn parse_ber_utctime(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::UtcTime)
+    parse_ber_with_tag(i, Tag::UtcTime)
 }
 
 /// Read a Generalized time value
 #[inline]
 pub fn parse_ber_generalizedtime(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::GeneralizedTime)
+    parse_ber_with_tag(i, Tag::GeneralizedTime)
 }
 
 /// Read an ObjectDescriptor value
 #[inline]
 pub fn parse_ber_objectdescriptor(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::ObjDescriptor)
+    parse_ber_with_tag(i, Tag::ObjDescriptor)
 }
 
 /// Read a GraphicString value
 #[inline]
 pub fn parse_ber_graphicstring(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::GraphicString)
+    parse_ber_with_tag(i, Tag::GraphicString)
 }
 
 /// Read a GeneralString value
 #[inline]
 pub fn parse_ber_generalstring(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::GeneralString)
+    parse_ber_with_tag(i, Tag::GeneralString)
 }
 
 /// Read a BmpString value
 #[inline]
 pub fn parse_ber_bmpstring(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::BmpString)
+    parse_ber_with_tag(i, Tag::BmpString)
 }
 
 /// Read a UniversalString value
 #[inline]
 pub fn parse_ber_universalstring(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, BerTag::UniversalString)
+    parse_ber_with_tag(i, Tag::UniversalString)
 }
 
 /// Parse an optional tagged object, applying function to get content
@@ -981,7 +981,7 @@ pub fn parse_ber_universalstring(i: &[u8]) -> BerResult {
 ///
 /// This function will never fail: if parsing content failed, the BER value `Optional(None)` is
 /// returned.
-pub fn parse_ber_explicit_optional<F>(i: &[u8], tag: BerTag, f: F) -> BerResult
+pub fn parse_ber_explicit_optional<F>(i: &[u8], tag: Tag, f: F) -> BerResult
 where
     F: Fn(&[u8]) -> BerResult,
 {
@@ -1018,7 +1018,7 @@ where
 ///     parse_ber_implicit(
 ///         i,
 ///         3,
-///         parse_ber_content(BerTag::Integer),
+///         parse_ber_content(Tag::Integer),
 ///     )
 /// }
 ///
@@ -1033,10 +1033,10 @@ where
 /// # }
 /// ```
 #[inline]
-pub fn parse_ber_implicit<'a, Tag, F>(i: &'a [u8], tag: Tag, f: F) -> BerResult<'a>
+pub fn parse_ber_implicit<'a, T, F>(i: &'a [u8], tag: T, f: F) -> BerResult<'a>
 where
     F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>>,
-    Tag: Into<BerTag>,
+    T: Into<Tag>,
 {
     parse_ber_tagged_implicit(tag, f)(i)
 }
@@ -1061,7 +1061,7 @@ where
 /// let mut parser = parse_ber_optional(parse_ber_integer);
 /// let (_, obj) = parser(bytes).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, BerTag::Integer);
+/// assert_eq!(obj.header.tag, Tag::Integer);
 /// assert!(obj.as_optional().is_ok());
 /// ```
 pub fn parse_ber_optional<'a, F>(mut f: F) -> impl FnMut(&'a [u8]) -> BerResult<'a>
@@ -1129,7 +1129,7 @@ pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
 
 /// Parse BER object and get content as slice
 #[inline]
-pub fn parse_ber_slice<Tag: Into<BerTag>>(i: &[u8], tag: Tag) -> BerResult<&[u8]> {
+pub fn parse_ber_slice<T: Into<Tag>>(i: &[u8], tag: T) -> BerResult<&[u8]> {
     let tag = tag.into();
     parse_ber_container(move |content, hdr| {
         if hdr.tag != tag {
@@ -1152,12 +1152,12 @@ pub(crate) fn r_parse_ber(max_depth: usize) -> impl Fn(&[u8]) -> BerResult {
 /// ### Example
 ///
 /// ```
-/// use der_parser::ber::{parse_ber_recursive, BerTag};
+/// use der_parser::ber::{parse_ber_recursive, Tag};
 ///
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_ber_recursive(bytes, 1).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, BerTag::Integer);
+/// assert_eq!(obj.header.tag, Tag::Integer);
 /// ```
 pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
@@ -1201,12 +1201,12 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
 /// ### Example
 ///
 /// ```
-/// use der_parser::ber::{parse_ber, BerTag};
+/// use der_parser::ber::{parse_ber, Tag};
 ///
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_ber(bytes).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, BerTag::Integer);
+/// assert_eq!(obj.header.tag, Tag::Integer);
 /// ```
 #[inline]
 pub fn parse_ber(i: &[u8]) -> BerResult {

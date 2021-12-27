@@ -1,4 +1,4 @@
-use super::{BerTag, Class, Length};
+use super::{Class, Length, Tag};
 
 /// BER object header (identifier and length)
 #[derive(Clone, Debug)]
@@ -8,7 +8,7 @@ pub struct BerObjectHeader<'a> {
     /// Constructed attribute: 1 if constructed, else 0
     pub structured: u8,
     /// Tag number
-    pub tag: BerTag,
+    pub tag: Tag,
     /// Object length: definite or indefinite
     pub len: Length,
 

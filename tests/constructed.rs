@@ -37,7 +37,7 @@ fn parse_struct01_complete(i: &[u8]) -> BerResult<MyStruct> {
 }
 
 // verifying tag
-fn parse_struct04(i: &[u8], tag: BerTag) -> BerResult<MyStruct> {
+fn parse_struct04(i: &[u8], tag: Tag) -> BerResult<MyStruct> {
     parse_der_container(|i: &[u8], hdr| {
         if hdr.tag != tag {
             return Err(Err::Error(BerError::InvalidTag));
@@ -302,9 +302,9 @@ fn struct_verify_tag() {
         a: BerObject::from_int_slice(b"\x01\x00\x01"),
         b: BerObject::from_int_slice(b"\x01\x00\x00"),
     };
-    let res = parse_struct04(&bytes, BerTag::Sequence);
+    let res = parse_struct04(&bytes, Tag::Sequence);
     assert_eq!(res, Ok((empty, expected)));
-    let res = parse_struct04(&bytes, BerTag::Set);
+    let res = parse_struct04(&bytes, Tag::Set);
     assert_eq!(res, Err(Err::Error(BerError::InvalidTag)));
 }
 
@@ -362,7 +362,7 @@ fn tagged_explicit() {
 fn tc_ber_tagged_implicit_g(i: &[u8], out: Result<u32, BerError>) {
     fn parse_int_implicit(i: &[u8]) -> BerResult<u32> {
         parse_ber_tagged_implicit_g(2, |content, hdr, depth| {
-            let (rem, obj) = parse_ber_content(BerTag::Integer)(content, &hdr, depth)?;
+            let (rem, obj) = parse_ber_content(Tag::Integer)(content, &hdr, depth)?;
             let value = obj.as_u32()?;
             Ok((rem, value))
         })(i)
@@ -409,7 +409,7 @@ fn application() {
             if hdr.class != Class::Application {
                 return Err(Err::Error(BerError::InvalidClass));
             }
-            if hdr.tag != BerTag(2) {
+            if hdr.tag != Tag(2) {
                 return Err(Err::Error(BerError::InvalidTag));
             }
             let (i, a) = map_res(parse_ber_integer, |x: BerObject| x.as_u32())(i)?;
