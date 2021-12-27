@@ -11,6 +11,8 @@ Changing the names should be enough for upgrades.
 
 To eventually ease upgrades, a new module (`der_parser::ber::compat`) has been added, to provide aliases for these types. It must be imported explicitely.
 
+Header fields must now be access using getters/setters.
+
 ## Upgrading from 4.x to 5.0
 
 ### BER variants: ContextSpecific, Optional, Tagged
