@@ -467,7 +467,7 @@ where
 /// parsed are ignored.
 /// The nom combinator `all_consuming` can be used to ensure all the content is parsed.
 ///
-/// This function is mostly intended for structured objects, but can be used for any valid DER
+/// This function is mostly intended for constructed objects, but can be used for any valid DER
 /// object.
 ///
 /// # Examples

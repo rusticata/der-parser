@@ -194,7 +194,7 @@ pub fn parse_der_relative_oid(i: &[u8]) -> DerResult {
 /// Parse a sequence of DER elements
 ///
 /// Read a sequence of DER objects, without any constraint on the types.
-/// Sequence is parsed recursively, so if structured elements are found, they are parsed using the
+/// Sequence is parsed recursively, so if constructed elements are found, they are parsed using the
 /// same function.
 ///
 /// To read a specific sequence of objects (giving the expected types), use the
@@ -207,7 +207,7 @@ pub fn parse_der_sequence(i: &[u8]) -> DerResult {
 /// Parse a set of DER elements
 ///
 /// Read a set of DER objects, without any constraint on the types.
-/// Set is parsed recursively, so if structured elements are found, they are parsed using the
+/// Set is parsed recursively, so if constructed elements are found, they are parsed using the
 /// same function.
 ///
 /// To read a specific set of objects (giving the expected types), use the
