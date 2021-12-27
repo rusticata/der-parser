@@ -44,7 +44,7 @@ pub fn ber_encode_header<'a, 'b: 'a, W: Write + 'a>(
     move |out| {
         // identifier octets (X.690 8.1.2)
         let class_u8 = (hdr.class as u8) << 6;
-        let pc_u8 = (hdr.constructed & 1) << 5;
+        let pc_u8 = (if hdr.constructed { 1 } else { 0 }) << 5;
         if hdr.tag.0 >= 30 {
             unimplemented!();
         }
@@ -81,7 +81,7 @@ pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         let v = gen_simple(ber_encode_object(obj), W::default())?;
         let len = v.as_ref().len();
         // encode the application header, using the tag
-        let hdr = BerObjectHeader::new(class, 1 /* X.690 8.14.2 */, tag, len);
+        let hdr = BerObjectHeader::new(class, true /* X.690 8.14.2 */, tag, len);
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }

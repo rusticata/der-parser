@@ -11,7 +11,9 @@ Changing the names should be enough for upgrades.
 
 To eventually ease upgrades, a new module (`der_parser::ber::compat`) has been added, to provide aliases for these types. It must be imported explicitely.
 
-Header fields must now be access using getters/setters.
+Header fields are now private. Getters/setters have been added, and must be used to access/modify fields.
+`structured` has been renamed to `constructed` to match RFC. Since this field is now private, methods `constructed()`/`set_constructed()` must be used instead of raw access.
+
 
 ## Upgrading from 4.x to 5.0
 
