@@ -1,4 +1,6 @@
+use super::{BerClass, BerClassFromIntError, BerSize, BerSizeError, BerTag};
 use crate::ber::bitstring_to_u64;
+use crate::ber::header::*;
 use crate::ber::integer::*;
 use crate::error::BerError;
 use crate::oid::Oid;
@@ -12,78 +14,6 @@ use core::convert::From;
 use core::convert::TryFrom;
 use core::fmt;
 use core::ops::Index;
-use rusticata_macros::newtype_enum;
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct BerClassFromIntError(pub(crate) ());
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct BerSizeError(pub(crate) ());
-
-/// BER Object class of tag
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[repr(u8)]
-pub enum BerClass {
-    Universal = 0b00,
-    Application = 0b01,
-    ContextSpecific = 0b10,
-    Private = 0b11,
-}
-
-/// Ber Object Length
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum BerSize {
-    /// Definite form (X.690 8.1.3.3)
-    Definite(usize),
-    /// Indefinite form (X.690 8.1.3.6)
-    Indefinite,
-}
-
-/// BER/DER Tag as defined in X.680 section 8.4
-///
-/// X.690 doesn't specify the maximum tag size so we're assuming that people
-/// aren't going to need anything more than a u32.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct BerTag(pub u32);
-
-newtype_enum! {
-impl debug BerTag {
-    EndOfContent = 0x0,
-    Boolean = 0x1,
-    Integer = 0x2,
-    BitString = 0x3,
-    OctetString = 0x4,
-    Null = 0x05,
-    Oid = 0x06,
-    ObjDescriptor = 0x07,
-    External = 0x08,
-    RealType = 0x09,
-    Enumerated = 0xa,
-    EmbeddedPdv = 0xb,
-    Utf8String = 0xc,
-    RelativeOid = 0xd,
-
-    Sequence = 0x10,
-    Set = 0x11,
-    NumericString = 0x12,
-    PrintableString = 0x13,
-    T61String = 0x14,
-    VideotexString = 0x15,
-
-    Ia5String = 0x16,
-    UtcTime = 0x17,
-    GeneralizedTime = 0x18,
-
-    GraphicString = 25, // 0x19
-    VisibleString = 26, // 0x1a
-    GeneralString = 27, // 0x1b
-
-    UniversalString = 0x1c,
-    BmpString = 0x1e,
-
-    Invalid = 0xff,
-}
-}
 
 /// Representation of a BER-encoded (X.690) object
 ///
@@ -96,25 +26,6 @@ impl debug BerTag {
 pub struct BerObject<'a> {
     pub header: BerObjectHeader<'a>,
     pub content: BerObjectContent<'a>,
-}
-
-/// BER object header (identifier and length)
-#[derive(Clone, Debug)]
-pub struct BerObjectHeader<'a> {
-    /// Object class: universal, application, context-specific, or private
-    pub class: BerClass,
-    /// Constructed attribute: 1 if constructed, else 0
-    pub structured: u8,
-    /// Tag number
-    pub tag: BerTag,
-    /// Object length: definite or indefinite
-    pub len: BerSize,
-
-    /// Optionally, the raw encoding of the tag
-    ///
-    /// This is useful in some cases, where different representations of the same
-    /// BER tags have different meanings (BER only)
-    pub raw_tag: Option<&'a [u8]>,
 }
 
 /// BER object content
