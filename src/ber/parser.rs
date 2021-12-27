@@ -280,7 +280,7 @@ fn ber_read_content_utf8string(i: &[u8], len: usize) -> BerResult<BerObjectConte
     let (i, bytes) = take(len)(i)?;
     let s = core::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::UTF8String(s))?;
+        .map(BerObjectContent::UTF8String)?;
     Ok((i, s))
 }
 
@@ -345,7 +345,7 @@ fn ber_read_content_numericstring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     }
     let s = core::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::NumericString(s))?;
+        .map(BerObjectContent::NumericString)?;
     Ok((i, s))
 }
 
@@ -361,7 +361,7 @@ fn ber_read_content_visiblestring<'a>(i: &'a [u8], len: usize) -> BerResult<BerO
     }
     let s = core::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::VisibleString(s))?;
+        .map(BerObjectContent::VisibleString)?;
     Ok((i, s))
 }
 
@@ -395,7 +395,7 @@ fn ber_read_content_printablestring<'a>(
     }
     let s = core::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::PrintableString(s))?;
+        .map(BerObjectContent::PrintableString)?;
     Ok((i, s))
 }
 
@@ -416,7 +416,7 @@ fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjec
     }
     let s = core::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::IA5String(s))?;
+        .map(BerObjectContent::IA5String)?;
     Ok((i, s))
 }
 
@@ -432,7 +432,7 @@ fn ber_read_content_utctime<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectC
     }
     let s = core::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::UTCTime(s))?;
+        .map(BerObjectContent::UTCTime)?;
     Ok((i, s))
 }
 
@@ -451,7 +451,7 @@ fn ber_read_content_generalizedtime<'a>(
     }
     let s = core::str::from_utf8(bytes)
         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(|s| BerObjectContent::GeneralizedTime(s))?;
+        .map(BerObjectContent::GeneralizedTime)?;
     Ok((i, s))
 }
 
