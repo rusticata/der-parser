@@ -349,6 +349,18 @@ impl<'a> BerObject<'a> {
     pub const fn assert_tag(&self, tag: Tag) -> Result<(), BerError> {
         self.header.assert_tag(tag)
     }
+
+    /// Return error if object is not constructed
+    #[inline]
+    pub const fn assert_constructed(&self) -> Result<(), BerError> {
+        self.header.assert_constructed()
+    }
+
+    /// Return error if object is not primitive
+    #[inline]
+    pub const fn assert_primitive(&self) -> Result<(), BerError> {
+        self.header.assert_primitive()
+    }
 }
 
 /// Build a DER object from an OID.

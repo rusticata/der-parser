@@ -66,19 +66,31 @@ pub enum BerError {
     Custom(u32),
 
     /// Unexpected Class was encountered while parsing
-    UnexpectedClass(Class),
+    UnexpectedClass {
+        expected: Class,
+        found: Class,
+    },
     /// Unexpected Tag was encountered while parsing
-    UnexpectedTag(Tag),
+    UnexpectedTag {
+        expected: Tag,
+        found: Tag,
+    },
 
     /// Error raised by the underlying nom parser
     NomError(ErrorKind),
 }
 
 impl BerError {
+    /// Build an error from the provided unexpected class
+    #[inline]
+    pub const fn unexpected_class(expected: Class, found: Class) -> Self {
+        Self::UnexpectedClass { expected, found }
+    }
+
     /// Build an error from the provided unexpected tag
     #[inline]
-    pub const fn unexpected_tag(tag: Tag) -> Self {
-        Self::UnexpectedTag(tag)
+    pub const fn unexpected_tag(expected: Tag, found: Tag) -> Self {
+        Self::UnexpectedTag { expected, found }
     }
 }
 
