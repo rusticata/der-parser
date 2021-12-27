@@ -355,7 +355,13 @@ fn test_der_implicit() {
         hdr: &BerObjectHeader,
         depth: usize,
     ) -> BerResult<'a, BerObjectContent<'a>> {
-        ber_read_element_content_as(i, DerTag::Ia5String, hdr.len, hdr.is_constructed(), depth)
+        ber_read_element_content_as(
+            i,
+            DerTag::Ia5String,
+            hdr.length(),
+            hdr.is_constructed(),
+            depth,
+        )
     }
     assert_eq!(
         parse_der_implicit(&bytes, Tag(1), der_read_ia5string_content),
@@ -381,7 +387,13 @@ fn test_der_implicit_long_tag() {
         hdr: &BerObjectHeader,
         depth: usize,
     ) -> BerResult<'a, BerObjectContent<'a>> {
-        ber_read_element_content_as(i, DerTag::Ia5String, hdr.len, hdr.is_constructed(), depth)
+        ber_read_element_content_as(
+            i,
+            DerTag::Ia5String,
+            hdr.length(),
+            hdr.is_constructed(),
+            depth,
+        )
     }
     assert_eq!(
         parse_der_implicit(&bytes, Tag(0x52), der_read_ia5string_content),

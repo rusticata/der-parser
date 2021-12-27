@@ -23,7 +23,7 @@ pub(crate) fn ber_skip_object_content<'a>(
     if max_depth == 0 {
         return Err(Err::Error(BerError::BerMaxDepth));
     }
-    match hdr.len {
+    match hdr.length {
         Length::Definite(l) => {
             if l == 0 && hdr.tag == Tag::EndOfContent {
                 return Ok((i, true));
@@ -62,7 +62,7 @@ pub(crate) fn ber_get_object_content<'a>(
     let len = start_i.offset(i);
     let (content, i) = start_i.split_at(len);
     // if len is indefinite, there are 2 extra bytes for EOC
-    if hdr.len == Length::Indefinite {
+    if hdr.length == Length::Indefinite {
         let len = content.len();
         assert!(len >= 2);
         Ok((i, &content[..len - 2]))
@@ -174,7 +174,7 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
 ///
 /// assert_eq!(hdr.class(), Class::Universal);
 /// assert_eq!(hdr.tag(), Tag::Integer);
-/// assert_eq!(hdr.len, Length::Definite(3));
+/// assert_eq!(hdr.length(), Length::Definite(3));
 /// ```
 pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
     let (i1, el) = parse_identifier(i)?;
@@ -498,7 +498,7 @@ fn ber_read_content_universalstring(i: &[u8], len: usize) -> BerResult<BerObject
 /// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
 /// let (_, content) = ber_read_element_content_as(
-///     i, hdr.tag(), hdr.len, hdr.is_constructed(), 5
+///     i, hdr.tag(), hdr.length(), hdr.is_constructed(), 5
 /// ).expect("parsing failed");
 /// #
 /// # assert_eq!(hdr.tag(), Tag::Integer);
@@ -712,7 +712,7 @@ pub fn parse_ber_content<'a>(
     tag: Tag,
 ) -> impl Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>> {
     move |i: &[u8], hdr: &BerObjectHeader, max_recursion: usize| {
-        ber_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
+        ber_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
     }
 }
 
@@ -744,7 +744,7 @@ pub fn parse_ber_content2<'a>(
     tag: Tag,
 ) -> impl Fn(&'a [u8], BerObjectHeader<'a>, usize) -> BerResult<'a, BerObjectContent<'a>> {
     move |i: &[u8], hdr: BerObjectHeader, max_recursion: usize| {
-        ber_read_element_content_as(i, tag, hdr.len, hdr.is_constructed(), max_recursion)
+        ber_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
     }
 }
 
@@ -770,7 +770,7 @@ pub fn parse_ber_with_tag<T: Into<Tag>>(i: &[u8], tag: T) -> BerResult {
         return Err(nom::Err::Error(BerError::InvalidTag));
     }
     let (i, content) =
-        ber_read_element_content_as(i, hdr.tag, hdr.len, hdr.is_constructed(), MAX_RECURSION)?;
+        ber_read_element_content_as(i, hdr.tag, hdr.length, hdr.is_constructed(), MAX_RECURSION)?;
     Ok((i, BerObject::from_header_and_content(hdr, content)))
 }
 
@@ -1163,7 +1163,7 @@ pub(crate) fn r_parse_ber(max_depth: usize) -> impl Fn(&[u8]) -> BerResult {
 pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     let (rem, hdr) = ber_read_element_header(i)?;
-    if let Length::Definite(l) = hdr.len {
+    if let Length::Definite(l) = hdr.length {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
     }
     match hdr.class {
@@ -1181,7 +1181,7 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
             return Ok((rem, obj));
         }
     }
-    match ber_read_element_content_as(rem, hdr.tag, hdr.len, hdr.is_constructed(), max_depth) {
+    match ber_read_element_content_as(rem, hdr.tag, hdr.length, hdr.is_constructed(), max_depth) {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag)) => {
             let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
