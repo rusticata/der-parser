@@ -307,20 +307,24 @@ impl<'a> BerObject<'a> {
     }
 
     /// Test if object class is Universal
-    pub fn is_universal(&self) -> bool {
-        self.header.class == Class::Universal
+    #[inline]
+    pub const fn is_universal(&self) -> bool {
+        self.header.is_universal()
     }
     /// Test if object class is Application
-    pub fn is_application(&self) -> bool {
-        self.header.class == Class::Application
+    #[inline]
+    pub const fn is_application(&self) -> bool {
+        self.header.is_application()
     }
     /// Test if object class is Context-specific
-    pub fn is_contextspecific(&self) -> bool {
-        self.header.class == Class::ContextSpecific
+    #[inline]
+    pub const fn is_contextspecific(&self) -> bool {
+        self.header.is_contextspecific()
     }
     /// Test if object class is Private
+    #[inline]
     pub fn is_private(&self) -> bool {
-        self.header.class == Class::Private
+        self.header.is_private()
     }
 
     /// Test if object is primitive
@@ -332,6 +336,18 @@ impl<'a> BerObject<'a> {
     #[inline]
     pub const fn is_constructed(&self) -> bool {
         self.header.is_constructed()
+    }
+
+    /// Return error if `class` is not the expected class
+    #[inline]
+    pub const fn assert_class(&self, class: Class) -> Result<(), BerError> {
+        self.header.assert_class(class)
+    }
+
+    /// Return error if `tag` is not the expected tag
+    #[inline]
+    pub const fn assert_tag(&self, tag: Tag) -> Result<(), BerError> {
+        self.header.assert_tag(tag)
     }
 }
 
