@@ -17,7 +17,7 @@ pub struct BerObjectHeader<'a> {
     ///
     /// This is useful in some cases, where different representations of the same
     /// BER tags have different meanings (BER only)
-    pub raw_tag: Option<&'a [u8]>,
+    pub(crate) raw_tag: Option<&'a [u8]>,
 }
 
 impl<'a> BerObjectHeader<'a> {
