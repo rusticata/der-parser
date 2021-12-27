@@ -31,10 +31,22 @@ impl<'a> BerObjectHeader<'a> {
         }
     }
 
+    /// Get the BER object header's class.
+    #[inline]
+    pub const fn class(&self) -> Class {
+        self.class
+    }
+
     /// Update header class
     #[inline]
     pub fn with_class(self, class: Class) -> Self {
         BerObjectHeader { class, ..self }
+    }
+
+    /// Get the BER object header's tag.
+    #[inline]
+    pub const fn tag(&self) -> Tag {
+        self.tag
     }
 
     /// Update header tag
@@ -43,10 +55,22 @@ impl<'a> BerObjectHeader<'a> {
         BerObjectHeader { tag, ..self }
     }
 
+    /// Get the BER object header's length.
+    #[inline]
+    pub const fn length(&self) -> Length {
+        self.len
+    }
+
     /// Update header length
     #[inline]
     pub fn with_len(self, len: Length) -> Self {
         BerObjectHeader { len, ..self }
+    }
+
+    /// Get a reference to the BER object header's tag.
+    #[inline]
+    pub const fn raw_tag(&self) -> Option<&'a [u8]> {
+        self.raw_tag
     }
 
     /// Update header to add reference to raw tag
