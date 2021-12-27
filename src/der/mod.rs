@@ -53,7 +53,7 @@
 //!     .expect("parsing failed");
 //! ```
 
-use crate::ber::{BerObject, BerObjectContent, BerObjectHeader, BerTag, Class};
+use crate::ber::{BerObject, BerObjectContent, BerObjectHeader, Class, Tag};
 
 mod multi;
 mod parser;
@@ -70,7 +70,7 @@ use core::convert::{Into, TryFrom};
 pub type DerClass = Class;
 
 /// DER tag (same as BER tag)
-pub type DerTag = BerTag;
+pub type DerTag = Tag;
 
 /// Representation of a DER-encoded (X.690) object
 ///

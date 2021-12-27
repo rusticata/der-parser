@@ -526,7 +526,7 @@ fn test_parse_ber_content() {
     let (rem, content) =
         parse_ber_content(header.tag)(i, &header, MAX_RECURSION).expect("parsing failed");
     assert!(rem.is_empty());
-    assert_eq!(header.tag, BerTag::Integer);
+    assert_eq!(header.tag, Tag::Integer);
     assert_eq!(content.as_u32(), Ok(0x10001));
 }
 
@@ -537,7 +537,7 @@ fn test_parse_ber_content2() {
     let tag = header.tag;
     let (rem, content) = parse_ber_content2(tag)(i, header, MAX_RECURSION).expect("parsing failed");
     assert!(rem.is_empty());
-    assert_eq!(tag, BerTag::Integer);
+    assert_eq!(tag, Tag::Integer);
     assert_eq!(content.as_u32(), Ok(0x10001));
 }
 

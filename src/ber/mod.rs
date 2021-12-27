@@ -71,6 +71,8 @@ pub use crate::ber::serialize::*;
 pub use crate::ber::tag::*;
 pub use crate::ber::tagged::*;
 
+pub mod compat;
+
 use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use alloc::vec::Vec;

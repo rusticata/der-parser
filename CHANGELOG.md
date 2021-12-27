@@ -14,6 +14,7 @@
 
 - `BerSize` has been renamed to `Length`
 - `BerClass` has been renamed to `Class`
+- `BerTag` has been renamed to `Tag`
 
 ### Added
 

@@ -1,4 +1,4 @@
-use super::{BerSizeError, BerTag, Class, ClassFromIntError, Length};
+use super::{BerSizeError, Class, ClassFromIntError, Length, Tag};
 use crate::ber::bitstring_to_u64;
 use crate::ber::header::*;
 use crate::ber::integer::*;
@@ -95,12 +95,12 @@ pub enum BerObjectContent<'a> {
     /// Optional object
     Optional(Option<Box<BerObject<'a>>>),
     /// Tagged object (EXPLICIT): class, tag  and content of inner object
-    Tagged(Class, BerTag, Box<BerObject<'a>>),
+    Tagged(Class, Tag, Box<BerObject<'a>>),
     /// Private
     Private(BerObjectHeader<'a>, &'a [u8]),
 
     /// Unknown object: object tag (copied from header), and raw content
-    Unknown(Class, BerTag, &'a [u8]),
+    Unknown(Class, Tag, &'a [u8]),
 }
 
 impl fmt::Display for Class {
@@ -115,9 +115,9 @@ impl fmt::Display for Class {
     }
 }
 
-impl From<u32> for BerTag {
+impl From<u32> for Tag {
     fn from(v: u32) -> Self {
-        BerTag(v)
+        Tag(v)
     }
 }
 
@@ -181,7 +181,7 @@ impl TryFrom<u8> for Class {
 
 impl<'a> BerObjectHeader<'a> {
     /// Build a new BER header
-    pub fn new<Len: Into<Length>>(class: Class, structured: u8, tag: BerTag, len: Len) -> Self {
+    pub fn new<Len: Into<Length>>(class: Class, structured: u8, tag: Tag, len: Len) -> Self {
         BerObjectHeader {
             tag,
             structured,
@@ -199,7 +199,7 @@ impl<'a> BerObjectHeader<'a> {
 
     /// Update header tag
     #[inline]
-    pub fn with_tag(self, tag: BerTag) -> Self {
+    pub fn with_tag(self, tag: Tag) -> Self {
         BerObjectHeader { tag, ..self }
     }
 
@@ -266,7 +266,7 @@ impl<'a> BerObject<'a> {
         let class = Class::Universal;
         let tag = c.tag();
         let structured = match tag {
-            BerTag::Sequence | BerTag::Set => 1,
+            Tag::Sequence | Tag::Set => 1,
             _ => 0,
         };
         let header = BerObjectHeader::new(class, structured, tag, Length::Definite(0));
@@ -275,8 +275,7 @@ impl<'a> BerObject<'a> {
 
     /// Build a DER integer object from a slice containing an encoded integer
     pub fn from_int_slice(i: &'a [u8]) -> BerObject<'a> {
-        let header =
-            BerObjectHeader::new(Class::Universal, 0, BerTag::Integer, Length::Definite(0));
+        let header = BerObjectHeader::new(Class::Universal, 0, Tag::Integer, Length::Definite(0));
         BerObject {
             header,
             content: BerObjectContent::Integer(i),
@@ -401,7 +400,7 @@ impl<'a> BerObject<'a> {
 
     /// Attempt to get a reference on the content from a tagged object.
     /// This can fail if the object is not tagged.
-    pub fn as_tagged(&'a self) -> Result<(Class, BerTag, &'_ BerObject<'a>), BerError> {
+    pub fn as_tagged(&'a self) -> Result<(Class, Tag, &'_ BerObject<'a>), BerError> {
         self.content.as_tagged()
     }
 
@@ -672,7 +671,7 @@ impl<'a> BerObjectContent<'a> {
         }
     }
 
-    pub fn as_tagged(&'a self) -> Result<(Class, BerTag, &'_ BerObject<'a>), BerError> {
+    pub fn as_tagged(&'a self) -> Result<(Class, Tag, &'_ BerObject<'a>), BerError> {
         match *self {
             BerObjectContent::Tagged(class, tag, ref o) => Ok((class, tag, o.as_ref())),
             _ => Err(BerError::BerTypeError),
@@ -755,38 +754,38 @@ impl<'a> BerObjectContent<'a> {
     }
 
     #[rustfmt::skip]
-    fn tag(&self) -> BerTag {
+    fn tag(&self) -> Tag {
         match self {
-            BerObjectContent::EndOfContent         => BerTag::EndOfContent,
-            BerObjectContent::Boolean(_)           => BerTag::Boolean,
-            BerObjectContent::Integer(_)           => BerTag::Integer,
-            BerObjectContent::BitString(_,_)       => BerTag::BitString,
-            BerObjectContent::OctetString(_)       => BerTag::OctetString,
-            BerObjectContent::Null                 => BerTag::Null,
-            BerObjectContent::Enum(_)              => BerTag::Enumerated,
-            BerObjectContent::OID(_)               => BerTag::Oid,
-            BerObjectContent::NumericString(_)     => BerTag::NumericString,
-            BerObjectContent::VisibleString(_)     => BerTag::VisibleString,
-            BerObjectContent::PrintableString(_)   => BerTag::PrintableString,
-            BerObjectContent::IA5String(_)         => BerTag::Ia5String,
-            BerObjectContent::UTF8String(_)        => BerTag::Utf8String,
-            BerObjectContent::RelativeOID(_)       => BerTag::RelativeOid,
-            BerObjectContent::T61String(_)         => BerTag::T61String,
-            BerObjectContent::VideotexString(_)    => BerTag::VideotexString,
-            BerObjectContent::BmpString(_)         => BerTag::BmpString,
-            BerObjectContent::UniversalString(_)   => BerTag::UniversalString,
-            BerObjectContent::Sequence(_)          => BerTag::Sequence,
-            BerObjectContent::Set(_)               => BerTag::Set,
-            BerObjectContent::UTCTime(_)           => BerTag::UtcTime,
-            BerObjectContent::GeneralizedTime(_)   => BerTag::GeneralizedTime,
-            BerObjectContent::ObjectDescriptor(_)  => BerTag::ObjDescriptor,
-            BerObjectContent::GraphicString(_)     => BerTag::GraphicString,
-            BerObjectContent::GeneralString(_)     => BerTag::GeneralString,
+            BerObjectContent::EndOfContent         => Tag::EndOfContent,
+            BerObjectContent::Boolean(_)           => Tag::Boolean,
+            BerObjectContent::Integer(_)           => Tag::Integer,
+            BerObjectContent::BitString(_,_)       => Tag::BitString,
+            BerObjectContent::OctetString(_)       => Tag::OctetString,
+            BerObjectContent::Null                 => Tag::Null,
+            BerObjectContent::Enum(_)              => Tag::Enumerated,
+            BerObjectContent::OID(_)               => Tag::Oid,
+            BerObjectContent::NumericString(_)     => Tag::NumericString,
+            BerObjectContent::VisibleString(_)     => Tag::VisibleString,
+            BerObjectContent::PrintableString(_)   => Tag::PrintableString,
+            BerObjectContent::IA5String(_)         => Tag::Ia5String,
+            BerObjectContent::UTF8String(_)        => Tag::Utf8String,
+            BerObjectContent::RelativeOID(_)       => Tag::RelativeOid,
+            BerObjectContent::T61String(_)         => Tag::T61String,
+            BerObjectContent::VideotexString(_)    => Tag::VideotexString,
+            BerObjectContent::BmpString(_)         => Tag::BmpString,
+            BerObjectContent::UniversalString(_)   => Tag::UniversalString,
+            BerObjectContent::Sequence(_)          => Tag::Sequence,
+            BerObjectContent::Set(_)               => Tag::Set,
+            BerObjectContent::UTCTime(_)           => Tag::UtcTime,
+            BerObjectContent::GeneralizedTime(_)   => Tag::GeneralizedTime,
+            BerObjectContent::ObjectDescriptor(_)  => Tag::ObjDescriptor,
+            BerObjectContent::GraphicString(_)     => Tag::GraphicString,
+            BerObjectContent::GeneralString(_)     => Tag::GeneralString,
             BerObjectContent::Tagged(_,x,_) |
             BerObjectContent::Unknown(_, x,_)         => *x,
             &BerObjectContent::Private(ref hdr, _) => hdr.tag,
             BerObjectContent::Optional(Some(obj))  => obj.content.tag(),
-            BerObjectContent::Optional(None)       => BerTag(0x00), // XXX invalid !
+            BerObjectContent::Optional(None)       => Tag(0x00), // XXX invalid !
         }
     }
 }

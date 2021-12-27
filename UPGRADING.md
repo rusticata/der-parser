@@ -1,3 +1,16 @@
+## Upgrading from 6.x to 7.0
+
+### Header refactor
+
+Header names have changed:
+- `BerClass` is now `Class`
+- `BerSize` is now `Length`
+- `BerTag` is now `Tag`
+
+Changing the names should be enough for upgrades.
+
+To eventually ease upgrades, a new module (`der_parser::ber::compat`) has been added, to provide aliases for these types. It must be imported explicitely.
+
 ## Upgrading from 4.x to 5.0
 
 ### BER variants: ContextSpecific, Optional, Tagged
