@@ -50,7 +50,7 @@ impl<'a> BerObjectHeader<'a> {
         if self.class as u8 == class as u8 {
             Ok(())
         } else {
-            Err(BerError::UnexpectedClass(class))
+            Err(BerError::unexpected_class(class, self.class))
         }
     }
 
@@ -84,7 +84,7 @@ impl<'a> BerObjectHeader<'a> {
         if self.tag.0 == tag.0 {
             Ok(())
         } else {
-            Err(BerError::UnexpectedTag(tag))
+            Err(BerError::unexpected_tag(tag, self.tag))
         }
     }
 
@@ -170,6 +170,26 @@ impl<'a> BerObjectHeader<'a> {
         BerObjectHeader {
             constructed,
             ..self
+        }
+    }
+
+    /// Return error if object is not constructed
+    #[inline]
+    pub const fn assert_constructed(&self) -> Result<(), BerError> {
+        if self.is_constructed() {
+            Ok(())
+        } else {
+            Err(BerError::ConstructExpected)
+        }
+    }
+
+    /// Return error if object is not primitive
+    #[inline]
+    pub const fn assert_primitive(&self) -> Result<(), BerError> {
+        if self.is_primitive() {
+            Ok(())
+        } else {
+            Err(BerError::ConstructUnexpected)
         }
     }
 }
