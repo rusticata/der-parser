@@ -12,9 +12,12 @@
 
 ### Changed/Fixed
 
+`BerObjectHeader`:
+
 - `BerSize` has been renamed to `Length`
 - `BerClass` has been renamed to `Class`
 - `BerTag` has been renamed to `Tag`
+- Header fields are now private. Getters/setters have been added, and must be used to access/modify fields
 
 ### Added
 

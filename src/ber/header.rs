@@ -5,8 +5,8 @@ use super::{Class, Length, Tag};
 pub struct BerObjectHeader<'a> {
     /// Object class: universal, application, context-specific, or private
     pub(crate) class: Class,
-    /// Constructed attribute: 1 if constructed, else 0
-    pub(crate) constructed: u8,
+    /// Constructed attribute: `true` if constructed, `false` if primitive
+    pub(crate) constructed: bool,
     /// Tag number
     pub tag: Tag,
     /// Object length: definite or indefinite
@@ -21,7 +21,7 @@ pub struct BerObjectHeader<'a> {
 
 impl<'a> BerObjectHeader<'a> {
     /// Build a new BER header
-    pub fn new<Len: Into<Length>>(class: Class, constructed: u8, tag: Tag, len: Len) -> Self {
+    pub fn new<Len: Into<Length>>(class: Class, constructed: bool, tag: Tag, len: Len) -> Self {
         BerObjectHeader {
             tag,
             constructed,
@@ -102,13 +102,33 @@ impl<'a> BerObjectHeader<'a> {
 
     /// Test if object is primitive
     #[inline]
-    pub fn is_primitive(&self) -> bool {
-        self.constructed == 0
+    pub const fn is_primitive(&self) -> bool {
+        !self.constructed
     }
     /// Test if object is constructed
     #[inline]
-    pub fn is_constructed(&self) -> bool {
-        self.constructed == 1
+    pub const fn is_constructed(&self) -> bool {
+        self.constructed
+    }
+
+    /// Set the BER object header's constructed attribute.
+    #[inline]
+    pub const fn constructed(&self) -> bool {
+        self.constructed
+    }
+    /// Set the BER object header's constructed attribute.
+    #[inline]
+    pub fn set_constructed(&mut self, constructed: bool) {
+        self.constructed = constructed;
+    }
+
+    /// Update header tag
+    #[inline]
+    pub fn with_constructed(self, constructed: bool) -> Self {
+        BerObjectHeader {
+            constructed,
+            ..self
+        }
     }
 }
 

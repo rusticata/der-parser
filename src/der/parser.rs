@@ -663,6 +663,7 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<DerObjectHeader> {
             }
         }
     };
-    let hdr = DerObjectHeader::new(class, el.1, Tag(el.2), len).with_raw_tag(Some(el.3));
+    let constructed = el.1 != 0;
+    let hdr = DerObjectHeader::new(class, constructed, Tag(el.2), len).with_raw_tag(Some(el.3));
     Ok((i3, hdr))
 }

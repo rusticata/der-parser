@@ -118,17 +118,15 @@ impl<'a> BerObject<'a> {
     pub fn from_obj(c: BerObjectContent) -> BerObject {
         let class = Class::Universal;
         let tag = c.tag();
-        let constructed = match tag {
-            Tag::Sequence | Tag::Set => 1,
-            _ => 0,
-        };
+        let constructed = matches!(tag, Tag::Sequence | Tag::Set);
         let header = BerObjectHeader::new(class, constructed, tag, Length::Definite(0));
         BerObject { header, content: c }
     }
 
     /// Build a DER integer object from a slice containing an encoded integer
     pub fn from_int_slice(i: &'a [u8]) -> BerObject<'a> {
-        let header = BerObjectHeader::new(Class::Universal, 0, Tag::Integer, Length::Definite(0));
+        let header =
+            BerObjectHeader::new(Class::Universal, false, Tag::Integer, Length::Definite(0));
         BerObject {
             header,
             content: BerObjectContent::Integer(i),
@@ -326,12 +324,14 @@ impl<'a> BerObject<'a> {
     }
 
     /// Test if object is primitive
-    pub fn is_primitive(&self) -> bool {
-        self.header.constructed == 0
+    #[inline]
+    pub const fn is_primitive(&self) -> bool {
+        self.header.is_primitive()
     }
     /// Test if object is constructed
-    pub fn is_constructed(&self) -> bool {
-        self.header.constructed == 1
+    #[inline]
+    pub const fn is_constructed(&self) -> bool {
+        self.header.is_constructed()
     }
 }
 
