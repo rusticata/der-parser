@@ -89,7 +89,7 @@ where
 {
     let tag = tag.into();
     parse_ber_container(move |i, hdr| {
-        if hdr.class == BerClass::Universal {
+        if hdr.class == Class::Universal {
             return Err(Err::Error(BerError::InvalidClass.into()));
         }
         if hdr.tag != tag {

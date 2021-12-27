@@ -13,6 +13,7 @@
 ### Changed/Fixed
 
 - `BerSize` has been renamed to `Length`
+- `BerClass` has been renamed to `Class`
 
 ### Added
 
