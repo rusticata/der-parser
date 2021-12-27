@@ -26,7 +26,7 @@ fn bench_der_read_element_header(b: &mut Bencher) {
                         .with_raw_tag(Some(&[0xc]))
                 );
             }
-            _ => assert!(false),
+            _ => panic!("parsing failed"),
         }
     });
 }
@@ -40,7 +40,7 @@ fn bench_der_map_res_integer_u32(b: &mut Bencher) {
             Ok((_rem, i)) => {
                 assert_eq!(i, 0x0123_4567);
             }
-            _ => assert!(false),
+            _ => panic!("parsing failed"),
         }
     });
 }
@@ -54,7 +54,7 @@ fn bench_parse_der_u32(b: &mut Bencher) {
             Ok((_rem, i)) => {
                 assert_eq!(i, 0x0123_4567);
             }
-            _ => assert!(false),
+            _ => panic!("parsing failed"),
         }
     });
 }
@@ -72,7 +72,7 @@ fn bench_parse_der_seq(b: &mut Bencher) {
             Ok((_rem, i)) => {
                 assert_eq!(i, expected);
             }
-            _ => assert!(false),
+            _ => panic!("parsing failed"),
         }
     });
 }
