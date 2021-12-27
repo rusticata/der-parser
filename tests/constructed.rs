@@ -39,7 +39,7 @@ fn parse_struct01_complete(i: &[u8]) -> BerResult<MyStruct> {
 // verifying tag
 fn parse_struct04(i: &[u8], tag: Tag) -> BerResult<MyStruct> {
     parse_der_container(|i: &[u8], hdr| {
-        if hdr.tag != tag {
+        if hdr.tag() != tag {
             return Err(Err::Error(BerError::InvalidTag));
         }
         let (i, a) = parse_ber_integer(i)?;
@@ -409,7 +409,7 @@ fn application() {
             if hdr.class() != Class::Application {
                 return Err(Err::Error(BerError::InvalidClass));
             }
-            if hdr.tag != Tag(2) {
+            if hdr.tag() != Tag(2) {
                 return Err(Err::Error(BerError::InvalidTag));
             }
             let (i, a) = map_res(parse_ber_integer, |x: BerObject| x.as_u32())(i)?;

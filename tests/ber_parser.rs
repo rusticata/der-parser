@@ -524,9 +524,9 @@ fn test_parse_ber_content() {
     let bytes = &hex!("02 03 01 00 01");
     let (i, header) = ber_read_element_header(bytes).expect("parsing failed");
     let (rem, content) =
-        parse_ber_content(header.tag)(i, &header, MAX_RECURSION).expect("parsing failed");
+        parse_ber_content(header.tag())(i, &header, MAX_RECURSION).expect("parsing failed");
     assert!(rem.is_empty());
-    assert_eq!(header.tag, Tag::Integer);
+    assert_eq!(header.tag(), Tag::Integer);
     assert_eq!(content.as_u32(), Ok(0x10001));
 }
 
@@ -534,7 +534,7 @@ fn test_parse_ber_content() {
 fn test_parse_ber_content2() {
     let bytes = &hex!("02 03 01 00 01");
     let (i, header) = ber_read_element_header(bytes).expect("parsing failed");
-    let tag = header.tag;
+    let tag = header.tag();
     let (rem, content) = parse_ber_content2(tag)(i, header, MAX_RECURSION).expect("parsing failed");
     assert!(rem.is_empty());
     assert_eq!(tag, Tag::Integer);
