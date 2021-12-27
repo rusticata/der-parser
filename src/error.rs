@@ -1,6 +1,6 @@
 //! Error type for BER/DER parsers
 
-use crate::ber::{BerObject, Tag};
+use crate::ber::{BerObject, Class, Tag};
 use crate::der::DerObject;
 use alloc::fmt;
 use nom::error::{ErrorKind, FromExternalError, ParseError};
@@ -65,6 +65,8 @@ pub enum BerError {
     /// errors
     Custom(u32),
 
+    /// Unexpected Class was encountered while parsing
+    UnexpectedClass(Class),
     /// Unexpected Tag was encountered while parsing
     UnexpectedTag(Tag),
 
