@@ -173,7 +173,7 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
 /// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
 ///
 /// assert_eq!(hdr.class(), Class::Universal);
-/// assert_eq!(hdr.tag, Tag::Integer);
+/// assert_eq!(hdr.tag(), Tag::Integer);
 /// assert_eq!(hdr.len, Length::Definite(3));
 /// ```
 pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
@@ -498,10 +498,10 @@ fn ber_read_content_universalstring(i: &[u8], len: usize) -> BerResult<BerObject
 /// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, hdr) = ber_read_element_header(bytes).expect("could not read header");
 /// let (_, content) = ber_read_element_content_as(
-///     i, hdr.tag, hdr.len, hdr.is_constructed(), 5
+///     i, hdr.tag(), hdr.len, hdr.is_constructed(), 5
 /// ).expect("parsing failed");
 /// #
-/// # assert_eq!(hdr.tag, Tag::Integer);
+/// # assert_eq!(hdr.tag(), Tag::Integer);
 /// # assert_eq!(content.as_u32(), Ok(0x10001));
 /// ```
 pub fn ber_read_element_content_as(
@@ -703,10 +703,10 @@ pub fn ber_read_element_content_as(
 /// #
 /// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, header) = ber_read_element_header(bytes).expect("parsing failed");
-/// let (rem, content) = parse_ber_content(header.tag)(i, &header, MAX_RECURSION)
+/// let (rem, content) = parse_ber_content(header.tag())(i, &header, MAX_RECURSION)
 ///     .expect("parsing failed");
 /// #
-/// # assert_eq!(header.tag, Tag::Integer);
+/// # assert_eq!(header.tag(), Tag::Integer);
 /// ```
 pub fn parse_ber_content<'a>(
     tag: Tag,
@@ -735,10 +735,10 @@ pub fn parse_ber_content<'a>(
 /// #
 /// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, header) = ber_read_element_header(bytes).expect("parsing failed");
-/// let (rem, content) = parse_ber_content(header.tag)(i, &header, MAX_RECURSION)
+/// let (rem, content) = parse_ber_content(header.tag())(i, &header, MAX_RECURSION)
 ///     .expect("parsing failed");
 /// #
-/// # assert_eq!(header.tag, Tag::Integer);
+/// # assert_eq!(header.tag(), Tag::Integer);
 /// ```
 pub fn parse_ber_content2<'a>(
     tag: Tag,
@@ -761,7 +761,7 @@ pub fn parse_ber_content2<'a>(
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_ber_with_tag(bytes, Tag::Integer).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, Tag::Integer);
+/// assert_eq!(obj.header.tag(), Tag::Integer);
 /// ```
 pub fn parse_ber_with_tag<T: Into<Tag>>(i: &[u8], tag: T) -> BerResult {
     let tag = tag.into();
@@ -1062,7 +1062,7 @@ where
 /// let mut parser = parse_ber_optional(parse_ber_integer);
 /// let (_, obj) = parser(bytes).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, Tag::Integer);
+/// assert_eq!(obj.header.tag(), Tag::Integer);
 /// assert!(obj.as_optional().is_ok());
 /// ```
 pub fn parse_ber_optional<'a, F>(mut f: F) -> impl FnMut(&'a [u8]) -> BerResult<'a>
@@ -1158,7 +1158,7 @@ pub(crate) fn r_parse_ber(max_depth: usize) -> impl Fn(&[u8]) -> BerResult {
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_ber_recursive(bytes, 1).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, Tag::Integer);
+/// assert_eq!(obj.header.tag(), Tag::Integer);
 /// ```
 pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
@@ -1207,7 +1207,7 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_ber(bytes).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, Tag::Integer);
+/// assert_eq!(obj.header.tag(), Tag::Integer);
 /// ```
 #[inline]
 pub fn parse_ber(i: &[u8]) -> BerResult {

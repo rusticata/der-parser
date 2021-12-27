@@ -20,7 +20,7 @@ use rusticata_macros::custom_check;
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_der(bytes).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, DerTag::Integer);
+/// assert_eq!(obj.header.tag(), DerTag::Integer);
 /// ```
 #[inline]
 pub fn parse_der(i: &[u8]) -> DerResult {
@@ -39,7 +39,7 @@ pub fn parse_der(i: &[u8]) -> DerResult {
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_der_recursive(bytes, 1).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, DerTag::Integer);
+/// assert_eq!(obj.header.tag(), DerTag::Integer);
 /// ```
 pub fn parse_der_recursive(i: &[u8], max_depth: usize) -> DerResult {
     let (i, hdr) = der_read_element_header(i)?;
@@ -74,7 +74,7 @@ macro_rules! der_constraint_fail_if(
 /// let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (_, obj) = parse_der_with_tag(bytes, DerTag::Integer).expect("parsing failed");
 ///
-/// assert_eq!(obj.header.tag, DerTag::Integer);
+/// assert_eq!(obj.header.tag(), DerTag::Integer);
 /// ```
 pub fn parse_der_with_tag<Tag: Into<DerTag>>(i: &[u8], tag: Tag) -> DerResult {
     let tag = tag.into();
@@ -438,10 +438,10 @@ pub fn parse_der_slice<Tag: Into<DerTag>>(i: &[u8], tag: Tag) -> BerResult<&[u8]
 /// #
 /// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, header) = der_read_element_header(bytes).expect("parsing failed");
-/// let (rem, content) = parse_der_content(header.tag)(i, &header, MAX_RECURSION)
+/// let (rem, content) = parse_der_content(header.tag())(i, &header, MAX_RECURSION)
 ///     .expect("parsing failed");
 /// #
-/// # assert_eq!(header.tag, DerTag::Integer);
+/// # assert_eq!(header.tag(), DerTag::Integer);
 /// ```
 pub fn parse_der_content<'a>(
     tag: DerTag,
@@ -471,8 +471,8 @@ pub fn parse_der_content<'a>(
 /// #
 /// # let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
 /// let (i, header) = der_read_element_header(bytes).expect("parsing failed");
-/// # assert_eq!(header.tag, DerTag::Integer);
-/// let (rem, content) = parse_der_content2(header.tag)(i, header, MAX_RECURSION)
+/// # assert_eq!(header.tag(), DerTag::Integer);
+/// let (rem, content) = parse_der_content2(header.tag())(i, header, MAX_RECURSION)
 ///     .expect("parsing failed");
 /// ```
 pub fn parse_der_content2<'a>(

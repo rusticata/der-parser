@@ -1,4 +1,5 @@
 use super::{Class, Length, Tag};
+use crate::error::BerError;
 
 /// BER object header (identifier and length)
 #[derive(Clone, Debug)]
@@ -8,7 +9,7 @@ pub struct BerObjectHeader<'a> {
     /// Constructed attribute: `true` if constructed, `false` if primitive
     pub(crate) constructed: bool,
     /// Tag number
-    pub tag: Tag,
+    pub(crate) tag: Tag,
     /// Object length: definite or indefinite
     pub len: Length,
 
@@ -53,6 +54,16 @@ impl<'a> BerObjectHeader<'a> {
     #[inline]
     pub fn with_tag(self, tag: Tag) -> Self {
         BerObjectHeader { tag, ..self }
+    }
+
+    /// Return error if tag is not the expected tag
+    #[inline]
+    pub const fn assert_tag(&self, tag: Tag) -> Result<(), BerError> {
+        if self.tag.0 == tag.0 {
+            Ok(())
+        } else {
+            Err(BerError::UnexpectedTag(tag))
+        }
     }
 
     /// Get the BER object header's length.

@@ -491,7 +491,7 @@ where
 /// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
 ///     parse_ber_container(
 ///         |i: &[u8], hdr: BerObjectHeader| {
-///             if hdr.tag != Tag::Sequence {
+///             if hdr.tag() != Tag::Sequence {
 ///                 return Err(nom::Err::Error(BerError::BerTypeError.into()));
 ///             }
 ///             let (i, a) = parse_ber_u32(i)?;

@@ -1,6 +1,6 @@
 //! Error type for BER/DER parsers
 
-use crate::ber::BerObject;
+use crate::ber::{BerObject, Tag};
 use crate::der::DerObject;
 use alloc::fmt;
 use nom::error::{ErrorKind, FromExternalError, ParseError};
@@ -65,8 +65,19 @@ pub enum BerError {
     /// errors
     Custom(u32),
 
+    /// Unexpected Tag was encountered while parsing
+    UnexpectedTag(Tag),
+
     /// Error raised by the underlying nom parser
     NomError(ErrorKind),
+}
+
+impl BerError {
+    /// Build an error from the provided unexpected tag
+    #[inline]
+    pub const fn unexpected_tag(tag: Tag) -> Self {
+        Self::UnexpectedTag(tag)
+    }
 }
 
 impl From<BerError> for nom::Err<BerError> {
