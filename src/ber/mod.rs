@@ -47,20 +47,28 @@
 //! ```
 
 mod ber;
+mod class;
+mod header;
 mod integer;
+mod length;
 mod multi;
 mod parser;
 mod print;
 #[cfg(feature = "serialize")]
 mod serialize;
+mod tag;
 mod tagged;
 
 pub use crate::ber::ber::*;
+pub use crate::ber::class::*;
+pub use crate::ber::header::*;
+pub use crate::ber::length::*;
 pub use crate::ber::multi::*;
 pub use crate::ber::parser::*;
 pub use crate::ber::print::*;
 #[cfg(feature = "serialize")]
 pub use crate::ber::serialize::*;
+pub use crate::ber::tag::*;
 pub use crate::ber::tagged::*;
 
 use alloc::borrow::Cow;
