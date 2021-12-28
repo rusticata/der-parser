@@ -382,7 +382,7 @@ fn tc_ber_tagged_implicit_g(i: &[u8], out: Result<u32, BerError>) {
 fn tagged_implicit() {
     fn parse_int_implicit(i: &[u8]) -> BerResult<u32> {
         map_res(
-            parse_der_tagged_implicit(2, parse_der_content(DerTag::Integer)),
+            parse_der_tagged_implicit(2, parse_der_content(Tag::Integer)),
             |x: BerObject| x.as_u32(),
         )(i)
     }
@@ -393,7 +393,7 @@ fn tagged_implicit() {
     assert_eq!(val, 0x10001);
     // wrong tag
     assert_eq!(
-        parse_der_tagged_implicit(3, parse_der_content(DerTag::Integer))(bytes as &[u8]),
+        parse_der_tagged_implicit(3, parse_der_content(Tag::Integer))(bytes as &[u8]),
         Err(Err::Error(BerError::unexpected_tag(Tag(3), Tag(2))))
     );
 }

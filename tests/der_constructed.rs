@@ -37,7 +37,7 @@ fn tc_der_tagged_explicit_g(i: &[u8], out: Result<u32, BerError>) {
 fn tc_der_tagged_implicit_g(i: &[u8], out: Result<u32, BerError>) {
     fn parse_int_implicit(i: &[u8]) -> BerResult<u32> {
         parse_der_tagged_implicit_g(2, |content, hdr, depth| {
-            let (rem, obj) = parse_der_content(DerTag::Integer)(content, &hdr, depth)?;
+            let (rem, obj) = parse_der_content(Tag::Integer)(content, &hdr, depth)?;
             let value = obj.as_u32()?;
             Ok((rem, value))
         })(i)
