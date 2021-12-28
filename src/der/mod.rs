@@ -53,7 +53,8 @@
 //!     .expect("parsing failed");
 //! ```
 
-use crate::ber::{BerObject, BerObjectContent, BerObjectHeader, Class, Tag};
+use crate::ber::{BerObject, BerObjectContent, BerObjectHeader};
+pub use crate::ber::{Class, Tag};
 
 mod multi;
 mod parser;
