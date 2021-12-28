@@ -305,6 +305,24 @@ impl<'a> BerObject<'a> {
         self.content.as_str()
     }
 
+    /// Get the BER object header's class.
+    #[inline]
+    pub const fn class(&self) -> Class {
+        self.header.class()
+    }
+
+    /// Get the BER object header's tag.
+    #[inline]
+    pub const fn tag(&self) -> Tag {
+        self.header.tag()
+    }
+
+    /// Get the BER object header's length.
+    #[inline]
+    pub const fn length(&self) -> Length {
+        self.header.length()
+    }
+
     /// Test if object class is Universal
     #[inline]
     pub const fn is_universal(&self) -> bool {
