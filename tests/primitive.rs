@@ -218,3 +218,12 @@ fn test_pretty_print() {
     pp.set_flag(PrettyPrinterFlag::ShowHeader);
     println!("{:?}", pp);
 }
+
+#[test]
+fn test_print_unexpected() {
+    let bytes = hex!("01 01 ff");
+    let nom_err = parse_der_integer(&bytes).expect_err("expected error");
+    nom_err.map(|e| eprintln!("{}", e));
+
+    eprintln!("{}", BerError::BerMaxDepth);
+}

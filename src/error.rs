@@ -2,9 +2,10 @@
 
 use crate::ber::{BerObject, Class, Tag};
 use crate::der::DerObject;
-use alloc::fmt;
+use displaydoc::Display;
 use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::IResult;
+use thiserror::Error;
 
 /// Holds the result of parsing functions
 ///
@@ -21,7 +22,8 @@ pub type BerResult<'a, O = BerObject<'a>> = IResult<&'a [u8], O, BerError>;
 pub type DerResult<'a> = BerResult<'a, DerObject<'a>>;
 
 /// Error for BER/DER parsers
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Display, Error)]
+#[ignore_extra_doc_attributes]
 pub enum BerError {
     /// BER object does not have the expected type
     BerTypeError,
@@ -51,8 +53,8 @@ pub enum BerError {
     /// BER integer is negative, while an unsigned integer was requested
     IntegerNegative,
 
-    /// BER recursive parsing reached maximum depth (See
-    /// [MAX_RECURSION](../ber/constant.MAX_RECURSION.html))
+    /// BER recursive parsing reached maximum depth
+    /// (See [MAX_RECURSION](../ber/constant.MAX_RECURSION.html))
     BerMaxDepth,
 
     /// When parsing a defined sequence, some items could not be found
@@ -61,26 +63,22 @@ pub enum BerError {
     /// A DER constraint failed (object may be using BER encoding?)
     DerConstraintFailed,
 
+    /// Unknown tag
     UnknownTag,
     /// Feature is not yet implemented
     Unsupported,
 
-    /// Custom error type left for parsers on top of this crate, so they can handle their custom
-    /// errors
+    /// Invalid class (expected {expected:?}, found {found:?})
+    UnexpectedClass { expected: Class, found: Class },
+    /// Invalid tag (expected {expected:?}, found {found:?})
+    UnexpectedTag { expected: Tag, found: Tag },
+
+    /// Custom error: {0}
+    ///
+    /// This type is left for parsers on top of this crate, so they can handle their custom errors.
     Custom(u32),
 
-    /// Unexpected Class was encountered while parsing
-    UnexpectedClass {
-        expected: Class,
-        found: Class,
-    },
-    /// Unexpected Tag was encountered while parsing
-    UnexpectedTag {
-        expected: Tag,
-        found: Tag,
-    },
-
-    /// Error raised by the underlying nom parser
+    /// Error raised by the underlying nom parser: {0:?}
     NomError(ErrorKind),
 }
 
@@ -99,6 +97,7 @@ impl BerError {
 }
 
 impl From<BerError> for nom::Err<BerError> {
+    #[inline]
     fn from(e: BerError) -> nom::Err<BerError> {
         nom::Err::Error(e)
     }
@@ -118,15 +117,6 @@ impl<I, E> FromExternalError<I, E> for BerError {
         BerError::NomError(kind)
     }
 }
-
-impl fmt::Display for BerError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for BerError {}
 
 #[cfg(all(test, feature = "std"))]
 mod tests {
