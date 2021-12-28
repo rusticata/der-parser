@@ -19,6 +19,12 @@
 - `BerTag` has been renamed to `Tag`
 - Header fields are now private. Getters/setters have been added, and must be used to access/modify fields
 
+`BerError`:
+
+- Add error types `UnexpectedClass` and `UnexpectedTag`
+- Store expected and found item in error to help debugginh
+- Keep `InvalidTag` for tags with invalid form (length/encoding/etc.)
+
 ### Added
 
 ### Thanks

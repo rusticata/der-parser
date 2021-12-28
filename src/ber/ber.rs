@@ -401,7 +401,7 @@ impl<'a> BerObjectContent<'a> {
             };
             Ok(result)
         } else {
-            Err(BerError::InvalidTag)
+            Err(BerError::BerValueError)
         }
     }
 
@@ -428,7 +428,7 @@ impl<'a> BerObjectContent<'a> {
             };
             Ok(result)
         } else {
-            Err(BerError::InvalidTag)
+            Err(BerError::BerValueError)
         }
     }
 
@@ -672,7 +672,7 @@ impl<'a> BerObject<'a> {
     pub fn as_bigint(&self) -> Result<BigInt, BerError> {
         match self.content {
             BerObjectContent::Integer(s) => Ok(BigInt::from_signed_bytes_be(s)),
-            _ => Err(BerError::InvalidTag),
+            _ => Err(BerError::BerValueError),
         }
     }
 
@@ -699,7 +699,7 @@ impl<'a> BerObject<'a> {
                 }
                 Ok(BigUint::from_bytes_be(s))
             }
-            _ => Err(BerError::InvalidTag),
+            _ => Err(BerError::BerValueError),
         }
     }
 }

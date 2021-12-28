@@ -92,13 +92,10 @@ where
         if hdr.class == Class::Universal {
             return Err(Err::Error(BerError::InvalidClass.into()));
         }
-        if hdr.tag != tag {
-            return Err(Err::Error(BerError::InvalidTag.into()));
-        }
+        hdr.assert_tag(tag).map_err(|e| Err::Error(e.into()))?;
         // X.690 8.14.2: if implicit tagging was not used, the encoding shall be constructed
-        if !hdr.is_constructed() {
-            return Err(Err::Error(BerError::ConstructExpected.into()));
-        }
+        hdr.assert_constructed().map_err(|e| Err::Error(e.into()))?;
+
         f(i, hdr)
         // trailing bytes are ignored
     })
@@ -252,9 +249,7 @@ where
 {
     let tag = tag.into();
     parse_ber_container(move |i, hdr| {
-        if hdr.tag != tag {
-            return Err(Err::Error(BerError::InvalidTag.into()));
-        }
+        hdr.assert_tag(tag).map_err(|e| Err::Error(e.into()))?;
         // XXX MAX_RECURSION should not be used, it resets the depth counter
         f(i, hdr, MAX_RECURSION)
         // trailing bytes are ignored
