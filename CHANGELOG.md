@@ -26,6 +26,9 @@
 - Keep `InvalidTag` for tags with invalid form (length/encoding/etc.)
 - Use `displaydoc` for `BerError`
 
+`DER`:
+- `DerClass` and `DerTag` have been deprecated. Use `Class` and `Tag` instead.
+
 ### Added
 
 ### Thanks

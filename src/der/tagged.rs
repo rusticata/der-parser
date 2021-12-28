@@ -36,10 +36,10 @@ use nom::{Err, IResult};
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_der_tagged_explicit<'a, Tag, F>(tag: Tag, f: F) -> impl FnMut(&'a [u8]) -> BerResult
+pub fn parse_der_tagged_explicit<'a, T, F>(tag: T, f: F) -> impl FnMut(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8]) -> BerResult<DerObject>,
-    Tag: Into<DerTag>,
+    T: Into<Tag>,
 {
     let tag = tag.into();
     parse_der_tagged_explicit_g(tag, move |content, hdr| {
@@ -79,18 +79,18 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_der_tagged_explicit_g<'a, Tag, Output, F, E>(
-    tag: Tag,
+pub fn parse_der_tagged_explicit_g<'a, T, Output, F, E>(
+    tag: T,
     f: F,
 ) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Output, E>
 where
     F: Fn(&'a [u8], DerObjectHeader<'a>) -> IResult<&'a [u8], Output, E>,
     E: ParseError<&'a [u8]> + From<BerError>,
-    Tag: Into<DerTag>,
+    T: Into<Tag>,
 {
     let tag = tag.into();
     parse_der_container(move |i, hdr| {
-        if hdr.class == DerClass::Universal {
+        if hdr.class == Class::Universal {
             return Err(Err::Error(BerError::InvalidClass.into()));
         }
         hdr.assert_tag(tag).map_err(|e| Err::Error(e.into()))?;
@@ -124,7 +124,7 @@ where
 /// fn parse_int_implicit(i:&[u8]) -> BerResult<DerObject> {
 ///     parse_der_tagged_implicit(
 ///         2,
-///         parse_der_content(DerTag::Integer),
+///         parse_der_content(Tag::Integer),
 ///     )(i)
 /// }
 ///
@@ -151,7 +151,7 @@ where
 ///     map_res(
 ///         parse_der_tagged_implicit(
 ///             2,
-///             parse_der_content(DerTag::Integer),
+///             parse_der_content(Tag::Integer),
 ///         ),
 ///         |x: DerObject| x.as_u32()
 ///     )(i)
@@ -167,10 +167,10 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_der_tagged_implicit<'a, Tag, F>(tag: Tag, f: F) -> impl FnMut(&'a [u8]) -> BerResult
+pub fn parse_der_tagged_implicit<'a, T, F>(tag: T, f: F) -> impl FnMut(&'a [u8]) -> BerResult
 where
     F: Fn(&'a [u8], &'_ DerObjectHeader, usize) -> BerResult<'a, DerObjectContent<'a>>,
-    Tag: Into<DerTag>,
+    T: Into<Tag>,
 {
     let tag = tag.into();
     parse_der_tagged_implicit_g(tag, move |i, hdr, depth| {
@@ -196,7 +196,7 @@ where
 /// fn parse_implicit_0_octetstring(i:&[u8]) -> BerResult<DerObjectContent> {
 ///     parse_der_tagged_implicit_g(
 ///         2,
-///         parse_der_content2(DerTag::OctetString)
+///         parse_der_content2(Tag::OctetString)
 ///     )(i)
 /// }
 ///
@@ -223,7 +223,7 @@ where
 ///     parse_der_tagged_implicit_g(
 ///         2,
 ///         |content, hdr, depth| {
-///             let (rem, obj_content) = parse_der_content(DerTag::Integer)(content, &hdr, depth)?;
+///             let (rem, obj_content) = parse_der_content(Tag::Integer)(content, &hdr, depth)?;
 ///             let value = obj_content.as_u32()?;
 ///             Ok((rem, value))
 ///         }
@@ -240,14 +240,14 @@ where
 /// #     _ => assert!(false)
 /// # }
 /// ```
-pub fn parse_der_tagged_implicit_g<'a, Tag, Output, F, E>(
-    tag: Tag,
+pub fn parse_der_tagged_implicit_g<'a, T, Output, F, E>(
+    tag: T,
     f: F,
 ) -> impl FnMut(&'a [u8]) -> IResult<&[u8], Output, E>
 where
     F: Fn(&'a [u8], DerObjectHeader<'a>, usize) -> IResult<&'a [u8], Output, E>,
     E: ParseError<&'a [u8]> + From<BerError>,
-    Tag: Into<DerTag>,
+    T: Into<Tag>,
 {
     let tag = tag.into();
     parse_der_container(move |i, hdr| {

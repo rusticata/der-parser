@@ -68,9 +68,11 @@ use alloc::vec::Vec;
 use core::convert::{Into, TryFrom};
 
 /// DER Object class of tag (same as `BerClass`)
+#[deprecated(since = "7.0.0", note = "Use `Class` instead")]
 pub type DerClass = Class;
 
 /// DER tag (same as BER tag)
+#[deprecated(since = "7.0.0", note = "Use `Tag` instead")]
 pub type DerTag = Tag;
 
 /// Representation of a DER-encoded (X.690) object
