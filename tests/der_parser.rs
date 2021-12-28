@@ -312,8 +312,7 @@ fn test_der_contextspecific() {
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let empty = &b""[..];
     let expected = DerObject {
-        header: BerObjectHeader::new(Class::ContextSpecific, true, Tag(0), 3)
-            .with_raw_tag(Some(&[0xa0])),
+        header: Header::new(Class::ContextSpecific, true, Tag(0), 3).with_raw_tag(Some(&[0xa0])),
         content: BerObjectContent::Unknown(Class::ContextSpecific, Tag(0), &bytes[2..]),
     };
     assert_eq!(parse_der(&bytes), Ok((empty, expected)));
@@ -323,8 +322,7 @@ fn test_der_contextspecific() {
 fn test_der_explicit_optional() {
     let empty = &b""[..];
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
-    let header =
-        BerObjectHeader::new(Class::ContextSpecific, true, Tag(0), 3).with_raw_tag(Some(&[0xa0]));
+    let header = Header::new(Class::ContextSpecific, true, Tag(0), 3).with_raw_tag(Some(&[0xa0]));
     let expected = DerObject {
         header: header.clone(),
         content: BerObjectContent::Optional(Some(Box::new(BerObject::from_header_and_content(
@@ -352,13 +350,12 @@ fn test_der_implicit() {
     let empty = &b""[..];
     let bytes = [0x81, 0x04, 0x70, 0x61, 0x73, 0x73];
     let expected = DerObject {
-        header: BerObjectHeader::new(Class::ContextSpecific, false, Tag(1), 4)
-            .with_raw_tag(Some(&[0x81])),
+        header: Header::new(Class::ContextSpecific, false, Tag(1), 4).with_raw_tag(Some(&[0x81])),
         content: BerObjectContent::IA5String("pass"),
     };
     fn der_read_ia5string_content<'a>(
         i: &'a [u8],
-        hdr: &BerObjectHeader,
+        hdr: &Header,
         depth: usize,
     ) -> BerResult<'a, BerObjectContent<'a>> {
         ber_read_element_content_as(
@@ -384,13 +381,13 @@ fn test_der_implicit_long_tag() {
     let empty = &b""[..];
     let bytes = [0x5f, 0x52, 0x04, 0x70, 0x61, 0x73, 0x73];
     let expected = DerObject {
-        header: BerObjectHeader::new(Class::Application, false, Tag(0x52), 4)
+        header: Header::new(Class::Application, false, Tag(0x52), 4)
             .with_raw_tag(Some(&[0x5f, 0x52])),
         content: BerObjectContent::IA5String("pass"),
     };
     fn der_read_ia5string_content<'a>(
         i: &'a [u8],
-        hdr: &BerObjectHeader,
+        hdr: &Header,
         depth: usize,
     ) -> BerResult<'a, BerObjectContent<'a>> {
         ber_read_element_content_as(

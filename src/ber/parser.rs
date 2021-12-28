@@ -17,7 +17,7 @@ pub const MAX_OBJECT_SIZE: usize = 4_294_967_295;
 /// Skip object content, and return true if object was End-Of-Content
 pub(crate) fn ber_skip_object_content<'a>(
     i: &'a [u8],
-    hdr: &BerObjectHeader,
+    hdr: &Header,
     max_depth: usize,
 ) -> BerResult<'a, bool> {
     if max_depth == 0 {
@@ -54,7 +54,7 @@ pub(crate) fn ber_skip_object_content<'a>(
 /// Read object raw content (bytes)
 pub(crate) fn ber_get_object_content<'a>(
     i: &'a [u8],
-    hdr: &BerObjectHeader,
+    hdr: &Header,
     max_depth: usize,
 ) -> BerResult<'a, &'a [u8]> {
     let start_i = i;
@@ -176,7 +176,7 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
 /// assert_eq!(hdr.tag(), Tag::Integer);
 /// assert_eq!(hdr.length(), Length::Definite(3));
 /// ```
-pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
+pub fn ber_read_element_header(i: &[u8]) -> BerResult<Header> {
     let (i1, el) = parse_identifier(i)?;
     let class = match Class::try_from(el.0) {
         Ok(c) => c,
@@ -215,7 +215,7 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<BerObjectHeader> {
         }
     };
     let constructed = el.1 != 0;
-    let hdr = BerObjectHeader::new(class, constructed, Tag(el.2), len).with_raw_tag(Some(el.3));
+    let hdr = Header::new(class, constructed, Tag(el.2), len).with_raw_tag(Some(el.3));
     Ok((i3, hdr))
 }
 
@@ -710,8 +710,8 @@ pub fn ber_read_element_content_as(
 /// ```
 pub fn parse_ber_content<'a>(
     tag: Tag,
-) -> impl Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>> {
-    move |i: &[u8], hdr: &BerObjectHeader, max_recursion: usize| {
+) -> impl Fn(&'a [u8], &'_ Header, usize) -> BerResult<'a, BerObjectContent<'a>> {
+    move |i: &[u8], hdr: &Header, max_recursion: usize| {
         ber_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
     }
 }
@@ -742,8 +742,8 @@ pub fn parse_ber_content<'a>(
 /// ```
 pub fn parse_ber_content2<'a>(
     tag: Tag,
-) -> impl Fn(&'a [u8], BerObjectHeader<'a>, usize) -> BerResult<'a, BerObjectContent<'a>> {
-    move |i: &[u8], hdr: BerObjectHeader, max_recursion: usize| {
+) -> impl Fn(&'a [u8], Header<'a>, usize) -> BerResult<'a, BerObjectContent<'a>> {
+    move |i: &[u8], hdr: Header, max_recursion: usize| {
         ber_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
     }
 }
@@ -1034,7 +1034,7 @@ where
 #[inline]
 pub fn parse_ber_implicit<'a, T, F>(i: &'a [u8], tag: T, f: F) -> BerResult<'a>
 where
-    F: Fn(&'a [u8], &'_ BerObjectHeader, usize) -> BerResult<'a, BerObjectContent<'a>>,
+    F: Fn(&'a [u8], &'_ Header, usize) -> BerResult<'a, BerObjectContent<'a>>,
     T: Into<Tag>,
 {
     parse_ber_tagged_implicit(tag, f)(i)

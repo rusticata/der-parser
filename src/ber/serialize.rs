@@ -38,9 +38,7 @@ fn encode_length<'a, W: Write + 'a, Len: Into<Length>>(len: Len) -> impl Seriali
 ///
 /// The `len` field must be correct
 #[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
-pub fn ber_encode_header<'a, 'b: 'a, W: Write + 'a>(
-    hdr: &'b BerObjectHeader,
-) -> impl SerializeFn<W> + 'a {
+pub fn ber_encode_header<'a, 'b: 'a, W: Write + 'a>(hdr: &'b Header) -> impl SerializeFn<W> + 'a {
     move |out| {
         // identifier octets (X.690 8.1.2)
         let class_u8 = (hdr.class as u8) << 6;
@@ -81,7 +79,7 @@ pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         let v = gen_simple(ber_encode_object(obj), W::default())?;
         let len = v.as_ref().len();
         // encode the application header, using the tag
-        let hdr = BerObjectHeader::new(class, true /* X.690 8.14.2 */, tag, len);
+        let hdr = Header::new(class, true /* X.690 8.14.2 */, tag, len);
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -101,7 +99,7 @@ pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
         // but replace the tag (keep constructed attribute)
         let len = v.as_ref().len();
-        let hdr = BerObjectHeader::new(class, obj.header.constructed, tag, len);
+        let hdr = Header::new(class, obj.header.constructed, tag, len);
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -173,7 +171,7 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
 /// *This function is only available if the `serialize` feature is enabled.*
 #[cfg_attr(docsrs, doc(cfg(feature = "serialize")))]
 pub fn ber_encode_object_raw<'a, 'b: 'a, 'c: 'a, W: Write + Default + AsRef<[u8]> + 'a>(
-    hdr: &'b BerObjectHeader,
+    hdr: &'b Header,
     content: &'c BerObjectContent,
 ) -> impl SerializeFn<W> + 'a {
     tuple((ber_encode_header(hdr), ber_encode_object_content(content)))
@@ -368,7 +366,7 @@ mod test {
     fn test_encode_tagged_implicit() {
         fn der_read_integer_content<'a>(
             i: &'a [u8],
-            hdr: &BerObjectHeader,
+            hdr: &Header,
             depth: usize,
         ) -> BerResult<'a, BerObjectContent<'a>> {
             ber_read_element_content_as(i, Tag::Integer, hdr.length, false, depth)

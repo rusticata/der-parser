@@ -115,7 +115,7 @@ fn test_unknown_context_specific() {
     assert_eq!(
         res.1,
         BerObject {
-            header: BerObjectHeader::new(Class::ContextSpecific, false, Tag(0), 1)
+            header: Header::new(Class::ContextSpecific, false, Tag(0), 1)
                 .with_raw_tag(Some(&[0x80])),
             content: BerObjectContent::Unknown(Class::ContextSpecific, Tag(0x0), &bytes[2..]),
         }
@@ -130,7 +130,7 @@ fn test_unknown_long_tag() {
     assert_eq!(
         res.1,
         BerObject {
-            header: BerObjectHeader::new(Class::ContextSpecific, false, Tag(0x22), 1)
+            header: Header::new(Class::ContextSpecific, false, Tag(0x22), 1)
                 .with_raw_tag(Some(&[0x9f, 0x22])),
             content: BerObjectContent::Unknown(Class::ContextSpecific, Tag(0x22), &bytes[3..]),
         }
@@ -145,7 +145,7 @@ fn test_unknown_longer_tag() {
     assert_eq!(
         res.1,
         BerObject {
-            header: BerObjectHeader::new(Class::ContextSpecific, false, Tag(0x1122), 1)
+            header: Header::new(Class::ContextSpecific, false, Tag(0x1122), 1)
                 .with_raw_tag(Some(&[0x9f, 0xa2, 0x22])),
             content: BerObjectContent::Unknown(Class::ContextSpecific, Tag(0x1122), &bytes[4..]),
         }

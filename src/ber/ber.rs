@@ -22,7 +22,7 @@ use core::ops::Index;
 /// tagged values).
 #[derive(Debug, Clone, PartialEq)]
 pub struct BerObject<'a> {
-    pub header: BerObjectHeader<'a>,
+    pub header: Header<'a>,
     pub content: BerObjectContent<'a>,
 }
 
@@ -95,7 +95,7 @@ pub enum BerObjectContent<'a> {
     /// Tagged object (EXPLICIT): class, tag  and content of inner object
     Tagged(Class, Tag, Box<BerObject<'a>>),
     /// Private
-    Private(BerObjectHeader<'a>, &'a [u8]),
+    Private(Header<'a>, &'a [u8]),
 
     /// Unknown object: object tag (copied from header), and raw content
     Unknown(Class, Tag, &'a [u8]),
@@ -107,7 +107,7 @@ impl<'a> BerObject<'a> {
     /// Note: values are not checked, so the tag can be different from the real content, or flags
     /// can be invalid.
     pub fn from_header_and_content<'o>(
-        header: BerObjectHeader<'o>,
+        header: Header<'o>,
         content: BerObjectContent<'o>,
     ) -> BerObject<'o> {
         BerObject { header, content }
@@ -119,14 +119,13 @@ impl<'a> BerObject<'a> {
         let class = Class::Universal;
         let tag = c.tag();
         let constructed = matches!(tag, Tag::Sequence | Tag::Set);
-        let header = BerObjectHeader::new(class, constructed, tag, Length::Definite(0));
+        let header = Header::new(class, constructed, tag, Length::Definite(0));
         BerObject { header, content: c }
     }
 
     /// Build a DER integer object from a slice containing an encoded integer
     pub fn from_int_slice(i: &'a [u8]) -> BerObject<'a> {
-        let header =
-            BerObjectHeader::new(Class::Universal, false, Tag::Integer, Length::Definite(0));
+        let header = Header::new(Class::Universal, false, Tag::Integer, Length::Definite(0));
         BerObject {
             header,
             content: BerObjectContent::Integer(i),
@@ -135,7 +134,7 @@ impl<'a> BerObject<'a> {
 
     /// Set a tag for the BER object
     pub fn set_raw_tag(self, raw_tag: Option<&'a [u8]>) -> BerObject {
-        let header = BerObjectHeader {
+        let header = Header {
             raw_tag,
             ..self.header
         };
