@@ -24,7 +24,7 @@
 - Add error types `UnexpectedClass` and `UnexpectedTag`
 - Store expected and found item in error to help debugginh
 - Keep `InvalidTag` for tags with invalid form (length/encoding/etc.)
-- Use thiserror and displaydoc for `BerError`
+- Use `displaydoc` for `BerError`
 
 ### Added
 

@@ -5,7 +5,6 @@ use crate::der::DerObject;
 use displaydoc::Display;
 use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::IResult;
-use thiserror::Error;
 
 /// Holds the result of parsing functions
 ///
@@ -22,7 +21,7 @@ pub type BerResult<'a, O = BerObject<'a>> = IResult<&'a [u8], O, BerError>;
 pub type DerResult<'a> = BerResult<'a, DerObject<'a>>;
 
 /// Error for BER/DER parsers
-#[derive(Debug, PartialEq, Copy, Clone, Display, Error)]
+#[derive(Debug, PartialEq, Copy, Clone, Display)]
 #[ignore_extra_doc_attributes]
 pub enum BerError {
     /// BER object does not have the expected type
@@ -117,6 +116,9 @@ impl<I, E> FromExternalError<I, E> for BerError {
         BerError::NomError(kind)
     }
 }
+
+#[cfg(feature = "std")]
+impl std::error::Error for BerError {}
 
 #[cfg(all(test, feature = "std"))]
 mod tests {
