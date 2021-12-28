@@ -53,8 +53,8 @@
 //!     .expect("parsing failed");
 //! ```
 
-use crate::ber::{BerObject, BerObjectContent, Header};
-pub use crate::ber::{Class, Tag};
+use crate::ber::{BerObject, BerObjectContent};
+pub use crate::ber::{Class, Header, Tag};
 
 mod multi;
 mod parser;
@@ -83,6 +83,7 @@ pub type DerObject<'a> = BerObject<'a>;
 /// DER object header (identifier and length)
 ///
 /// This is the same object as `BerObjectHeader`.
+#[deprecated(since = "7.0.0", note = "Use `Tag` instead")]
 pub type DerObjectHeader<'a> = Header<'a>;
 
 /// BER object content
