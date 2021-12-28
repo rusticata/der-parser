@@ -6,6 +6,7 @@ Header names have changed:
 - `BerClass` is now `Class`
 - `BerSize` is now `Length`
 - `BerTag` is now `Tag`
+- `BerObjectHeader` is now `Header`
 
 Changing the names should be enough for upgrades.
 

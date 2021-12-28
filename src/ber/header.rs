@@ -3,7 +3,7 @@ use crate::error::BerError;
 
 /// BER object header (identifier and length)
 #[derive(Clone, Debug)]
-pub struct BerObjectHeader<'a> {
+pub struct Header<'a> {
     /// Object class: universal, application, context-specific, or private
     pub(crate) class: Class,
     /// Constructed attribute: `true` if constructed, `false` if primitive
@@ -20,10 +20,10 @@ pub struct BerObjectHeader<'a> {
     pub(crate) raw_tag: Option<&'a [u8]>,
 }
 
-impl<'a> BerObjectHeader<'a> {
+impl<'a> Header<'a> {
     /// Build a new BER header
     pub fn new<Len: Into<Length>>(class: Class, constructed: bool, tag: Tag, length: Len) -> Self {
-        BerObjectHeader {
+        Header {
             tag,
             constructed,
             class,
@@ -57,7 +57,7 @@ impl<'a> BerObjectHeader<'a> {
     /// Update header class
     #[inline]
     pub fn with_class(self, class: Class) -> Self {
-        BerObjectHeader { class, ..self }
+        Header { class, ..self }
     }
 
     /// Get the BER object header's tag.
@@ -75,7 +75,7 @@ impl<'a> BerObjectHeader<'a> {
     /// Update header tag
     #[inline]
     pub fn with_tag(self, tag: Tag) -> Self {
-        BerObjectHeader { tag, ..self }
+        Header { tag, ..self }
     }
 
     /// Return error if `tag` is not the expected tag
@@ -103,7 +103,7 @@ impl<'a> BerObjectHeader<'a> {
     /// Update header length
     #[inline]
     pub fn with_len(self, len: Length) -> Self {
-        BerObjectHeader {
+        Header {
             length: len,
             ..self
         }
@@ -118,7 +118,7 @@ impl<'a> BerObjectHeader<'a> {
     /// Update header to add reference to raw tag
     #[inline]
     pub fn with_raw_tag(self, raw_tag: Option<&'a [u8]>) -> Self {
-        BerObjectHeader { raw_tag, ..self }
+        Header { raw_tag, ..self }
     }
 
     /// Test if object class is Universal
@@ -167,7 +167,7 @@ impl<'a> BerObjectHeader<'a> {
     /// Update header tag
     #[inline]
     pub fn with_constructed(self, constructed: bool) -> Self {
-        BerObjectHeader {
+        Header {
             constructed,
             ..self
         }
@@ -195,8 +195,8 @@ impl<'a> BerObjectHeader<'a> {
 }
 
 /// Compare two BER headers. `len` fields are compared only if both objects have it set (same for `raw_tag`)
-impl<'a> PartialEq<BerObjectHeader<'a>> for BerObjectHeader<'a> {
-    fn eq(&self, other: &BerObjectHeader) -> bool {
+impl<'a> PartialEq<Header<'a>> for Header<'a> {
+    fn eq(&self, other: &Header) -> bool {
         self.class == other.class
             && self.tag == other.tag
             && self.constructed == other.constructed
