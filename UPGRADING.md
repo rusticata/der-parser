@@ -23,6 +23,8 @@ Header fields are now private. Getters/setters have been added, and must be used
 
 `DerClass` and `DerTag` have been deprecated. Use `Class` and `Tag` instead.
 
+`DerObjectHeader` has been deprecated. Use `Header` instead.
+
 ## Upgrading from 4.x to 5.0
 
 ### BER variants: ContextSpecific, Optional, Tagged

@@ -28,6 +28,7 @@
 
 `DER`:
 - `DerClass` and `DerTag` have been deprecated. Use `Class` and `Tag` instead.
+- `DerObjectHeader` has been deprecated. Use `Header` instead.
 
 ### Added
 

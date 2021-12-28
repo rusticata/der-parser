@@ -356,7 +356,7 @@ where
 #[inline]
 pub fn parse_der_implicit<'a, T, F>(i: &'a [u8], tag: T, f: F) -> DerResult<'a>
 where
-    F: Fn(&'a [u8], &'_ DerObjectHeader, usize) -> BerResult<'a, DerObjectContent<'a>>,
+    F: Fn(&'a [u8], &'_ Header, usize) -> BerResult<'a, DerObjectContent<'a>>,
     T: Into<Tag>,
 {
     parse_ber_implicit(i, tag, f)
@@ -441,8 +441,8 @@ pub fn parse_der_slice<T: Into<Tag>>(i: &[u8], tag: T) -> BerResult<&[u8]> {
 /// ```
 pub fn parse_der_content<'a>(
     tag: Tag,
-) -> impl Fn(&'a [u8], &'_ DerObjectHeader, usize) -> BerResult<'a, DerObjectContent<'a>> {
-    move |i: &[u8], hdr: &DerObjectHeader, max_recursion: usize| {
+) -> impl Fn(&'a [u8], &'_ Header, usize) -> BerResult<'a, DerObjectContent<'a>> {
+    move |i: &[u8], hdr: &Header, max_recursion: usize| {
         der_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
     }
 }
@@ -473,8 +473,8 @@ pub fn parse_der_content<'a>(
 /// ```
 pub fn parse_der_content2<'a>(
     tag: Tag,
-) -> impl Fn(&'a [u8], DerObjectHeader<'a>, usize) -> BerResult<'a, DerObjectContent<'a>> {
-    move |i: &[u8], hdr: DerObjectHeader, max_recursion: usize| {
+) -> impl Fn(&'a [u8], Header<'a>, usize) -> BerResult<'a, DerObjectContent<'a>> {
+    move |i: &[u8], hdr: Header, max_recursion: usize| {
         der_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
     }
 }
@@ -544,13 +544,13 @@ pub fn der_read_element_content_as(
 /// Parse DER object content recursively
 ///
 /// *Note: an error is raised if recursion depth exceeds `MAX_RECURSION`.
-pub fn der_read_element_content<'a>(i: &'a [u8], hdr: DerObjectHeader<'a>) -> DerResult<'a> {
+pub fn der_read_element_content<'a>(i: &'a [u8], hdr: Header<'a>) -> DerResult<'a> {
     der_read_element_content_recursive(i, hdr, MAX_RECURSION)
 }
 
 fn der_read_element_content_recursive<'a>(
     i: &'a [u8],
-    hdr: DerObjectHeader<'a>,
+    hdr: Header<'a>,
     max_depth: usize,
 ) -> DerResult<'a> {
     match hdr.class {
@@ -621,7 +621,7 @@ fn der_read_content_bitstring(i: &[u8], len: usize) -> BerResult<DerObjectConten
 }
 
 /// Read an object header (DER)
-pub fn der_read_element_header(i: &[u8]) -> BerResult<DerObjectHeader> {
+pub fn der_read_element_header(i: &[u8]) -> BerResult<Header> {
     let (i1, el) = parse_identifier(i)?;
     let class = match Class::try_from(el.0) {
         Ok(c) => c,
@@ -660,6 +660,6 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<DerObjectHeader> {
         }
     };
     let constructed = el.1 != 0;
-    let hdr = DerObjectHeader::new(class, constructed, Tag(el.2), len).with_raw_tag(Some(el.3));
+    let hdr = Header::new(class, constructed, Tag(el.2), len).with_raw_tag(Some(el.3));
     Ok((i3, hdr))
 }
