@@ -239,13 +239,19 @@ fn test_der_seq_of_incomplete() {
     fn parser(i: &[u8]) -> DerResult {
         parse_der_sequence_of(parse_der_integer)(i)
     }
-    assert_eq!(parser(&bytes), Err(Err::Failure(BerError::InvalidTag)));
+    assert_eq!(
+        parser(&bytes),
+        Err(Err::Failure(BerError::unexpected_tag(Tag(2), Tag(0))))
+    );
     //
     fn parser2(i: &[u8]) -> BerResult<Vec<BerObject>> {
         parse_ber_sequence_of_v(parse_der_integer)(i)
     }
     // eprintln!("trailing data");
-    assert_eq!(parser2(&bytes), Err(Err::Failure(BerError::InvalidTag)));
+    assert_eq!(
+        parser2(&bytes),
+        Err(Err::Failure(BerError::unexpected_tag(Tag(2), Tag(0))))
+    );
     let h = &hex!("30 06 02 03 01 00 01 02");
     // eprintln!("remaining 02 at end (incomplete)");
     assert_eq!(
@@ -369,7 +375,7 @@ fn test_der_implicit() {
     );
     assert_eq!(
         parse_der_implicit(&bytes, Tag(2), der_read_ia5string_content),
-        Err(Err::Error(BerError::InvalidTag))
+        Err(Err::Error(BerError::unexpected_tag(Tag(2), Tag(1))))
     );
 }
 
@@ -401,7 +407,7 @@ fn test_der_implicit_long_tag() {
     );
     assert_eq!(
         parse_der_implicit(&bytes, Tag(2), der_read_ia5string_content),
-        Err(Err::Error(BerError::InvalidTag))
+        Err(Err::Error(BerError::unexpected_tag(Tag(2), Tag(0x52))))
     );
 }
 
@@ -527,7 +533,7 @@ fn test_der_seq_dn_defined() {
 #[test_case(&hex!("02 06 00 00 01 23 45 67"), Err(BerError::DerConstraintFailed) ; "u32-long-leading-zeros")]
 #[test_case(&hex!("02 05 01 23 45 67 01"), Err(BerError::IntegerTooLarge) ; "u32 too large")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u32 too large 2")]
-#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Tag(2), Tag(3))) ; "invalid tag")]
 fn tc_der_u32(i: &[u8], out: Result<u32, BerError>) {
     let res = parse_der_u32(i);
     match out {
@@ -563,7 +569,7 @@ fn tc_der_i32(i: &[u8], out: Result<i32, BerError>) {
 #[test_case(&hex!("02 08 01 23 45 67 01 23 45 67"), Ok(0x0123_4567_0123_4567) ; "u64-long-ok")]
 #[test_case(&hex!("02 09 00 ff ff ff ff ff ff ff ff"), Ok(0xffff_ffff_ffff_ffff) ; "u64-long2-ok")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u64 too large")]
-#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Tag(2), Tag(3))) ; "invalid tag")]
 fn tc_der_u64(i: &[u8], out: Result<u64, BerError>) {
     let res = parse_der_u64(i);
     match out {
@@ -580,7 +586,7 @@ fn tc_der_u64(i: &[u8], out: Result<u64, BerError>) {
 #[test_case(&hex!("02 01 ff"), Ok(&[255]) ; "slice 2")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Ok(&hex!("01 23 45 67 01 23 45 67 ab")) ; "slice 3")]
 #[test_case(&hex!("22 80 02 01 01 00 00"), Err(BerError::DerConstraintFailed) ; "constructed slice")]
-#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Tag(2), Tag(3))) ; "invalid tag")]
 fn tc_der_slice(i: &[u8], out: Result<&[u8], BerError>) {
     let res = parse_der_slice(i, 2);
     match out {

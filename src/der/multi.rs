@@ -226,9 +226,8 @@ where
     E: ParseError<&'a [u8]> + From<BerError>,
 {
     parse_der_container(move |i, hdr| {
-        if hdr.tag != DerTag::Sequence {
-            return Err(Err::Error(BerError::InvalidTag.into()));
-        }
+        hdr.assert_tag(Tag::Sequence)
+            .map_err(|e| Err::Error(e.into()))?;
         f(i, hdr)
     })
 }
@@ -451,9 +450,7 @@ where
     E: ParseError<&'a [u8]> + From<BerError>,
 {
     parse_der_container(move |i, hdr| {
-        if hdr.tag != DerTag::Set {
-            return Err(Err::Error(BerError::InvalidTag.into()));
-        }
+        hdr.assert_tag(Tag::Set).map_err(|e| Err::Error(e.into()))?;
         f(i, hdr)
     })
 }

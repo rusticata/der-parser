@@ -79,9 +79,7 @@ macro_rules! der_constraint_fail_if(
 pub fn parse_der_with_tag<Tag: Into<DerTag>>(i: &[u8], tag: Tag) -> DerResult {
     let tag = tag.into();
     let (i, hdr) = der_read_element_header(i)?;
-    if hdr.tag != tag {
-        return Err(nom::Err::Error(BerError::InvalidTag));
-    }
+    hdr.assert_tag(tag)?;
     let (i, content) =
         der_read_element_content_as(i, hdr.tag, hdr.length, hdr.is_constructed(), MAX_RECURSION)?;
     Ok((i, DerObject::from_header_and_content(hdr, content)))
@@ -411,9 +409,7 @@ pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
 pub fn parse_der_slice<Tag: Into<DerTag>>(i: &[u8], tag: Tag) -> BerResult<&[u8]> {
     let tag = tag.into();
     parse_der_container(move |content, hdr| {
-        if hdr.tag != tag {
-            return Err(Err::Error(BerError::InvalidTag));
-        }
+        hdr.assert_tag(tag)?;
         Ok((&b""[..], content))
     })(i)
 }

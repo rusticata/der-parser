@@ -28,10 +28,14 @@ pub enum BerError {
     /// BER object does not have the expected value
     BerValueError,
 
+    /// Invalid tag encoding or value
     InvalidTag,
+    /// Invalid Class encoding or value
     InvalidClass,
+    /// Invalid Length encoding or value
     InvalidLength,
 
+    /// Indefinite length encountered, while a definite length was expected
     IndefiniteLengthUnexpected,
 
     /// DER object was expected to be constructed (and found to be primitive)

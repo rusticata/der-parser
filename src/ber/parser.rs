@@ -766,9 +766,7 @@ pub fn parse_ber_content2<'a>(
 pub fn parse_ber_with_tag<T: Into<Tag>>(i: &[u8], tag: T) -> BerResult {
     let tag = tag.into();
     let (i, hdr) = ber_read_element_header(i)?;
-    if hdr.tag != tag {
-        return Err(nom::Err::Error(BerError::InvalidTag));
-    }
+    hdr.assert_tag(tag)?;
     let (i, content) =
         ber_read_element_content_as(i, hdr.tag, hdr.length, hdr.is_constructed(), MAX_RECURSION)?;
     Ok((i, BerObject::from_header_and_content(hdr, content)))
@@ -1133,9 +1131,7 @@ pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
 pub fn parse_ber_slice<T: Into<Tag>>(i: &[u8], tag: T) -> BerResult<&[u8]> {
     let tag = tag.into();
     parse_ber_container(move |content, hdr| {
-        if hdr.tag != tag {
-            return Err(Err::Error(BerError::InvalidTag));
-        }
+        hdr.assert_tag(tag)?;
         Ok((&b""[..], content))
     })(i)
 }

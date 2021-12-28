@@ -147,7 +147,7 @@ fn test_ber_int() {
 #[test_case(&hex!("02 06 00 00 01 23 45 67"), Ok(0x0123_4567) ; "u32-long-leading-zeros-ok")]
 #[test_case(&hex!("02 05 01 23 45 67 01"), Err(BerError::IntegerTooLarge) ; "u32 too large")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u32 too large 2")]
-#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Tag(2), Tag(3))) ; "invalid tag")]
 fn tc_ber_u32(i: &[u8], out: Result<u32, BerError>) {
     let res = parse_ber_u32(i);
     match out {
@@ -166,7 +166,7 @@ fn tc_ber_u32(i: &[u8], out: Result<u32, BerError>) {
 #[test_case(&hex!("02 08 01 23 45 67 01 23 45 67"), Ok(0x0123_4567_0123_4567) ; "u64-long-ok")]
 #[test_case(&hex!("02 09 00 ff ff ff ff ff ff ff ff"), Ok(0xffff_ffff_ffff_ffff) ; "u64-long2-ok")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u64 too large")]
-#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Tag(2), Tag(3))) ; "invalid tag")]
 fn tc_ber_u64(i: &[u8], out: Result<u64, BerError>) {
     let res = parse_ber_u64(i);
     match out {
@@ -183,7 +183,7 @@ fn tc_ber_u64(i: &[u8], out: Result<u64, BerError>) {
 #[test_case(&hex!("02 01 ff"), Ok(-1) ; "i64-neg1")]
 #[test_case(&hex!("02 01 80"), Ok(-128) ; "i64-neg128")]
 #[test_case(&hex!("02 02 ff 7f"), Ok(-129) ; "i64-neg129")]
-#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Tag(2), Tag(3))) ; "invalid tag")]
 fn tc_ber_i64(i: &[u8], out: Result<i64, BerError>) {
     let res = parse_ber_i64(i);
     match out {
@@ -227,7 +227,7 @@ fn tc_ber_bigint(i: &[u8], out: Result<BigInt, BerError>) {
 #[test_case(&hex!("02 02 ff 7f"), Err(BerError::IntegerNegative) ; "biguint-neg129")]
 #[test_case(&hex!("02 09 00 ff ff ff ff ff ff ff ff"), Ok(BigUint::from(0xffff_ffff_ffff_ffff_u64)) ; "biguint-long2-ok")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Ok(BigUint::from_bytes_be(&hex!("01 23 45 67 01 23 45 67 ab"))) ; "biguint-longer1")]
-#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Tag(2), Tag(3))) ; "invalid tag")]
 fn tc_ber_biguint(i: &[u8], out: Result<BigUint, BerError>) {
     let res = parse_ber_integer(i).and_then(|(rem, ber)| Ok((rem, ber.as_biguint()?)));
     match out {
@@ -244,7 +244,7 @@ fn tc_ber_biguint(i: &[u8], out: Result<BigUint, BerError>) {
 #[test_case(&hex!("02 01 ff"), Ok(&[255]) ; "slice 2")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Ok(&hex!("01 23 45 67 01 23 45 67 ab")) ; "slice 3")]
 #[test_case(&hex!("22 80 02 01 01 00 00"), Ok(&[2, 1, 1]) ; "constructed slice")]
-#[test_case(&hex!("03 03 01 00 01"), Err(BerError::InvalidTag) ; "invalid tag")]
+#[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Tag(2), Tag(3))) ; "invalid tag")]
 fn tc_ber_slice(i: &[u8], out: Result<&[u8], BerError>) {
     let res = parse_ber_slice(i, 2);
     match out {
