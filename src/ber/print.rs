@@ -143,7 +143,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
                 writeln!(f, "]")?;
                 Ok(())
             },
-            BerObjectContent::Unknown(class, tag,o)         => writeln!(f, "Unknown([{} {}] {:x?})", class, tag.0, o),
+            BerObjectContent::Unknown(class, tag,o)         => writeln!(f, "Unknown([{} {}] {:x?})", class, tag.0, debug::HexSlice(o)),
         }
     }
 }
