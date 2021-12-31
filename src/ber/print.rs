@@ -119,10 +119,10 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
                 }
             }
             BerObjectContent::Private(ref hdr, bytes) => {
-                writeln!(f, "Private(c:{} s:{} t:{}): {:?}", hdr.class, hdr.constructed, hdr.tag.0, debug::HexSlice(bytes))
+                writeln!(f, "[Private {}] c:{}: {:?}", hdr.tag.0, hdr.constructed, debug::HexSlice(bytes))
             },
             BerObjectContent::Tagged(class, tag, ref obj) => {
-                writeln!(f, "ContextSpecific [{} {}] {{", class, tag)?;
+                writeln!(f, "ContextSpecific [{} {}] {{", class, tag.0)?;
                 write!(f, "{:?}", self.next_indent(obj))?;
                 if self.indent > 0 {
                     write!(f, "{:1$}", " ", self.indent)?;
@@ -143,7 +143,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
                 writeln!(f, "]")?;
                 Ok(())
             },
-            BerObjectContent::Unknown(class, tag,o)         => writeln!(f, "Unknown({:?},{:?},{:x?})", class, tag, o),
+            BerObjectContent::Unknown(class, tag,o)         => writeln!(f, "Unknown([{} {}] {:x?})", class, tag.0, o),
         }
     }
 }
