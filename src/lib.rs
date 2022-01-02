@@ -255,6 +255,7 @@ pub mod oid;
 pub use ber::parse_ber;
 pub use der::parse_der;
 
+pub use asn1_rs;
 pub use nom;
 #[cfg(feature = "bigint")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]

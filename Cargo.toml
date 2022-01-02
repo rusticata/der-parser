@@ -32,6 +32,7 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
+asn1-rs = { git="https://github.com/rusticata/asn1-rs" }
 bitvec = { version="0.22", optional=true }
 cookie-factory = { version="0.3.0", optional=true }
 displaydoc = { version="0.2", default-features=false }
