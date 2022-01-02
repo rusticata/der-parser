@@ -1,6 +1,7 @@
 //! Compatibility module for old (pre-7.0) types
 
-use super::{Class, Header, Length, Tag};
+use super::{Class, Header, Length};
+pub use asn1_rs::Tag;
 
 pub type BerClass = Class;
 pub type BerSize = Length;

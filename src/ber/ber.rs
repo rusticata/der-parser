@@ -652,7 +652,7 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::Set(_)               => Tag::Set,
             BerObjectContent::UTCTime(_)           => Tag::UtcTime,
             BerObjectContent::GeneralizedTime(_)   => Tag::GeneralizedTime,
-            BerObjectContent::ObjectDescriptor(_)  => Tag::ObjDescriptor,
+            BerObjectContent::ObjectDescriptor(_)  => Tag::ObjectDescriptor,
             BerObjectContent::GraphicString(_)     => Tag::GraphicString,
             BerObjectContent::GeneralString(_)     => Tag::GeneralString,
             BerObjectContent::Tagged(_,x,_) |

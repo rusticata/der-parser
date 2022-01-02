@@ -1,5 +1,6 @@
 use crate::ber::*;
 use crate::error::*;
+use asn1_rs::Tag;
 use nom::error::ParseError;
 use nom::{Err, IResult};
 

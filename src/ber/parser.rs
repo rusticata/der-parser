@@ -1,6 +1,7 @@
 use crate::ber::*;
 use crate::error::*;
 use crate::oid::*;
+use asn1_rs::Tag;
 use nom::bytes::streaming::take;
 use nom::combinator::{complete, map, verify};
 use nom::multi::{many0, many_till};
@@ -562,7 +563,7 @@ pub fn ber_read_element_content_as(
         }
         // 0x07: object descriptor - Alias for GraphicString with a different
         // implicit tag, see below
-        Tag::ObjDescriptor => {
+        Tag::ObjectDescriptor => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
             let len = len.primitive()?;
             ber_read_content_objectdescriptor(i, len)
@@ -943,7 +944,7 @@ pub fn parse_ber_generalizedtime(i: &[u8]) -> BerResult {
 /// Read an ObjectDescriptor value
 #[inline]
 pub fn parse_ber_objectdescriptor(i: &[u8]) -> BerResult {
-    parse_ber_with_tag(i, Tag::ObjDescriptor)
+    parse_ber_with_tag(i, Tag::ObjectDescriptor)
 }
 
 /// Read a GraphicString value

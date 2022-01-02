@@ -54,7 +54,8 @@
 //! ```
 
 use crate::ber::{BerObject, BerObjectContent};
-pub use crate::ber::{Class, Header, Tag};
+pub use crate::ber::{Class, Header};
+pub use asn1_rs::Tag;
 
 mod multi;
 mod parser;

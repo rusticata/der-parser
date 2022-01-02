@@ -1,5 +1,6 @@
 use crate::ber::*;
 use crate::error::*;
+use asn1_rs::Tag;
 use nom::bytes::complete::take;
 use nom::combinator::{all_consuming, complete, cut, map};
 use nom::error::ParseError;
