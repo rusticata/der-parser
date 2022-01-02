@@ -1,7 +1,8 @@
 use crate::ber::BitStringObject;
-use crate::ber::{BerObject, BerObjectContent, Tag};
+use crate::ber::{BerObject, BerObjectContent};
 use alloc::string::String;
 use alloc::vec::Vec;
+use asn1_rs::Tag;
 use core::fmt;
 use core::iter::FromIterator;
 use core::str;

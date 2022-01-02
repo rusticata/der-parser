@@ -1,6 +1,7 @@
 use crate::ber::*;
 use crate::der::*;
 use crate::error::*;
+use asn1_rs::Tag;
 use nom::bytes::streaming::take;
 use nom::number::streaming::be_u8;
 use nom::{Err, Needed};
@@ -269,7 +270,7 @@ pub fn parse_der_generalizedtime(i: &[u8]) -> DerResult {
 /// Read a ObjectDescriptor value
 #[inline]
 pub fn parse_der_objectdescriptor(i: &[u8]) -> DerResult {
-    parse_der_with_tag(i, Tag::ObjDescriptor)
+    parse_der_with_tag(i, Tag::ObjectDescriptor)
 }
 
 /// Read a GraphicString value
@@ -526,7 +527,7 @@ pub fn der_read_element_content_as(
         | Tag::VideotexString
         | Tag::BmpString
         | Tag::UniversalString
-        | Tag::ObjDescriptor
+        | Tag::ObjectDescriptor
         | Tag::GraphicString
         | Tag::GeneralString => {
             der_constraint_fail_if!(i, constructed);

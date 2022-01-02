@@ -1,5 +1,6 @@
-use super::{Class, Length, Tag};
+use super::{Class, Length};
 use crate::error::BerError;
+use asn1_rs::Tag;
 
 /// BER object header (identifier and length)
 #[derive(Clone, Debug)]

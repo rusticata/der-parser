@@ -56,7 +56,6 @@ mod parser;
 mod print;
 #[cfg(feature = "serialize")]
 mod serialize;
-mod tag;
 mod tagged;
 
 pub use crate::ber::ber::*;
@@ -68,10 +67,11 @@ pub use crate::ber::parser::*;
 pub use crate::ber::print::*;
 #[cfg(feature = "serialize")]
 pub use crate::ber::serialize::*;
-pub use crate::ber::tag::*;
 pub use crate::ber::tagged::*;
 
 pub mod compat;
+
+pub use asn1_rs::Tag;
 
 use alloc::borrow::Cow;
 use alloc::boxed::Box;

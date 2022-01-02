@@ -1,7 +1,8 @@
 //! Error type for BER/DER parsers
 
-use crate::ber::{BerObject, Class, Tag};
+use crate::ber::{BerObject, Class};
 use crate::der::DerObject;
+use asn1_rs::Tag;
 use displaydoc::Display;
 use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::IResult;
