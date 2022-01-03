@@ -144,7 +144,6 @@ fn test_ber_int() {
 #[test_case(&hex!("02 02 01 23"), Ok(0x123) ; "u32-0x123")]
 #[test_case(&hex!("02 04 01 23 45 67"), Ok(0x0123_4567) ; "u32-long-ok")]
 #[test_case(&hex!("02 05 00 ff ff ff ff"), Ok(0xffff_ffff) ; "u32-long2-ok")]
-#[test_case(&hex!("02 06 00 00 01 23 45 67"), Ok(0x0123_4567) ; "u32-long-leading-zeros-ok")]
 #[test_case(&hex!("02 05 01 23 45 67 01"), Err(BerError::IntegerTooLarge) ; "u32 too large")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u32 too large 2")]
 #[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Tag(2), Tag(3))) ; "invalid tag")]

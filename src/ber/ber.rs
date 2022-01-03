@@ -411,12 +411,7 @@ impl<'a> BerObjectContent<'a> {
     /// ```
     pub fn as_i64(&self) -> Result<i64, BerError> {
         if let BerObjectContent::Integer(bytes) = self {
-            let result = if is_highest_bit_set(bytes) {
-                <i64>::from_be_bytes(decode_array_int8(bytes)?)
-            } else {
-                <u64>::from_be_bytes(decode_array_uint8(bytes)?) as i64
-            };
-            Ok(result)
+            decode_array_int8(bytes)
         } else {
             Err(BerError::BerValueError)
         }
@@ -438,12 +433,7 @@ impl<'a> BerObjectContent<'a> {
     /// ```
     pub fn as_i32(&self) -> Result<i32, BerError> {
         if let BerObjectContent::Integer(bytes) = self {
-            let result = if is_highest_bit_set(bytes) {
-                <i32>::from_be_bytes(decode_array_int4(bytes)?)
-            } else {
-                <u32>::from_be_bytes(decode_array_uint4(bytes)?) as i32
-            };
-            Ok(result)
+            decode_array_int4(bytes)
         } else {
             Err(BerError::BerValueError)
         }
@@ -465,10 +455,7 @@ impl<'a> BerObjectContent<'a> {
     /// ```
     pub fn as_u64(&self) -> Result<u64, BerError> {
         match self {
-            BerObjectContent::Integer(i) => {
-                let result = <u64>::from_be_bytes(decode_array_uint8(i)?);
-                Ok(result)
-            }
+            BerObjectContent::Integer(i) => decode_array_uint8(i),
             BerObjectContent::BitString(ignored_bits, data) => {
                 bitstring_to_u64(*ignored_bits as usize, data)
             }
@@ -494,10 +481,7 @@ impl<'a> BerObjectContent<'a> {
     /// ```
     pub fn as_u32(&self) -> Result<u32, BerError> {
         match self {
-            BerObjectContent::Integer(i) => {
-                let result = <u32>::from_be_bytes(decode_array_uint4(i)?);
-                Ok(result)
-            }
+            BerObjectContent::Integer(i) => decode_array_uint4(i),
             BerObjectContent::BitString(ignored_bits, data) => {
                 bitstring_to_u64(*ignored_bits as usize, data).and_then(|x| {
                     if x > u64::from(core::u32::MAX) {

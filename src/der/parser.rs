@@ -508,13 +508,19 @@ pub fn der_read_element_content_as(
         }
         Tag::Integer => {
             // verify leading zeros
-            match i[..l] {
-                [] => return Err(nom::Err::Error(BerError::DerConstraintFailed)),
-                [0, 0, ..] => return Err(nom::Err::Error(BerError::DerConstraintFailed)),
-                [0, byte, ..] if byte < 0x80 => {
-                    return Err(nom::Err::Error(BerError::DerConstraintFailed));
+            const U16_VALID_MASK: u16 = u16::from_ne_bytes([0xff, 0x80]);
+            match l {
+                0 => return Err(nom::Err::Error(BerError::DerConstraintFailed)),
+                1 => (),
+                _ => {
+                    // >2
+                    let mut first_two_bytes = [0u8; 2];
+                    first_two_bytes.copy_from_slice(&i[..2]);
+                    let m = u16::from_ne_bytes(first_two_bytes) & U16_VALID_MASK;
+                    if m == 0 || m == U16_VALID_MASK {
+                        return Err(nom::Err::Error(BerError::DerConstraintFailed));
+                    }
                 }
-                _ => (),
             }
         }
         Tag::NumericString
