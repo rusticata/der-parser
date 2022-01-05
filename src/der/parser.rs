@@ -1,6 +1,7 @@
 use crate::ber::*;
 use crate::der::*;
 use crate::error::*;
+use alloc::borrow::Cow;
 use asn1_rs::Tag;
 use nom::bytes::streaming::take;
 use nom::number::streaming::be_u8;
@@ -45,7 +46,7 @@ pub fn parse_der(i: &[u8]) -> DerResult {
 pub fn parse_der_recursive(i: &[u8], max_depth: usize) -> DerResult {
     let (i, hdr) = der_read_element_header(i)?;
     // safety check: length cannot be more than 2^32 bytes
-    if let Length::Definite(l) = hdr.length {
+    if let Length::Definite(l) = hdr.length() {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
     }
     der_read_element_content_recursive(i, hdr, max_depth)
@@ -81,8 +82,13 @@ pub fn parse_der_with_tag<T: Into<Tag>>(i: &[u8], tag: T) -> DerResult {
     let tag = tag.into();
     let (i, hdr) = der_read_element_header(i)?;
     hdr.assert_tag(tag)?;
-    let (i, content) =
-        der_read_element_content_as(i, hdr.tag, hdr.length, hdr.is_constructed(), MAX_RECURSION)?;
+    let (i, content) = der_read_element_content_as(
+        i,
+        hdr.tag(),
+        hdr.length(),
+        hdr.is_constructed(),
+        MAX_RECURSION,
+    )?;
     Ok((i, DerObject::from_header_and_content(hdr, content)))
 }
 
@@ -444,7 +450,7 @@ pub fn parse_der_content<'a>(
     tag: Tag,
 ) -> impl Fn(&'a [u8], &'_ Header, usize) -> BerResult<'a, DerObjectContent<'a>> {
     move |i: &[u8], hdr: &Header, max_recursion: usize| {
-        der_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
+        der_read_element_content_as(i, tag, hdr.length(), hdr.is_constructed(), max_recursion)
     }
 }
 
@@ -476,7 +482,7 @@ pub fn parse_der_content2<'a>(
     tag: Tag,
 ) -> impl Fn(&'a [u8], Header<'a>, usize) -> BerResult<'a, DerObjectContent<'a>> {
     move |i: &[u8], hdr: Header, max_recursion: usize| {
-        der_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
+        der_read_element_content_as(i, tag, hdr.length(), hdr.is_constructed(), max_recursion)
     }
 }
 
@@ -488,12 +494,12 @@ pub fn parse_der_content2<'a>(
 pub fn der_read_element_content_as(
     i: &[u8],
     tag: Tag,
-    len: Length,
+    length: Length,
     constructed: bool,
     max_depth: usize,
 ) -> BerResult<DerObjectContent> {
     // Indefinite lengths are not allowed in DER (X.690 section 10.1)
-    let l = len.definite().map_err(BerError::from)?;
+    let l = length.definite().map_err(BerError::from)?;
     if i.len() < l {
         return Err(Err::Incomplete(Needed::new(l)));
     }
@@ -539,7 +545,7 @@ pub fn der_read_element_content_as(
         }
         _ => (),
     }
-    ber_read_element_content_as(i, tag, len, constructed, max_depth)
+    ber_read_element_content_as(i, tag, length, constructed, max_depth)
 }
 
 /// Parse DER object content recursively
@@ -554,7 +560,7 @@ fn der_read_element_content_recursive<'a>(
     hdr: Header<'a>,
     max_depth: usize,
 ) -> DerResult<'a> {
-    match hdr.class {
+    match hdr.class() {
         Class::Universal => (),
         Class::Private => {
             let (rem, content) = ber_get_object_content(i, &hdr, max_depth)?;
@@ -564,16 +570,16 @@ fn der_read_element_content_recursive<'a>(
         }
         _ => {
             let (i, content) = ber_get_object_content(i, &hdr, max_depth)?;
-            let content = DerObjectContent::Unknown(hdr.class, hdr.tag, content);
+            let content = DerObjectContent::Unknown(hdr.class(), hdr.tag(), content);
             let obj = DerObject::from_header_and_content(hdr, content);
             return Ok((i, obj));
         }
     }
-    match der_read_element_content_as(i, hdr.tag, hdr.length, hdr.is_constructed(), max_depth) {
+    match der_read_element_content_as(i, hdr.tag(), hdr.length(), hdr.is_constructed(), max_depth) {
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag(_))) => {
             let (rem, content) = ber_get_object_content(i, &hdr, max_depth)?;
-            let content = DerObjectContent::Unknown(hdr.class, hdr.tag, content);
+            let content = DerObjectContent::Unknown(hdr.class(), hdr.tag(), content);
             let obj = DerObject::from_header_and_content(hdr, content);
             Ok((rem, obj))
         }
@@ -661,6 +667,7 @@ pub fn der_read_element_header(i: &[u8]) -> BerResult<Header> {
         }
     };
     let constructed = el.1 != 0;
-    let hdr = Header::new(class, constructed, Tag(el.2), len).with_raw_tag(Some(el.3));
+    let hdr =
+        Header::new(class, constructed, Tag(el.2), len).with_raw_tag(Some(Cow::Borrowed(el.3)));
     Ok((i3, hdr))
 }

@@ -24,9 +24,9 @@ pub(crate) fn ber_skip_object_content<'a>(
     if max_depth == 0 {
         return Err(Err::Error(BerError::BerMaxDepth));
     }
-    match hdr.length {
+    match hdr.length() {
         Length::Definite(l) => {
-            if l == 0 && hdr.tag == Tag::EndOfContent {
+            if l == 0 && hdr.tag() == Tag::EndOfContent {
                 return Ok((i, true));
             }
             let (i, _) = take(l)(i)?;
@@ -63,7 +63,7 @@ pub(crate) fn ber_get_object_content<'a>(
     let len = start_i.offset(i);
     let (content, i) = start_i.split_at(len);
     // if len is indefinite, there are 2 extra bytes for EOC
-    if hdr.length == Length::Indefinite {
+    if hdr.length() == Length::Indefinite {
         let len = content.len();
         assert!(len >= 2);
         Ok((i, &content[..len - 2]))
@@ -216,7 +216,8 @@ pub fn ber_read_element_header(i: &[u8]) -> BerResult<Header> {
         }
     };
     let constructed = el.1 != 0;
-    let hdr = Header::new(class, constructed, Tag(el.2), len).with_raw_tag(Some(el.3));
+    let hdr =
+        Header::new(class, constructed, Tag(el.2), len).with_raw_tag(Some(Cow::Borrowed(el.3)));
     Ok((i3, hdr))
 }
 
@@ -508,11 +509,11 @@ fn ber_read_content_universalstring(i: &[u8], len: usize) -> BerResult<BerObject
 pub fn ber_read_element_content_as(
     i: &[u8],
     tag: Tag,
-    len: Length,
+    length: Length,
     constructed: bool,
     max_depth: usize,
 ) -> BerResult<BerObjectContent> {
-    if let Length::Definite(l) = len {
+    if let Length::Definite(l) = length {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
         if i.len() < l {
             return Err(Err::Incomplete(Needed::new(l)));
@@ -521,93 +522,93 @@ pub fn ber_read_element_content_as(
     match tag {
         // 0x00 end-of-content
         Tag::EndOfContent => {
-            custom_check!(i, len != Length::Definite(0), BerError::InvalidLength)?;
+            custom_check!(i, length != Length::Definite(0), BerError::InvalidLength)?;
             ber_read_content_eoc(i)
         }
         // 0x01 bool
         Tag::Boolean => {
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             custom_check!(i, len != 1, BerError::InvalidLength)?;
             ber_read_content_bool(i)
         }
         // 0x02
         Tag::Integer => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?;
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_integer(i, len)
         }
         // 0x03: bitstring
         Tag::BitString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.6.3)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_bitstring(i, len)
         }
         // 0x04: octetstring
         Tag::OctetString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.7.1)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_octetstring(i, len)
         }
         // 0x05: null
         Tag::Null => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?;
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             custom_check!(i, len != 0, BerError::InvalidLength)?;
             ber_read_content_null(i)
         }
         // 0x06: object identifier
         Tag::Oid => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.19.1
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_oid(i, len)
         }
         // 0x07: object descriptor - Alias for GraphicString with a different
         // implicit tag, see below
         Tag::ObjectDescriptor => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_objectdescriptor(i, len)
         }
         // 0x0a: enumerated
         Tag::Enumerated => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.4
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_enum(i, len)
         }
         // 0x0c: UTF8String - Unicode encoded with the UTF-8 charset (ISO/IEC
         // 10646-1, Annex D)
         Tag::Utf8String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_utf8string(i, len)
         }
         // 0x0d: relative object identified
         Tag::RelativeOid => {
             custom_check!(i, constructed, BerError::ConstructUnexpected)?;
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_relativeoid(i, len)
         }
         // 0x10: sequence
         Tag::Sequence => {
             custom_check!(i, !constructed, BerError::ConstructExpected)?;
-            ber_read_content_sequence(i, len, max_depth)
+            ber_read_content_sequence(i, length, max_depth)
         }
         // 0x11: set
         Tag::Set => {
             custom_check!(i, !constructed, BerError::ConstructExpected)?;
-            ber_read_content_set(i, len, max_depth)
+            ber_read_content_set(i, length, max_depth)
         }
         // 0x12: numericstring - ASCII string with digits an spaces only
         Tag::NumericString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_numericstring(i, len)
         }
         // 0x13: printablestring - ASCII string with certain printable
         // characters only (specified in Table 10 of X.680)
         Tag::PrintableString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_printablestring(i, len)
         }
         // 0x14: t61string - ISO 2022 string with a Teletex (T.61) charset,
@@ -616,53 +617,53 @@ pub fn ber_read_element_content_as(
         // set. https://en.wikipedia.org/wiki/ITU_T.61
         Tag::T61String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_t61string(i, len)
         }
         // 0x15: videotexstring - ISO 2022 string with a Videotex (T.100/T.101)
         // charset, excluding ASCII. https://en.wikipedia.org/wiki/Videotex_character_set
         Tag::VideotexString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_videotexstring(i, len)
         }
         // 0x16: ia5string - ASCII string
         Tag::Ia5String => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_ia5string(i, len)
         }
         // 0x17: utctime - Alias for a VisibleString with a different implicit
         // tag, see below
         Tag::UtcTime => {
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_utctime(i, len)
         }
         // 0x18: generalizedtime - Alias for a VisibleString with a different
         // implicit tag, see below
         Tag::GeneralizedTime => {
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_generalizedtime(i, len)
         }
         // 0x19: graphicstring - Generic ISO 2022 container with explicit
         // escape sequences, without control characters
         Tag::GraphicString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_graphicstring(i, len)
         }
         // 0x1a: visiblestring - ASCII string with no control characters except
         // SPACE
         Tag::VisibleString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_visiblestring(i, len)
         }
         // 0x1b: generalstring - Generic ISO 2022 container with explicit
         // escape sequences
         Tag::GeneralString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_generalstring(i, len)
         }
         // 0x1e: bmpstring - Unicode encoded with the UCS-2 big-endian charset
@@ -670,14 +671,14 @@ pub fn ber_read_element_content_as(
         // Multilingual Plane) except certain control cahracters
         Tag::BmpString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_bmpstring(i, len)
         }
         // 0x1c: universalstring - Unicode encoded with the UCS-4 big-endian
         // charset (ISO/IEC 10646-1, section 13.2)
         Tag::UniversalString => {
             custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = len.definite().map_err(BerError::from)?;
+            let len = length.definite().map_err(BerError::from)?;
             ber_read_content_universalstring(i, len)
         }
         // all unknown values
@@ -713,7 +714,7 @@ pub fn parse_ber_content<'a>(
     tag: Tag,
 ) -> impl Fn(&'a [u8], &'_ Header, usize) -> BerResult<'a, BerObjectContent<'a>> {
     move |i: &[u8], hdr: &Header, max_recursion: usize| {
-        ber_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
+        ber_read_element_content_as(i, tag, hdr.length(), hdr.is_constructed(), max_recursion)
     }
 }
 
@@ -745,7 +746,7 @@ pub fn parse_ber_content2<'a>(
     tag: Tag,
 ) -> impl Fn(&'a [u8], Header<'a>, usize) -> BerResult<'a, BerObjectContent<'a>> {
     move |i: &[u8], hdr: Header, max_recursion: usize| {
-        ber_read_element_content_as(i, tag, hdr.length, hdr.is_constructed(), max_recursion)
+        ber_read_element_content_as(i, tag, hdr.length(), hdr.is_constructed(), max_recursion)
     }
 }
 
@@ -768,8 +769,13 @@ pub fn parse_ber_with_tag<T: Into<Tag>>(i: &[u8], tag: T) -> BerResult {
     let tag = tag.into();
     let (i, hdr) = ber_read_element_header(i)?;
     hdr.assert_tag(tag)?;
-    let (i, content) =
-        ber_read_element_content_as(i, hdr.tag, hdr.length, hdr.is_constructed(), MAX_RECURSION)?;
+    let (i, content) = ber_read_element_content_as(
+        i,
+        hdr.tag(),
+        hdr.length(),
+        hdr.is_constructed(),
+        MAX_RECURSION,
+    )?;
     Ok((i, BerObject::from_header_and_content(hdr, content)))
 }
 
@@ -987,7 +993,7 @@ where
 {
     parse_ber_optional(parse_ber_tagged_explicit_g(tag, |content, hdr| {
         let (rem, obj) = f(content)?;
-        let content = BerObjectContent::Tagged(hdr.class, hdr.tag, Box::new(obj));
+        let content = BerObjectContent::Tagged(hdr.class(), hdr.tag(), Box::new(obj));
         let tagged = BerObject::from_header_and_content(hdr, content);
         Ok((rem, tagged))
     }))(i)
@@ -1160,10 +1166,10 @@ pub(crate) fn r_parse_ber(max_depth: usize) -> impl Fn(&[u8]) -> BerResult {
 pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     let (rem, hdr) = ber_read_element_header(i)?;
-    if let Length::Definite(l) = hdr.length {
+    if let Length::Definite(l) = hdr.length() {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
     }
-    match hdr.class {
+    match hdr.class() {
         Class::Universal => (),
         Class::Private => {
             let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
@@ -1173,16 +1179,22 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
         }
         _ => {
             let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
-            let content = BerObjectContent::Unknown(hdr.class, hdr.tag, content);
+            let content = BerObjectContent::Unknown(hdr.class(), hdr.tag(), content);
             let obj = BerObject::from_header_and_content(hdr, content);
             return Ok((rem, obj));
         }
     }
-    match ber_read_element_content_as(rem, hdr.tag, hdr.length, hdr.is_constructed(), max_depth) {
+    match ber_read_element_content_as(
+        rem,
+        hdr.tag(),
+        hdr.length(),
+        hdr.is_constructed(),
+        max_depth,
+    ) {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag(_))) => {
             let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
-            let content = BerObjectContent::Unknown(hdr.class, hdr.tag, content);
+            let content = BerObjectContent::Unknown(hdr.class(), hdr.tag(), content);
             let obj = BerObject::from_header_and_content(hdr, content);
             Ok((rem, obj))
         }

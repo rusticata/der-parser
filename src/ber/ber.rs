@@ -1,6 +1,5 @@
-use super::{Class, Length, Tag};
+use super::{Class, Header, Length, Tag};
 use crate::ber::bitstring_to_u64;
-use crate::ber::header::*;
 use crate::ber::integer::*;
 use crate::error::BerError;
 use crate::oid::Oid;
@@ -134,10 +133,7 @@ impl<'a> BerObject<'a> {
 
     /// Set a tag for the BER object
     pub fn set_raw_tag(self, raw_tag: Option<&'a [u8]>) -> BerObject {
-        let header = Header {
-            raw_tag,
-            ..self.header
-        };
+        let header = self.header.with_raw_tag(raw_tag.map(|x| x.into()));
         BerObject { header, ..self }
     }
 
@@ -657,7 +653,7 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::GeneralString(_)     => Tag::GeneralString,
             BerObjectContent::Tagged(_,x,_) |
             BerObjectContent::Unknown(_, x,_)         => *x,
-            &BerObjectContent::Private(ref hdr, _) => hdr.tag,
+            &BerObjectContent::Private(ref hdr, _) => hdr.tag(),
             BerObjectContent::Optional(Some(obj))  => obj.content.tag(),
             BerObjectContent::Optional(None)       => Tag(0x00), // XXX invalid !
         }

@@ -3,15 +3,17 @@
 #![feature(test)]
 
 extern crate test;
+
 use test::Bencher;
 
-use der_parser::ber::{Class, Header, Tag};
+use der_parser::ber::{Class, Header, Length, Tag};
 use der_parser::der::{
     der_read_element_header, parse_der, parse_der_integer, parse_der_u32, DerObject,
 };
 use der_parser::*;
 use hex_literal::hex;
 use nom::combinator::map_res;
+use std::borrow::Cow;
 
 #[bench]
 fn bench_der_read_element_header(b: &mut Bencher) {
@@ -22,7 +24,8 @@ fn bench_der_read_element_header(b: &mut Bencher) {
             Ok((_rem, hdr)) => {
                 assert_eq!(
                     hdr,
-                    Header::new(Class::Universal, false, Tag(12), 10).with_raw_tag(Some(&[0xc]))
+                    Header::new(Class::Universal, false, Tag(12), Length::from(10))
+                        .with_raw_tag(Some(Cow::Borrowed(&[0xc])))
                 );
             }
             _ => panic!("parsing failed"),

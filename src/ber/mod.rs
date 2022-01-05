@@ -47,7 +47,6 @@
 //! ```
 
 mod ber;
-mod header;
 mod integer;
 mod multi;
 mod parser;
@@ -57,7 +56,6 @@ mod serialize;
 mod tagged;
 
 pub use crate::ber::ber::*;
-pub use crate::ber::header::*;
 pub use crate::ber::multi::*;
 pub use crate::ber::parser::*;
 pub use crate::ber::print::*;
@@ -67,7 +65,7 @@ pub use crate::ber::tagged::*;
 
 pub mod compat;
 
-pub use asn1_rs::{Class, Length, Tag};
+pub use asn1_rs::{Class, Header, Length, Tag};
 
 use alloc::borrow::Cow;
 use alloc::boxed::Box;
