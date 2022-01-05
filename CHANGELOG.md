@@ -12,6 +12,8 @@
 
 ### Changed/Fixed
 
+MSRV: The minimum supported rust version is now *1.53*.
+
 `BerObjectHeader`:
 
 - `BerSize` has been renamed to `Length`

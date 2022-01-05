@@ -196,8 +196,8 @@
 //!
 //! ## Rust version requirements
 //!
-//! The 6.0 series of `der-parser` requires **Rustc version 1.48 or greater**, based on nom 7
-//! dependencies.
+//! The 6.0 series of `der-parser` requires **Rustc version 1.53 or greater**, based on `asn1-rs`
+//! and `nom` 7 dependencies.
 //!
 //! # Serialization
 //!
