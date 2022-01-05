@@ -42,14 +42,14 @@ fn encode_length<'a, W: Write + 'a, Len: Into<Length>>(len: Len) -> impl Seriali
 pub fn ber_encode_header<'a, 'b: 'a, W: Write + 'a>(hdr: &'b Header) -> impl SerializeFn<W> + 'a {
     move |out| {
         // identifier octets (X.690 8.1.2)
-        let class_u8 = (hdr.class as u8) << 6;
-        let pc_u8 = (if hdr.constructed { 1 } else { 0 }) << 5;
-        if hdr.tag.0 >= 30 {
+        let class_u8 = (hdr.class() as u8) << 6;
+        let pc_u8 = (if hdr.constructed() { 1 } else { 0 }) << 5;
+        if hdr.tag().0 >= 30 {
             unimplemented!();
         }
-        let byte_0 = class_u8 | pc_u8 | (hdr.tag.0 as u8);
+        let byte_0 = class_u8 | pc_u8 | (hdr.tag().0 as u8);
         // length octets (X.690 8.1.3)
-        tuple((be_u8(byte_0), encode_length(hdr.length)))(out)
+        tuple((be_u8(byte_0), encode_length(hdr.length())))(out)
     }
 }
 
@@ -80,7 +80,7 @@ pub fn ber_encode_tagged_explicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         let v = gen_simple(ber_encode_object(obj), W::default())?;
         let len = v.as_ref().len();
         // encode the application header, using the tag
-        let hdr = Header::new(class, true /* X.690 8.14.2 */, tag, len);
+        let hdr = Header::new(class, true /* X.690 8.14.2 */, tag, len.into());
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -100,7 +100,7 @@ pub fn ber_encode_tagged_implicit<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
         // but replace the tag (keep constructed attribute)
         let len = v.as_ref().len();
-        let hdr = Header::new(class, obj.header.constructed, tag, len);
+        let hdr = Header::new(class, obj.header.constructed(), tag, len.into());
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -194,7 +194,7 @@ pub fn ber_encode_object<'a, 'b: 'a, W: Write + Default + AsRef<[u8]> + 'a>(
         // XXX should we make an exception for tagged values here ?
         let v = gen_simple(ber_encode_object_content(&obj.content), W::default())?;
         let len = v.as_ref().len();
-        let hdr = obj.header.clone().with_len(len.into());
+        let hdr = obj.header.clone().with_length(len.into());
         let v_hdr = gen_simple(ber_encode_header(&hdr), W::default())?;
         tuple((slice(v_hdr), slice(v)))(out)
     }
@@ -370,7 +370,7 @@ mod test {
             hdr: &Header,
             depth: usize,
         ) -> BerResult<'a, BerObjectContent<'a>> {
-            ber_read_element_content_as(i, Tag::Integer, hdr.length, false, depth)
+            ber_read_element_content_as(i, Tag::Integer, hdr.length(), false, depth)
         }
         fn local_parse(i: &[u8]) -> BerResult<BerObject> {
             parse_ber_implicit(i, Tag(3), der_read_integer_content)
@@ -382,7 +382,7 @@ mod test {
         )
         .expect("could not encode");
         let (_, obj2) = local_parse(&v).expect("could not re-parse");
-        assert_eq!(obj2.header.tag, Tag(3));
+        assert_eq!(obj2.header.tag(), Tag(3));
         assert_eq!(&obj.content, &obj2.content);
         let bytes = hex!("83 01 02");
         assert_eq!(&v[..], bytes);

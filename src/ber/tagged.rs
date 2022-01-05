@@ -44,7 +44,7 @@ where
     let tag = tag.into();
     parse_ber_tagged_explicit_g(tag, move |content, hdr| {
         let (rem, obj) = f(content)?;
-        let class = hdr.class;
+        let class = hdr.class();
         let obj2 = BerObject::from_header_and_content(
             hdr,
             BerObjectContent::Tagged(class, tag, Box::new(obj)),
@@ -90,9 +90,9 @@ where
 {
     let tag = tag.into();
     parse_ber_container(move |i, hdr| {
-        if hdr.class == Class::Universal {
+        if hdr.class() == Class::Universal {
             return Err(Err::Error(
-                BerError::unexpected_class(None, hdr.class).into(),
+                BerError::unexpected_class(None, hdr.class()).into(),
             ));
         }
         hdr.assert_tag(tag).map_err(|e| Err::Error(e.into()))?;

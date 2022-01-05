@@ -519,7 +519,7 @@ where
 {
     move |i: &[u8]| {
         let (i, hdr) = ber_read_element_header(i).map_err(nom::Err::convert)?;
-        let (i, data) = match hdr.length {
+        let (i, data) = match hdr.length() {
             Length::Definite(len) => take(len)(i)?,
             Length::Indefinite => {
                 ber_get_object_content(i, &hdr, MAX_RECURSION).map_err(nom::Err::convert)?

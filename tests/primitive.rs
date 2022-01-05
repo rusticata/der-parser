@@ -1,4 +1,6 @@
 extern crate alloc;
+use std::borrow::Cow;
+
 use der_parser::ber::*;
 use der_parser::der::*;
 use der_parser::error::*;
@@ -115,8 +117,8 @@ fn test_unknown_context_specific() {
     assert_eq!(
         res.1,
         BerObject {
-            header: Header::new(Class::ContextSpecific, false, Tag(0), 1)
-                .with_raw_tag(Some(&[0x80])),
+            header: Header::new(Class::ContextSpecific, false, Tag(0), 1.into())
+                .with_raw_tag(Some(Cow::Borrowed(&[0x80]))),
             content: BerObjectContent::Unknown(Class::ContextSpecific, Tag(0x0), &bytes[2..]),
         }
     );
@@ -130,8 +132,8 @@ fn test_unknown_long_tag() {
     assert_eq!(
         res.1,
         BerObject {
-            header: Header::new(Class::ContextSpecific, false, Tag(0x22), 1)
-                .with_raw_tag(Some(&[0x9f, 0x22])),
+            header: Header::new(Class::ContextSpecific, false, Tag(0x22), 1.into())
+                .with_raw_tag(Some(Cow::Borrowed(&[0x9f, 0x22]))),
             content: BerObjectContent::Unknown(Class::ContextSpecific, Tag(0x22), &bytes[3..]),
         }
     );
@@ -145,8 +147,8 @@ fn test_unknown_longer_tag() {
     assert_eq!(
         res.1,
         BerObject {
-            header: Header::new(Class::ContextSpecific, false, Tag(0x1122), 1)
-                .with_raw_tag(Some(&[0x9f, 0xa2, 0x22])),
+            header: Header::new(Class::ContextSpecific, false, Tag(0x1122), 1.into())
+                .with_raw_tag(Some(Cow::Borrowed(&[0x9f, 0xa2, 0x22]))),
             content: BerObjectContent::Unknown(Class::ContextSpecific, Tag(0x1122), &bytes[4..]),
         }
     );

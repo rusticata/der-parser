@@ -58,7 +58,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
             write!(f, "{:1$}", " ", self.indent)?;
         };
         if self.flags.contains(&PrettyPrinterFlag::ShowHeader) {
-            write!(f, "[c:{:?}, s:{}, t:{}] ", self.obj.header.class, self.obj.header.constructed, self.obj.header.tag)?;
+            write!(f, "[c:{:?}, s:{}, t:{}] ", self.obj.header.class(), self.obj.header.constructed(), self.obj.header.tag())?;
         };
         fn print_utf8_string_with_type(f: &mut fmt::Formatter, s: &[u8], ty: &str) -> fmt::Result {
             match str::from_utf8(s) {
@@ -120,7 +120,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
                 }
             }
             BerObjectContent::Private(ref hdr, bytes) => {
-                writeln!(f, "[Private {}] c:{}: {:?}", hdr.tag.0, hdr.constructed, debug::HexSlice(bytes))
+                writeln!(f, "[Private {}] c:{}: {:?}", hdr.tag().0, hdr.constructed(), debug::HexSlice(bytes))
             },
             BerObjectContent::Tagged(class, tag, ref obj) => {
                 writeln!(f, "ContextSpecific [{} {}] {{", class, tag.0)?;
@@ -133,7 +133,7 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
             },
             BerObjectContent::Set(ref v) |
             BerObjectContent::Sequence(ref v)        => {
-                let ty = if self.obj.header.tag == Tag::Sequence { "Sequence" } else { "Set" };
+                let ty = if self.obj.header.tag() == Tag::Sequence { "Sequence" } else { "Set" };
                 writeln!(f, "{}[", ty)?;
                 for o in v {
                     write!(f, "{:?}", self.next_indent(o))?;
