@@ -493,7 +493,7 @@ pub fn der_read_element_content_as(
     max_depth: usize,
 ) -> BerResult<DerObjectContent> {
     // Indefinite lengths are not allowed in DER (X.690 section 10.1)
-    let l = len.primitive()?;
+    let l = len.definite().map_err(BerError::from)?;
     if i.len() < l {
         return Err(Err::Incomplete(Needed::new(l)));
     }
@@ -571,7 +571,7 @@ fn der_read_element_content_recursive<'a>(
     }
     match der_read_element_content_as(i, hdr.tag, hdr.length, hdr.is_constructed(), max_depth) {
         Ok((rem, content)) => Ok((rem, DerObject::from_header_and_content(hdr, content))),
-        Err(Err::Error(BerError::UnknownTag)) => {
+        Err(Err::Error(BerError::UnknownTag(_))) => {
             let (rem, content) = ber_get_object_content(i, &hdr, max_depth)?;
             let content = DerObjectContent::Unknown(hdr.class, hdr.tag, content);
             let obj = DerObject::from_header_and_content(hdr, content);

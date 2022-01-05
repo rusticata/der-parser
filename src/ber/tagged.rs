@@ -91,7 +91,9 @@ where
     let tag = tag.into();
     parse_ber_container(move |i, hdr| {
         if hdr.class == Class::Universal {
-            return Err(Err::Error(BerError::InvalidClass.into()));
+            return Err(Err::Error(
+                BerError::unexpected_class(None, hdr.class).into(),
+            ));
         }
         hdr.assert_tag(tag).map_err(|e| Err::Error(e.into()))?;
         // X.690 8.14.2: if implicit tagging was not used, the encoding shall be constructed

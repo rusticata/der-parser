@@ -51,7 +51,7 @@ impl<'a> Header<'a> {
         if self.class as u8 == class as u8 {
             Ok(())
         } else {
-            Err(BerError::unexpected_class(class, self.class))
+            Err(BerError::unexpected_class(Some(class), self.class))
         }
     }
 
@@ -85,7 +85,7 @@ impl<'a> Header<'a> {
         if self.tag.0 == tag.0 {
             Ok(())
         } else {
-            Err(BerError::unexpected_tag(tag, self.tag))
+            Err(BerError::unexpected_tag(Some(tag), self.tag))
         }
     }
 

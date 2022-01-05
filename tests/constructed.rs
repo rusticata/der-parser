@@ -52,7 +52,7 @@ fn parse_struct04(i: &[u8], tag: Tag) -> BerResult<MyStruct> {
 #[test_case(&hex!("30 00"), Ok(&[]) ; "empty seq")]
 #[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Ok(&[0x10001, 0x10000]) ; "seq ok")]
 #[test_case(&hex!("30 07 02 03 01 00 01 02 03 01"), Err(Err::Error(BerError::NomError(ErrorKind::Eof))) ; "incomplete")]
-#[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Tag::Sequence, Tag::Set))) ; "invalid tag")]
+#[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Some(Tag::Sequence), Tag::Set))) ; "invalid tag")]
 #[test_case(&hex!("30 80 02 03 01 00 01 00 00"), Ok(&[0x10001]) ; "indefinite seq ok")]
 #[test_case(&hex!("30 80"), Err(Err::Incomplete(Needed::new(1))) ; "indefinite incomplete")]
 fn tc_ber_seq_of(i: &[u8], out: Result<&[u32], Err<BerError>>) {
@@ -81,7 +81,7 @@ fn tc_ber_seq_of(i: &[u8], out: Result<&[u32], Err<BerError>>) {
 
 #[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Ok(&[0x10001, 0x10000]) ; "seq ok")]
 #[test_case(&hex!("30 07 02 03 01 00 01 02 01"), Err(Err::Incomplete(Needed::new(1))) ; "incomplete")]
-#[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Tag::Sequence, Tag::Set))) ; "invalid tag")]
+#[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Some(Tag::Sequence), Tag::Set))) ; "invalid tag")]
 #[test_case(&hex!("30 80 02 03 01 00 01 02 03 01 00 00 00 00"), Ok(&[0x10001, 0x10000]) ; "indefinite seq")]
 fn tc_ber_seq_defined(i: &[u8], out: Result<&[u32], Err<BerError>>) {
     fn parser(i: &[u8]) -> BerResult<BerObject> {
@@ -113,7 +113,7 @@ fn tc_ber_seq_defined(i: &[u8], out: Result<&[u32], Err<BerError>>) {
 #[test_case(&hex!("31 00"), Ok(&[]) ; "empty set")]
 #[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Ok(&[0x10001, 0x10000]) ; "set ok")]
 #[test_case(&hex!("31 07 02 03 01 00 01 02 03 01"), Err(Err::Error(BerError::NomError(ErrorKind::Eof))) ; "incomplete")]
-#[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Tag::Set, Tag::Sequence))) ; "invalid tag")]
+#[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Some(Tag::Set), Tag::Sequence))) ; "invalid tag")]
 #[test_case(&hex!("31 80 02 03 01 00 01 00 00"), Ok(&[0x10001]) ; "indefinite set ok")]
 #[test_case(&hex!("31 80"), Err(Err::Incomplete(Needed::new(1))) ; "indefinite incomplete")]
 fn tc_ber_set_of(i: &[u8], out: Result<&[u32], Err<BerError>>) {
@@ -142,7 +142,7 @@ fn tc_ber_set_of(i: &[u8], out: Result<&[u32], Err<BerError>>) {
 
 #[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Ok(&[0x10001, 0x10000]) ; "set ok")]
 #[test_case(&hex!("31 07 02 03 01 00 01 02 01"), Err(Err::Incomplete(Needed::new(1))) ; "incomplete")]
-#[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Tag::Set, Tag::Sequence))) ; "invalid tag")]
+#[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Some(Tag::Set), Tag::Sequence))) ; "invalid tag")]
 #[test_case(&hex!("31 80 02 03 01 00 01 02 03 01 00 00 00 00"), Ok(&[0x10001, 0x10000]) ; "indefinite set")]
 fn tc_ber_set_defined(i: &[u8], out: Result<&[u32], Err<BerError>>) {
     fn parser(i: &[u8]) -> BerResult<BerObject> {
@@ -310,8 +310,8 @@ fn struct_verify_tag() {
 
 #[test_case(&hex!("a2 05 02 03 01 00 01"), Ok(0x10001) ; "tag ok")]
 #[test_case(&hex!("a2 80 02 03 01 00 01 00 00"), Ok(0x10001) ; "indefinite tag ok")]
-#[test_case(&hex!("a3 05 02 03 01 00 01"), Err(BerError::unexpected_tag(Tag(2), Tag(3))) ; "invalid tag")]
-#[test_case(&hex!("22 05 02 03 01 00 01"), Err(BerError::InvalidClass) ; "invalid class")]
+#[test_case(&hex!("a3 05 02 03 01 00 01"), Err(BerError::unexpected_tag(Some(Tag(2)), Tag(3))) ; "invalid tag")]
+#[test_case(&hex!("22 05 02 03 01 00 01"), Err(BerError::unexpected_class(None, Class::Universal)) ; "invalid class")]
 #[test_case(&hex!("82 05 02 03 01 00 01"), Err(BerError::ConstructExpected) ; "construct expected")]
 fn tc_ber_tagged_explicit_g(i: &[u8], out: Result<u32, BerError>) {
     fn parse_int_explicit(i: &[u8]) -> BerResult<u32> {
@@ -348,17 +348,17 @@ fn tagged_explicit() {
     // wrong tag
     assert_eq!(
         parse_der_tagged_explicit(3, parse_der_integer)(bytes as &[u8]),
-        Err(Err::Error(BerError::unexpected_tag(Tag(3), Tag(2))))
+        Err(Err::Error(BerError::unexpected_tag(Some(Tag(3)), Tag(2))))
     );
     // wrong type
     assert_eq!(
         parse_der_tagged_explicit(2, parse_der_bool)(bytes as &[u8]),
-        Err(Err::Error(BerError::unexpected_tag(Tag(1), Tag(2))))
+        Err(Err::Error(BerError::unexpected_tag(Some(Tag(1)), Tag(2))))
     );
 }
 
 #[test_case(&hex!("82 03 01 00 01"), Ok(0x10001) ; "tag ok")]
-#[test_case(&hex!("83 03 01 00 01"), Err(BerError::unexpected_tag(Tag(2), Tag(3))) ; "invalid tag")]
+#[test_case(&hex!("83 03 01 00 01"), Err(BerError::unexpected_tag(Some(Tag(2)), Tag(3))) ; "invalid tag")]
 fn tc_ber_tagged_implicit_g(i: &[u8], out: Result<u32, BerError>) {
     fn parse_int_implicit(i: &[u8]) -> BerResult<u32> {
         parse_ber_tagged_implicit_g(2, |content, hdr, depth| {
@@ -394,7 +394,7 @@ fn tagged_implicit() {
     // wrong tag
     assert_eq!(
         parse_der_tagged_implicit(3, parse_der_content(Tag::Integer))(bytes as &[u8]),
-        Err(Err::Error(BerError::unexpected_tag(Tag(3), Tag(2))))
+        Err(Err::Error(BerError::unexpected_tag(Some(Tag(3)), Tag(2))))
     );
 }
 
@@ -407,7 +407,7 @@ fn application() {
     fn parse_app01(i: &[u8]) -> BerResult<SimpleStruct> {
         parse_der_container(|i, hdr| {
             if hdr.class() != Class::Application {
-                return Err(Err::Error(BerError::InvalidClass));
+                return Err(Err::Error(BerError::unexpected_class(None, hdr.class())));
             }
             if hdr.tag() != Tag(2) {
                 return Err(Err::Error(BerError::InvalidTag));
