@@ -105,7 +105,8 @@ impl<'a> BerObject<'a> {
     ///
     /// Note: values are not checked, so the tag can be different from the real content, or flags
     /// can be invalid.
-    pub fn from_header_and_content<'o>(
+    #[inline]
+    pub const fn from_header_and_content<'o>(
         header: Header<'o>,
         content: BerObjectContent<'o>,
     ) -> BerObject<'o> {
@@ -114,7 +115,7 @@ impl<'a> BerObject<'a> {
 
     /// Build a BerObject from its content, using default flags (no class, correct tag,
     /// and constructed flag set only for Set and Sequence)
-    pub fn from_obj(c: BerObjectContent) -> BerObject {
+    pub const fn from_obj(c: BerObjectContent) -> BerObject {
         let class = Class::Universal;
         let tag = c.tag();
         let constructed = matches!(tag, Tag::Sequence | Tag::Set);
@@ -123,7 +124,7 @@ impl<'a> BerObject<'a> {
     }
 
     /// Build a DER integer object from a slice containing an encoded integer
-    pub fn from_int_slice(i: &'a [u8]) -> BerObject<'a> {
+    pub const fn from_int_slice(i: &'a [u8]) -> BerObject<'a> {
         let header = Header::new(Class::Universal, false, Tag::Integer, Length::Definite(0));
         BerObject {
             header,
@@ -138,12 +139,12 @@ impl<'a> BerObject<'a> {
     }
 
     /// Build a DER sequence object from a vector of DER objects
-    pub fn from_seq(l: Vec<BerObject>) -> BerObject {
+    pub const fn from_seq(l: Vec<BerObject>) -> BerObject {
         BerObject::from_obj(BerObjectContent::Sequence(l))
     }
 
     /// Build a DER set object from a vector of DER objects
-    pub fn from_set(l: Vec<BerObject>) -> BerObject {
+    pub const fn from_set(l: Vec<BerObject>) -> BerObject {
         BerObject::from_obj(BerObjectContent::Set(l))
     }
 
@@ -624,7 +625,7 @@ impl<'a> BerObjectContent<'a> {
     }
 
     #[rustfmt::skip]
-    fn tag(&self) -> Tag {
+    const fn tag(&self) -> Tag {
         match self {
             BerObjectContent::EndOfContent         => Tag::EndOfContent,
             BerObjectContent::Boolean(_)           => Tag::Boolean,
