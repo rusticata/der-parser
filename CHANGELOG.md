@@ -10,6 +10,13 @@
 
 ## [Unreleased][unreleased]
 
+This release marks the beginning of the merge with the `asn1-rs` crate. **This will break things.**
+
+However, this is necessary, because the `asn1-rs` crate is much cleaner and supports more types
+and features (like serialization, custom derive, etc.).
+Ultimately, this crate will become a frontend to `asn1-rs`, that will be optional: crate users can
+switch to `asn1-rs` and use it directly.
+
 ### Changed/Fixed
 
 MSRV: The minimum supported rust version is now *1.53*.
@@ -31,6 +38,10 @@ MSRV: The minimum supported rust version is now *1.53*.
 `DER`:
 - `DerClass` and `DerTag` have been deprecated. Use `Class` and `Tag` instead.
 - `DerObjectHeader` has been deprecated. Use `Header` instead.
+
+`Oid`:
+- The `Oid` object is now the same as `asn1_rs::Oid` (simply reexported)
+- Remove dependency on crate `der-oid-macro`
 
 ### Added
 
