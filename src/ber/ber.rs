@@ -6,6 +6,7 @@ use crate::oid::Oid;
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use asn1_rs::Any;
 #[cfg(feature = "bitvec")]
 use bitvec::{order::Msb0, slice::BitSlice};
 use core::convert::AsRef;
@@ -97,7 +98,7 @@ pub enum BerObjectContent<'a> {
     Private(Header<'a>, &'a [u8]),
 
     /// Unknown object: object tag (copied from header), and raw content
-    Unknown(Class, Tag, &'a [u8]),
+    Unknown(Any<'a>),
 }
 
 impl<'a> BerObject<'a> {
@@ -604,8 +605,8 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::ObjectDescriptor(s) |
             BerObjectContent::GraphicString(s) |
             BerObjectContent::GeneralString(s) |
-            BerObjectContent::Unknown(_, _,s) |
             BerObjectContent::Private(_,s) => Ok(s),
+            BerObjectContent::Unknown(ref any) => Ok(any.data),
             _ => Err(BerError::BerTypeError),
         }
     }
@@ -652,8 +653,8 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::ObjectDescriptor(_)  => Tag::ObjectDescriptor,
             BerObjectContent::GraphicString(_)     => Tag::GraphicString,
             BerObjectContent::GeneralString(_)     => Tag::GeneralString,
-            BerObjectContent::Tagged(_,x,_) |
-            BerObjectContent::Unknown(_, x,_)         => *x,
+            BerObjectContent::Tagged(_,x,_) => *x,
+            BerObjectContent::Unknown(any) => any.tag(),
             &BerObjectContent::Private(ref hdr, _) => hdr.tag(),
             BerObjectContent::Optional(Some(obj))  => obj.content.tag(),
             BerObjectContent::Optional(None)       => Tag(0x00), // XXX invalid !

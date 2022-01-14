@@ -1,6 +1,7 @@
 extern crate alloc;
 use std::borrow::Cow;
 
+use asn1_rs::Any;
 use der_parser::ber::*;
 use der_parser::der::*;
 use der_parser::error::*;
@@ -91,21 +92,19 @@ fn test_unknown_tag() {
     assert!(res.0.is_empty());
     assert_eq!(
         res.1,
-        BerObject::from_obj(BerObjectContent::Unknown(
-            Class::Universal,
+        BerObject::from_obj(BerObjectContent::Unknown(Any::from_tag_and_data(
             Tag(0x1d),
             &bytes[2..]
-        ))
+        )))
     );
     let res = parse_der(&bytes).expect("parsing failed");
     assert!(res.0.is_empty());
     assert_eq!(
         res.1,
-        BerObject::from_obj(BerObjectContent::Unknown(
-            Class::Universal,
+        BerObject::from_obj(BerObjectContent::Unknown(Any::from_tag_and_data(
             Tag(0x1d),
             &bytes[2..]
-        ))
+        )))
     );
 }
 
@@ -119,7 +118,9 @@ fn test_unknown_context_specific() {
         BerObject {
             header: Header::new(Class::ContextSpecific, false, Tag(0), 1.into())
                 .with_raw_tag(Some(Cow::Borrowed(&[0x80]))),
-            content: BerObjectContent::Unknown(Class::ContextSpecific, Tag(0x0), &bytes[2..]),
+            content: BerObjectContent::Unknown(
+                Any::from_tag_and_data(Tag(0x0), &bytes[2..]).with_class(Class::ContextSpecific)
+            ),
         }
     );
 }
@@ -134,7 +135,9 @@ fn test_unknown_long_tag() {
         BerObject {
             header: Header::new(Class::ContextSpecific, false, Tag(0x22), 1.into())
                 .with_raw_tag(Some(Cow::Borrowed(&[0x9f, 0x22]))),
-            content: BerObjectContent::Unknown(Class::ContextSpecific, Tag(0x22), &bytes[3..]),
+            content: BerObjectContent::Unknown(
+                Any::from_tag_and_data(Tag(0x22), &bytes[3..]).with_class(Class::ContextSpecific)
+            ),
         }
     );
 }
@@ -149,7 +152,9 @@ fn test_unknown_longer_tag() {
         BerObject {
             header: Header::new(Class::ContextSpecific, false, Tag(0x1122), 1.into())
                 .with_raw_tag(Some(Cow::Borrowed(&[0x9f, 0xa2, 0x22]))),
-            content: BerObjectContent::Unknown(Class::ContextSpecific, Tag(0x1122), &bytes[4..]),
+            content: BerObjectContent::Unknown(
+                Any::from_tag_and_data(Tag(0x1122), &bytes[4..]).with_class(Class::ContextSpecific)
+            ),
         }
     );
 }
