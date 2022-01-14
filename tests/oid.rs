@@ -8,7 +8,7 @@ const OID_RSA_ENCRYPTION: &[u8] = &oid!(raw 1.2.840.113549.1.1.1);
 const OID_EC_PUBLIC_KEY: &[u8] = &oid!(raw 1.2.840.10045.2.1);
 #[allow(clippy::match_like_matches_macro)]
 fn compare_oid(oid: &Oid) -> bool {
-    match oid.bytes() {
+    match oid.as_bytes() {
         OID_RSA_ENCRYPTION => true,
         OID_EC_PUBLIC_KEY => true,
         _ => false,

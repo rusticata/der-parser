@@ -56,7 +56,7 @@ pub fn ber_encode_header<'a, 'b: 'a, W: Write + 'a>(hdr: &'b Header) -> impl Ser
 fn ber_encode_oid<'a, W: Write + 'a>(oid: &'a Oid) -> impl SerializeFn<W> + 'a {
     move |out| {
         // check oid.relative attribute ? this should not be necessary
-        slice(oid.bytes())(out)
+        slice(oid.as_bytes())(out)
     }
 }
 
