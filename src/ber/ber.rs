@@ -94,10 +94,8 @@ pub enum BerObjectContent<'a> {
     Optional(Option<Box<BerObject<'a>>>),
     /// Tagged object (EXPLICIT): class, tag  and content of inner object
     Tagged(Class, Tag, Box<BerObject<'a>>),
-    /// Private
-    Private(Header<'a>, &'a [u8]),
 
-    /// Unknown object: object tag (copied from header), and raw content
+    /// Private or Unknown (for ex. unknown tag) object
     Unknown(Any<'a>),
 }
 
@@ -604,8 +602,7 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::UniversalString(s) |
             BerObjectContent::ObjectDescriptor(s) |
             BerObjectContent::GraphicString(s) |
-            BerObjectContent::GeneralString(s) |
-            BerObjectContent::Private(_,s) => Ok(s),
+            BerObjectContent::GeneralString(s) => Ok(s),
             BerObjectContent::Unknown(ref any) => Ok(any.data),
             _ => Err(BerError::BerTypeError),
         }
@@ -655,7 +652,6 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::GeneralString(_)     => Tag::GeneralString,
             BerObjectContent::Tagged(_,x,_) => *x,
             BerObjectContent::Unknown(any) => any.tag(),
-            &BerObjectContent::Private(ref hdr, _) => hdr.tag(),
             BerObjectContent::Optional(Some(obj))  => obj.content.tag(),
             BerObjectContent::Optional(None)       => Tag(0x00), // XXX invalid !
         }
