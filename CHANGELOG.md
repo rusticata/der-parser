@@ -28,6 +28,10 @@ MSRV: The minimum supported rust version is now *1.53*.
 - `BerTag` has been renamed to `Tag`
 - Header fields are now private. Getters/setters have been added, and must be used to access/modify fields
 
+`BerObjectContent`:
+- `Unknown` variant now contains an `Any` object, with both the header and object content
+- `Private` variant has been merged into `Unknown`
+
 `BerError`:
 
 - Add error types `UnexpectedClass` and `UnexpectedTag`

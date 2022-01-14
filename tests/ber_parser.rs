@@ -546,5 +546,5 @@ fn parse_ber_private() {
     let bytes = &hex!("c0 03 01 00 01");
     let (rem, res) = parse_ber(bytes).expect("parsing failed");
     assert!(rem.is_empty());
-    assert!(matches!(res.content, BerObjectContent::Private(_, _)));
+    assert!(matches!(res.content, BerObjectContent::Unknown(_)));
 }

@@ -154,7 +154,6 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
                 None => slice(&[])(out), // XXX encode NOP ?
             }
         }
-        BerObjectContent::Private(_hdr, bytes) => slice(bytes)(out),
         BerObjectContent::Tagged(_class, _tag, inner) => {
             // directly encode inner object
             // XXX wrong, we should wrap it!
