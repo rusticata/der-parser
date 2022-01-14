@@ -1,5 +1,6 @@
 #![allow(deprecated)]
 
+use asn1_rs::Any;
 use der_parser::ber::*;
 use der_parser::der::*;
 use der_parser::error::*;
@@ -312,10 +313,12 @@ fn test_der_generalstring() {
 fn test_der_contextspecific() {
     let bytes = [0xa0, 0x03, 0x02, 0x01, 0x02];
     let empty = &b""[..];
+    let header = Header::new(Class::ContextSpecific, true, Tag(0), 3.into())
+        .with_raw_tag(Some(Cow::Borrowed(&[0xa0])));
+    let any = Any::new(header.clone(), &bytes[2..]);
     let expected = DerObject {
-        header: Header::new(Class::ContextSpecific, true, Tag(0), 3.into())
-            .with_raw_tag(Some(Cow::Borrowed(&[0xa0]))),
-        content: BerObjectContent::Unknown(Class::ContextSpecific, Tag(0), &bytes[2..]),
+        header,
+        content: BerObjectContent::Unknown(any),
     };
     assert_eq!(parse_der(&bytes), Ok((empty, expected)));
 }

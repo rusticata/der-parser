@@ -1,6 +1,7 @@
 use crate::ber::*;
 use crate::error::*;
 use crate::oid::*;
+use asn1_rs::Any;
 use asn1_rs::Tag;
 use nom::bytes::streaming::take;
 use nom::combinator::{complete, map, verify};
@@ -1178,8 +1179,9 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
             return Ok((rem, obj));
         }
         _ => {
-            let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
-            let content = BerObjectContent::Unknown(hdr.class(), hdr.tag(), content);
+            let (rem, data) = ber_get_object_content(rem, &hdr, max_depth)?;
+            let any = Any::new(hdr.clone(), data);
+            let content = BerObjectContent::Unknown(any);
             let obj = BerObject::from_header_and_content(hdr, content);
             return Ok((rem, obj));
         }
@@ -1193,8 +1195,9 @@ pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
     ) {
         Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
         Err(Err::Error(BerError::UnknownTag(_))) => {
-            let (rem, content) = ber_get_object_content(rem, &hdr, max_depth)?;
-            let content = BerObjectContent::Unknown(hdr.class(), hdr.tag(), content);
+            let (rem, data) = ber_get_object_content(rem, &hdr, max_depth)?;
+            let any = Any::new(hdr.clone(), data);
+            let content = BerObjectContent::Unknown(any);
             let obj = BerObject::from_header_and_content(hdr, content);
             Ok((rem, obj))
         }

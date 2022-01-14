@@ -160,7 +160,7 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
             // XXX wrong, we should wrap it!
             ber_encode_object(inner)(out)
         }
-        BerObjectContent::Unknown(_, _, s) => slice(s)(out),
+        BerObjectContent::Unknown(any) => slice(any.data)(out),
     }
 }
 
