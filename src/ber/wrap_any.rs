@@ -43,7 +43,7 @@ macro_rules! from_obj {
     (STRING $ty:ident, $variant:ident, $any:ident, $header:ident) => {{
         custom_check!($any.data, $header.constructed(), BerError::Unsupported)?; // XXX valid in BER (8.21)
         <$ty>::test_valid_charset($any.data)?;
-        let s = std::str::from_utf8($any.data)?;
+        let s = core::str::from_utf8($any.data)?;
         Ok(BerObject::from_header_and_content(
             $header,
             BerObjectContent::$variant(s),
