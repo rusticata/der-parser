@@ -106,12 +106,8 @@ fn try_berobject_from_any(any: Any, max_depth: usize) -> Result<BerObject> {
             Ok(obj_from(header, BerObjectContent::Enum(obj.0 as u64)))
         }
         Tag::GeneralizedTime => {
-            let data = <&[u8]>::clone(&any.data);
-            // use asn1-rs for verification
-            // but the BerObjectContent variant cannot use the same value
-            let _ = any.generalizedtime()?;
-            let s = std::str::from_utf8(data)?;
-            Ok(obj_from(header, BerObjectContent::GeneralizedTime(s)))
+            let time = any.generalizedtime()?;
+            Ok(obj_from(header, BerObjectContent::GeneralizedTime(time.0)))
         }
         Tag::GeneralString => from_obj!(STRING GeneralString, any, header),
         Tag::GraphicString => from_obj!(STRING GraphicString, any, header),
@@ -157,15 +153,12 @@ fn try_berobject_from_any(any: Any, max_depth: usize) -> Result<BerObject> {
         }
         Tag::TeletexString => from_obj!(STRING TeletexString, T61String, any, header),
         Tag::UtcTime => {
-            let data = <&[u8]>::clone(&any.data);
-            // use asn1-rs for verification
-            // but the BerObjectContent variant cannot use the same value
-            let _ = any.utctime()?;
-            let s = std::str::from_utf8(data)?;
-            Ok(obj_from(header, BerObjectContent::UTCTime(s)))
+            let time = any.utctime()?;
+            Ok(obj_from(header, BerObjectContent::UTCTime(time.0)))
         }
         Tag::UniversalString => {
             custom_check!(any.data, header.constructed(), BerError::Unsupported)?; // XXX valid in BER (8.21)
+
             // as detailed in asn1-rs, UniversalString allocates memory since the UCS-4 to UTF-8 conversion requires a memory allocation.
             // so, the charset is not checked here
             Ok(obj_from(

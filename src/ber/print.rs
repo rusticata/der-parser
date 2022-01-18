@@ -82,8 +82,8 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
             BerObjectContent::OctetString(v)         => writeln!(f, "OctetString({:?})", debug::HexSlice(v)),
             BerObjectContent::BitString(u,BitStringObject{data:v})
                                                      => writeln!(f, "BitString({},{:?})", u, debug::HexSlice(v)),
-            BerObjectContent::GeneralizedTime(s)     => writeln!(f, "GeneralizedTime(\"{}\")", s),
-            BerObjectContent::UTCTime(s)             => writeln!(f, "UTCTime(\"{}\")", s),
+            BerObjectContent::GeneralizedTime(ref time)     => writeln!(f, "GeneralizedTime(\"{}\")", time),
+            BerObjectContent::UTCTime(ref time)             => writeln!(f, "UTCTime(\"{}\")", time),
             BerObjectContent::VisibleString(s)       => writeln!(f, "VisibleString(\"{}\")", s),
             BerObjectContent::GeneralString(s)       => writeln!(f, "GeneralString(\"{}\")", s),
             BerObjectContent::GraphicString(s)       => writeln!(f, "GraphicString(\"{}\")", s),

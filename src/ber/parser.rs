@@ -437,40 +437,40 @@ fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjec
     Ok((i, s))
 }
 
-fn ber_read_content_utctime<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
-    // Argument must be a reference, because of the .iter().all(F) call below
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    fn is_visible(b: &u8) -> bool {
-        0x20 <= *b && *b <= 0x7f
-    }
-    let (i, bytes) = take(len)(i)?;
-    if !bytes.iter().all(is_visible) {
-        return Err(Err::Error(BerError::StringInvalidCharset));
-    }
-    let s = core::str::from_utf8(bytes)
-        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(BerObjectContent::UTCTime)?;
-    Ok((i, s))
-}
+// fn ber_read_content_utctime<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
+//     // Argument must be a reference, because of the .iter().all(F) call below
+//     #[allow(clippy::trivially_copy_pass_by_ref)]
+//     fn is_visible(b: &u8) -> bool {
+//         0x20 <= *b && *b <= 0x7f
+//     }
+//     let (i, bytes) = take(len)(i)?;
+//     if !bytes.iter().all(is_visible) {
+//         return Err(Err::Error(BerError::StringInvalidCharset));
+//     }
+//     let s = core::str::from_utf8(bytes)
+//         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+//         .map(BerObjectContent::UTCTime)?;
+//     Ok((i, s))
+// }
 
-fn ber_read_content_generalizedtime<'a>(
-    i: &'a [u8],
-    len: usize,
-) -> BerResult<BerObjectContent<'a>> {
-    // Argument must be a reference, because of the .iter().all(F) call below
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    fn is_visible(b: &u8) -> bool {
-        0x20 <= *b && *b <= 0x7f
-    }
-    let (i, bytes) = take(len)(i)?;
-    if !bytes.iter().all(is_visible) {
-        return Err(Err::Error(BerError::StringInvalidCharset));
-    }
-    let s = core::str::from_utf8(bytes)
-        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
-        .map(BerObjectContent::GeneralizedTime)?;
-    Ok((i, s))
-}
+// fn ber_read_content_generalizedtime<'a>(
+//     i: &'a [u8],
+//     len: usize,
+// ) -> BerResult<BerObjectContent<'a>> {
+//     // Argument must be a reference, because of the .iter().all(F) call below
+//     #[allow(clippy::trivially_copy_pass_by_ref)]
+//     fn is_visible(b: &u8) -> bool {
+//         0x20 <= *b && *b <= 0x7f
+//     }
+//     let (i, bytes) = take(len)(i)?;
+//     if !bytes.iter().all(is_visible) {
+//         return Err(Err::Error(BerError::StringInvalidCharset));
+//     }
+//     let s = core::str::from_utf8(bytes)
+//         .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+//         .map(BerObjectContent::GeneralizedTime)?;
+//     Ok((i, s))
+// }
 
 #[inline]
 fn ber_read_content_objectdescriptor(i: &[u8], len: usize) -> BerResult<BerObjectContent> {

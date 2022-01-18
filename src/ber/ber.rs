@@ -6,6 +6,7 @@ use crate::oid::Oid;
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use asn1_rs::ASN1DateTime;
 use asn1_rs::Any;
 #[cfg(feature = "bitvec")]
 use bitvec::{order::Msb0, slice::BitSlice};
@@ -79,9 +80,9 @@ pub enum BerObjectContent<'a> {
     Set(Vec<BerObject<'a>>),
 
     /// UTCTime: decoded string
-    UTCTime(&'a str),
+    UTCTime(ASN1DateTime),
     /// GeneralizedTime: decoded string
-    GeneralizedTime(&'a str),
+    GeneralizedTime(ASN1DateTime),
 
     /// Object descriptor: decoded string
     ObjectDescriptor(&'a str),
@@ -586,8 +587,6 @@ impl<'a> BerObjectContent<'a> {
     pub fn as_slice(&self) -> Result<&'a [u8],BerError> {
         match *self {
             BerObjectContent::NumericString(s) |
-            BerObjectContent::GeneralizedTime(s) |
-            BerObjectContent::UTCTime(s) |
             BerObjectContent::BmpString(s) |
             BerObjectContent::VisibleString(s) |
             BerObjectContent::PrintableString(s) |
@@ -611,8 +610,6 @@ impl<'a> BerObjectContent<'a> {
     pub fn as_str(&self) -> Result<&'a str,BerError> {
         match *self {
             BerObjectContent::NumericString(s) |
-            BerObjectContent::GeneralizedTime(s) |
-            BerObjectContent::UTCTime(s) |
             BerObjectContent::BmpString(s) |
             BerObjectContent::VisibleString(s) |
             BerObjectContent::PrintableString(s) |

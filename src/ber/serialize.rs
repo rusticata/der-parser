@@ -1,7 +1,7 @@
 #![cfg(feature = "std")]
 use crate::ber::*;
 use crate::oid::Oid;
-use asn1_rs::Tag;
+use asn1_rs::{ASN1DateTime, Tag};
 use cookie_factory::bytes::be_u8;
 use cookie_factory::combinator::slice;
 use cookie_factory::gen_simple;
@@ -57,6 +57,13 @@ fn ber_encode_oid<'a, W: Write + 'a>(oid: &'a Oid) -> impl SerializeFn<W> + 'a {
     move |out| {
         // check oid.relative attribute ? this should not be necessary
         slice(oid.as_bytes())(out)
+    }
+}
+
+fn ber_encode_datetime<'a, W: Write + 'a>(time: &'a ASN1DateTime) -> impl SerializeFn<W> + 'a {
+    move |out| {
+        let s = format!("{}", time);
+        slice(s)(out)
     }
 }
 
@@ -131,9 +138,10 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
             slice(v)(out)
         }
         BerObjectContent::OID(oid) | BerObjectContent::RelativeOID(oid) => ber_encode_oid(oid)(out),
+        BerObjectContent::UTCTime(time) | BerObjectContent::GeneralizedTime(time) => {
+            ber_encode_datetime(time)(out)
+        }
         BerObjectContent::NumericString(s)
-        | BerObjectContent::UTCTime(s)
-        | BerObjectContent::GeneralizedTime(s)
         | BerObjectContent::BmpString(s)
         | BerObjectContent::GeneralString(s)
         | BerObjectContent::ObjectDescriptor(s)
