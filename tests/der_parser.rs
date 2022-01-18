@@ -27,7 +27,9 @@ fn test_der_bool() {
     assert_eq!(parse_der_bool(&[0x01, 0x01, 0xff]), Ok((empty, b_true)));
     assert_eq!(
         parse_der_bool(&[0x01, 0x01, 0x7f]),
-        Err(Err::Error(BerError::DerConstraintFailed))
+        Err(Err::Error(BerError::DerConstraintFailed(
+            DerConstraint::InvalidBoolean
+        )))
     );
 }
 
@@ -71,7 +73,9 @@ fn test_der_bitstring_primitive() {
     let bytes = &[0x03, 0x04, 0x06, 0x6e, 0x5d, 0xe0];
     assert_eq!(
         parse_der_bitstring(bytes),
-        Err(Err::Error(BerError::DerConstraintFailed))
+        Err(Err::Error(BerError::DerConstraintFailed(
+            DerConstraint::UnusedBitsNotZero
+        )))
     );
     // // XXX test disabled: the parser is laxist here, since *many* implementations do
     // // XXX not respect this constraint!
@@ -89,7 +93,9 @@ fn test_der_bitstring_constructed() {
     let bytes = &hex!("23 81 0c 03 03 00 0a 3b 03 05 04 5f 29 1c d0");
     assert_eq!(
         parse_der_bitstring(bytes),
-        Err(Err::Error(BerError::DerConstraintFailed))
+        Err(Err::Error(BerError::DerConstraintFailed(
+            DerConstraint::Constructed
+        )))
     );
 }
 
@@ -98,7 +104,9 @@ fn test_der_indefinite_length() {
     let bytes = &hex!("23 80 03 03 00 0a 3b 03 05 04 5f 29 1c d0 00 00");
     assert_eq!(
         parse_der_bitstring(bytes),
-        Err(Err::Error(BerError::IndefiniteLengthUnexpected))
+        Err(Err::Error(BerError::DerConstraintFailed(
+            DerConstraint::IndefiniteLength
+        )))
     );
 }
 
@@ -298,7 +306,12 @@ fn test_der_utctime() {
     // missing 'Z'
     let bytes = hex!("17 0a 39 32 30 35 32 31 32 33 34 32");
     let e = parse_der_utctime(&bytes).expect_err("expected error");
-    assert_eq!(e, Err::Error(BerError::DerConstraintFailed));
+    assert_eq!(
+        e,
+        Err::Error(BerError::DerConstraintFailed(
+            DerConstraint::MissingTimeZone
+        ))
+    );
 }
 
 #[test]
@@ -555,7 +568,7 @@ fn test_der_seq_dn_defined() {
 #[test_case(&hex!("02 04 01 23 45 67"), Ok(0x0123_4567) ; "u32-long-ok")]
 // XXX DER encoding is invalid (not minimal) in following test:
 // #[test_case(&hex!("02 04 ff ff ff ff"), Err(BerError::IntegerNegative) ; "u32-long2-neg")]
-#[test_case(&hex!("02 06 00 00 01 23 45 67"), Err(BerError::DerConstraintFailed) ; "u32-long-leading-zeros")]
+#[test_case(&hex!("02 06 00 00 01 23 45 67"), Err(BerError::DerConstraintFailed(DerConstraint::IntegerLeadingZeroes)) ; "u32-long-leading-zeros")]
 #[test_case(&hex!("02 05 01 23 45 67 01"), Err(BerError::IntegerTooLarge) ; "u32 too large")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u32 too large 2")]
 #[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Some(Tag(2)), Tag(3))) ; "invalid tag")]
@@ -576,7 +589,7 @@ fn tc_der_u32(i: &[u8], out: Result<u32, BerError>) {
 #[test_case(&hex!("02 01 80"), Ok(-128) ; "i32-neg128")]
 #[test_case(&hex!("02 02 ff 7f"), Ok(-129) ; "i32-neg129")]
 #[test_case(&hex!("02 02 00 ff"), Ok(255) ; "i32-255")]
-#[test_case(&hex!("02 02 ff f0"), Err(BerError::DerConstraintFailed) ; "i32-neg-leading-ff")]
+#[test_case(&hex!("02 02 ff f0"), Err(BerError::DerConstraintFailed(DerConstraint::IntegerLeadingFF)) ; "i32-neg-leading-ff")]
 fn tc_der_i32(i: &[u8], out: Result<i32, BerError>) {
     let res = parse_der_i32(i);
     match out {
@@ -611,7 +624,7 @@ fn tc_der_u64(i: &[u8], out: Result<u64, BerError>) {
 #[test_case(&hex!("02 01 01"), Ok(&[1]) ; "slice 1")]
 #[test_case(&hex!("02 01 ff"), Ok(&[255]) ; "slice 2")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Ok(&hex!("01 23 45 67 01 23 45 67 ab")) ; "slice 3")]
-#[test_case(&hex!("22 80 02 01 01 00 00"), Err(BerError::IndefiniteLengthUnexpected) ; "constructed slice")]
+#[test_case(&hex!("22 80 02 01 01 00 00"), Err(BerError::DerConstraintFailed(DerConstraint::IndefiniteLength)) ; "constructed slice")]
 #[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Some(Tag(2)), Tag(3))) ; "invalid tag")]
 fn tc_der_slice(i: &[u8], out: Result<&[u8], BerError>) {
     let res = parse_der_slice(i, 2);

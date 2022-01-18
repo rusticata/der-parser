@@ -4,7 +4,7 @@ use crate::ber::BerObject;
 use crate::der::DerObject;
 use nom::IResult;
 
-pub use asn1_rs::Error;
+pub use asn1_rs::{DerConstraint, Error};
 
 pub type BerError = Error;
 

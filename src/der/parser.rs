@@ -1,6 +1,8 @@
 use crate::ber::*;
 use crate::der::*;
+use crate::der_constraint_fail_if;
 use crate::error::*;
+use alloc::borrow::ToOwned;
 use asn1_rs::{Any, FromDer, Tag};
 use nom::bytes::streaming::take;
 use nom::number::streaming::be_u8;
@@ -50,18 +52,6 @@ pub fn parse_der_recursive(i: &[u8], max_depth: usize) -> DerResult {
     }
     der_read_element_content_recursive(i, hdr, max_depth)
 }
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! der_constraint_fail_if(
-    ($slice:expr, $cond:expr) => (
-        {
-            if $cond {
-                return Err(::nom::Err::Error(BerError::DerConstraintFailed));
-            }
-        }
-    );
-);
 
 /// Parse a DER object, expecting a value with specified tag
 ///
@@ -497,20 +487,30 @@ pub fn der_read_element_content_as(
     match tag {
         Tag::Boolean => {
             custom_check!(i, l != 1, BerError::InvalidLength)?;
-            der_constraint_fail_if!(i, i[0] != 0 && i[0] != 0xff);
+            der_constraint_fail_if!(i, i[0] != 0 && i[0] != 0xff, DerConstraint::InvalidBoolean);
         }
         Tag::BitString => {
-            der_constraint_fail_if!(i, constructed);
+            der_constraint_fail_if!(i, constructed, DerConstraint::Constructed);
             // exception: read and verify padding bits
             return der_read_content_bitstring(i, l);
         }
         Tag::Integer => {
             // verify leading zeros
             match i[..l] {
-                [] => return Err(nom::Err::Error(BerError::DerConstraintFailed)),
-                [0, 0, ..] => return Err(nom::Err::Error(BerError::DerConstraintFailed)),
+                [] => {
+                    return Err(nom::Err::Error(BerError::DerConstraintFailed(
+                        DerConstraint::IntegerEmpty,
+                    )))
+                }
+                [0, 0, ..] => {
+                    return Err(nom::Err::Error(BerError::DerConstraintFailed(
+                        DerConstraint::IntegerLeadingZeroes,
+                    )))
+                }
                 [0, byte, ..] if byte < 0x80 => {
-                    return Err(nom::Err::Error(BerError::DerConstraintFailed));
+                    return Err(nom::Err::Error(BerError::DerConstraintFailed(
+                        DerConstraint::IntegerLeadingZeroes,
+                    )));
                 }
                 _ => (),
             }
@@ -527,11 +527,13 @@ pub fn der_read_element_content_as(
         | Tag::ObjectDescriptor
         | Tag::GraphicString
         | Tag::GeneralString => {
-            der_constraint_fail_if!(i, constructed);
+            der_constraint_fail_if!(i, constructed, DerConstraint::Constructed);
         }
         Tag::UtcTime | Tag::GeneralizedTime => {
             if l == 0 || i.get(l - 1).cloned() != Some(b'Z') {
-                return Err(Err::Error(BerError::DerConstraintFailed));
+                return Err(Err::Error(BerError::DerConstraintFailed(
+                    DerConstraint::MissingTimeZone,
+                )));
             }
         }
         _ => (),
@@ -577,7 +579,10 @@ fn der_read_element_content_recursive<'a>(
 fn der_read_content_bitstring(i: &[u8], len: usize) -> BerResult<DerObjectContent> {
     let (i, ignored_bits) = be_u8(i)?;
     if ignored_bits > 7 {
-        return Err(Err::Error(BerError::DerConstraintFailed));
+        return Err(Err::Error(BerError::invalid_value(
+            Tag::BitString,
+            "More than 7 unused bits".to_owned(),
+        )));
     }
     if len == 0 {
         return Err(Err::Error(BerError::InvalidLength));
@@ -586,7 +591,7 @@ fn der_read_content_bitstring(i: &[u8], len: usize) -> BerResult<DerObjectConten
     if len > 1 {
         let mut last_byte = data[len - 2];
         for _ in 0..ignored_bits as usize {
-            der_constraint_fail_if!(i, last_byte & 1 != 0);
+            der_constraint_fail_if!(i, last_byte & 1 != 0, DerConstraint::UnusedBitsNotZero);
             last_byte >>= 1;
         }
     }
