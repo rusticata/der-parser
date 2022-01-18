@@ -1,5 +1,7 @@
 #![allow(deprecated)]
 
+use asn1_rs::ASN1DateTime;
+use asn1_rs::ASN1TimeZone;
 use asn1_rs::Any;
 use der_parser::ber::*;
 use der_parser::der::*;
@@ -280,24 +282,38 @@ fn test_der_set_of() {
 
 #[test]
 fn test_der_utctime() {
-    let bytes = hex!("17 0D 30 32 31 32 31 33 31 34 32 39 32 33 5A FF");
-    let expected = DerObject::from_obj(BerObjectContent::UTCTime(
-        std::str::from_utf8(&bytes[2..(2 + 0x0d)]).unwrap(),
-    ));
+    let bytes = hex!("17 0b 39 32 30 35 32 31 32 33 34 32 5A FF");
+    let expected = DerObject::from_obj(BerObjectContent::UTCTime(ASN1DateTime::new(
+        92,
+        5,
+        21,
+        23,
+        42,
+        0,
+        None,
+        ASN1TimeZone::Z,
+    )));
     assert_eq!(parse_der_utctime(&bytes), Ok((&[0xff][..], expected)));
-    let bytes = hex!("17 0c 30 32 31 32 31 33 31 34 32 39 32 33");
-    parse_der_utctime(&bytes).err().expect("expected error");
+    // missing 'Z'
+    let bytes = hex!("17 0a 39 32 30 35 32 31 32 33 34 32");
+    let e = parse_der_utctime(&bytes).expect_err("expected error");
+    assert_eq!(e, Err::Error(BerError::DerConstraintFailed));
 }
 
 #[test]
 fn test_der_generalizedtime() {
     let empty = &b""[..];
-    let bytes = [
-        0x18, 0x0D, 0x31, 0x39, 0x39, 0x32, 0x30, 0x35, 0x32, 0x31, 0x30, 0x30, 0x30, 0x30, 0x5A,
-    ];
-    let expected = DerObject::from_obj(BerObjectContent::GeneralizedTime(
-        std::str::from_utf8(&bytes[2..]).unwrap(),
-    ));
+    let bytes = hex!("18 0D 31 39 39 32 30 35 32 31 32 33 34 32 5A");
+    let expected = DerObject::from_obj(BerObjectContent::GeneralizedTime(ASN1DateTime::new(
+        1992,
+        5,
+        21,
+        23,
+        42,
+        0,
+        None,
+        ASN1TimeZone::Z,
+    )));
     assert_eq!(parse_der_generalizedtime(&bytes), Ok((empty, expected)));
 }
 
