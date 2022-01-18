@@ -60,23 +60,6 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
         if self.flags.contains(&PrettyPrinterFlag::ShowHeader) {
             write!(f, "[c:{:?}, s:{}, t:{}] ", self.obj.header.class(), self.obj.header.constructed(), self.obj.header.tag())?;
         };
-        fn print_utf8_string_with_type(f: &mut fmt::Formatter, s: &[u8], ty: &str) -> fmt::Result {
-            match str::from_utf8(s) {
-                Ok(b)  => writeln!(f, "{}(\"{}\")", ty, b),
-                Err(e) => writeln!(f, "{}({:?}) <error decoding utf8 string: {:?}>", ty, s, e),
-            }
-        }
-        fn print_utf16_string_with_type(f: &mut fmt::Formatter, s: &[u8], ty: &str) -> fmt::Result {
-            let chars: Vec<u16> = s
-                .chunks_exact(2)
-                .map(|a| u16::from_be_bytes([a[0], a[1]]))
-                .collect();
-
-            match String::from_utf16(&chars) {
-                Ok(b)  => writeln!(f, "{}(\"{}\")", ty, b),
-                Err(e) => writeln!(f, "{}({:?}) <error decoding utf16 string: {:?}>", ty, s, e),
-            }
-        }
         fn print_utf32_string_with_type(f: &mut fmt::Formatter, s: &[u8], ty: &str) -> fmt::Result {
             let chars: Option<Vec<char>> = s
                 .chunks_exact(4)
@@ -102,17 +85,17 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
             BerObjectContent::GeneralizedTime(s)     => writeln!(f, "GeneralizedTime(\"{}\")", s),
             BerObjectContent::UTCTime(s)             => writeln!(f, "UTCTime(\"{}\")", s),
             BerObjectContent::VisibleString(s)       => writeln!(f, "VisibleString(\"{}\")", s),
+            BerObjectContent::GeneralString(s)       => writeln!(f, "GeneralString(\"{}\")", s),
+            BerObjectContent::GraphicString(s)       => writeln!(f, "GraphicString(\"{}\")", s),
             BerObjectContent::PrintableString(s)     => writeln!(f, "PrintableString(\"{}\")", s),
             BerObjectContent::NumericString(s)       => writeln!(f, "NumericString(\"{}\")", s),
             BerObjectContent::UTF8String(s)          => writeln!(f, "UTF8String(\"{}\")", s),
             BerObjectContent::IA5String(s)           => writeln!(f, "IA5String(\"{}\")", s),
-            BerObjectContent::T61String(v)           => writeln!(f, "T61String({:?})", debug::HexSlice(v)),
-            BerObjectContent::VideotexString(v)      => writeln!(f, "VideotexString({:?})", debug::HexSlice(v)),
-            BerObjectContent::BmpString(s)           => print_utf16_string_with_type(f, s, "BmpString"),
+            BerObjectContent::T61String(s)           => writeln!(f, "T61String({})", s),
+            BerObjectContent::VideotexString(s)      => writeln!(f, "VideotexString({})", s),
+            BerObjectContent::ObjectDescriptor(s)    => writeln!(f, "ObjectDescriptor(\"{}\")", s),
+            BerObjectContent::BmpString(s)           => writeln!(f, "BmpString(\"{}\")", s),
             BerObjectContent::UniversalString(s)     => print_utf32_string_with_type(f, s, "UniversalString"),
-            BerObjectContent::ObjectDescriptor(s)    => print_utf8_string_with_type(f, s, "ObjectDescriptor"),
-            BerObjectContent::GraphicString(s)       => print_utf8_string_with_type(f, s, "GraphicString"),
-            BerObjectContent::GeneralString(s)       => print_utf8_string_with_type(f, s, "GeneralString"),
             BerObjectContent::Optional(ref o) => {
                 match o {
                     Some(obj) => writeln!(f, "OPTION {:?}", obj),

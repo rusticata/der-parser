@@ -134,17 +134,17 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         BerObjectContent::NumericString(s)
         | BerObjectContent::UTCTime(s)
         | BerObjectContent::GeneralizedTime(s)
+        | BerObjectContent::BmpString(s)
+        | BerObjectContent::GeneralString(s)
+        | BerObjectContent::ObjectDescriptor(s)
+        | BerObjectContent::GraphicString(s)
         | BerObjectContent::VisibleString(s)
         | BerObjectContent::PrintableString(s)
         | BerObjectContent::IA5String(s)
-        | BerObjectContent::UTF8String(s) => slice(s)(out),
-        BerObjectContent::T61String(s)
+        | BerObjectContent::T61String(s)
         | BerObjectContent::VideotexString(s)
-        | BerObjectContent::BmpString(s)
-        | BerObjectContent::UniversalString(s)
-        | BerObjectContent::ObjectDescriptor(s)
-        | BerObjectContent::GraphicString(s)
-        | BerObjectContent::GeneralString(s) => slice(s)(out),
+        | BerObjectContent::UTF8String(s) => slice(s)(out),
+        BerObjectContent::UniversalString(s) => slice(s)(out),
         BerObjectContent::Sequence(v) | BerObjectContent::Set(v) => ber_encode_sequence(v)(out),
         // best we can do is tagged-explicit, but we don't know
         BerObjectContent::Optional(inner) => {

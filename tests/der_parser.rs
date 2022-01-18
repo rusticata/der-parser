@@ -293,7 +293,7 @@ fn test_der_utctime() {
 fn test_der_generalizedtime() {
     let empty = &b""[..];
     let bytes = [
-        0x18, 0x0D, 0x30, 0x32, 0x31, 0x32, 0x31, 0x33, 0x31, 0x34, 0x32, 0x39, 0x32, 0x33, 0x5A,
+        0x18, 0x0D, 0x31, 0x39, 0x39, 0x32, 0x30, 0x35, 0x32, 0x31, 0x30, 0x30, 0x30, 0x30, 0x5A,
     ];
     let expected = DerObject::from_obj(BerObjectContent::GeneralizedTime(
         std::str::from_utf8(&bytes[2..]).unwrap(),
@@ -305,7 +305,7 @@ fn test_der_generalizedtime() {
 fn test_der_generalstring() {
     let empty = &b""[..];
     let bytes = [0x1b, 0x04, 0x63, 0x69, 0x66, 0x73];
-    let expected = DerObject::from_obj(BerObjectContent::GeneralString(b"cifs"));
+    let expected = DerObject::from_obj(BerObjectContent::GeneralString("cifs"));
     assert_eq!(parse_der_generalstring(&bytes), Ok((empty, expected)));
 }
 
@@ -536,7 +536,8 @@ fn test_der_seq_dn_defined() {
 #[test_case(&hex!("02 02 00 ff"), Ok(255) ; "u32-255")]
 #[test_case(&hex!("02 02 01 23"), Ok(0x123) ; "u32-0x123")]
 #[test_case(&hex!("02 04 01 23 45 67"), Ok(0x0123_4567) ; "u32-long-ok")]
-#[test_case(&hex!("02 04 ff ff ff ff"), Err(BerError::IntegerNegative) ; "u32-long2-neg")]
+// XXX DER encoding is invalid (not minimal) in following test:
+// #[test_case(&hex!("02 04 ff ff ff ff"), Err(BerError::IntegerNegative) ; "u32-long2-neg")]
 #[test_case(&hex!("02 06 00 00 01 23 45 67"), Err(BerError::DerConstraintFailed) ; "u32-long-leading-zeros")]
 #[test_case(&hex!("02 05 01 23 45 67 01"), Err(BerError::IntegerTooLarge) ; "u32 too large")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u32 too large 2")]
@@ -558,6 +559,7 @@ fn tc_der_u32(i: &[u8], out: Result<u32, BerError>) {
 #[test_case(&hex!("02 01 80"), Ok(-128) ; "i32-neg128")]
 #[test_case(&hex!("02 02 ff 7f"), Ok(-129) ; "i32-neg129")]
 #[test_case(&hex!("02 02 00 ff"), Ok(255) ; "i32-255")]
+#[test_case(&hex!("02 02 ff f0"), Err(BerError::DerConstraintFailed) ; "i32-neg-leading-ff")]
 fn tc_der_i32(i: &[u8], out: Result<i32, BerError>) {
     let res = parse_der_i32(i);
     match out {

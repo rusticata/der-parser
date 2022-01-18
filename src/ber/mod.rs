@@ -54,6 +54,7 @@ mod print;
 #[cfg(feature = "serialize")]
 mod serialize;
 mod tagged;
+mod wrap_any;
 
 pub use crate::ber::ber::*;
 pub use crate::ber::multi::*;
@@ -62,6 +63,7 @@ pub use crate::ber::print::*;
 #[cfg(feature = "serialize")]
 pub use crate::ber::serialize::*;
 pub use crate::ber::tagged::*;
+pub use crate::ber::wrap_any::*;
 
 pub mod compat;
 

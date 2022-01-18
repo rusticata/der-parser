@@ -9,8 +9,8 @@ use test_case::test_case;
 #[cfg(feature = "bigint")]
 use num_bigint::{BigInt, BigUint, Sign};
 
-#[test_case(&hex!("01 01 00"), Some(false) ; "val true")]
-#[test_case(&hex!("01 01 ff"), Some(true) ; "val false")]
+#[test_case(&hex!("01 01 00"), Some(false) ; "val false")]
+#[test_case(&hex!("01 01 ff"), Some(true) ; "val true")]
 #[test_case(&hex!("01 01 7f"), Some(true) ; "true not ff")]
 #[test_case(&hex!("01 02 00 00"), None ; "invalid length")]
 #[test_case(&hex!("01 01"), None ; "incomplete")]
@@ -144,6 +144,8 @@ fn test_ber_int() {
 #[test_case(&hex!("02 02 01 23"), Ok(0x123) ; "u32-0x123")]
 #[test_case(&hex!("02 04 01 23 45 67"), Ok(0x0123_4567) ; "u32-long-ok")]
 #[test_case(&hex!("02 05 00 ff ff ff ff"), Ok(0xffff_ffff) ; "u32-long2-ok")]
+#[test_case(&hex!("02 04 ff ff ff ff"), Err(BerError::IntegerNegative) ; "u32-long2-neg")]
+#[test_case(&hex!("02 06 ff ff ff ff ff ff"), Err(BerError::IntegerNegative) ; "u32-long3-neg")]
 #[test_case(&hex!("02 06 00 00 01 23 45 67"), Ok(0x0123_4567) ; "u32-long-leading-zeros-ok")]
 #[test_case(&hex!("02 05 01 23 45 67 01"), Err(BerError::IntegerTooLarge) ; "u32 too large")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Err(BerError::IntegerTooLarge) ; "u32 too large 2")]
@@ -183,6 +185,7 @@ fn tc_ber_u64(i: &[u8], out: Result<u64, BerError>) {
 #[test_case(&hex!("02 01 ff"), Ok(-1) ; "i64-neg1")]
 #[test_case(&hex!("02 01 80"), Ok(-128) ; "i64-neg128")]
 #[test_case(&hex!("02 02 ff 7f"), Ok(-129) ; "i64-neg129")]
+#[test_case(&hex!("02 04 ff ff ff ff"), Ok(-1) ; "i64-long-neg")]
 #[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Some(Tag(2)), Tag(3))) ; "invalid tag")]
 fn tc_ber_i64(i: &[u8], out: Result<i64, BerError>) {
     let res = parse_ber_i64(i);
@@ -466,7 +469,7 @@ fn test_ber_relativeoid() {
 fn test_ber_bmpstring() {
     let empty = &b""[..];
     let bytes = hex!("1e 08 00 55 00 73 00 65 00 72");
-    let expected = BerObject::from_obj(BerObjectContent::BmpString(b"\x00U\x00s\x00e\x00r"));
+    let expected = BerObject::from_obj(BerObjectContent::BmpString("\x00U\x00s\x00e\x00r"));
     assert_eq!(parse_ber_bmpstring(&bytes), Ok((empty, expected)));
 }
 
