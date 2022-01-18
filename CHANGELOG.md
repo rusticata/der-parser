@@ -41,6 +41,7 @@ MSRV: The minimum supported rust version is now *1.53*.
 - Keep `InvalidTag` for tags with invalid form (length/encoding/etc.)
 - Use `displaydoc` for `BerError`
 - Parsing an indefinite length in DER now raises `IndefiniteLengthUnexpected`
+- Error: when a DER constraint fails, store constraint identifier
 
 `DER`:
 - `DerClass` and `DerTag` have been deprecated. Use `Class` and `Tag` instead.

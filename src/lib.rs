@@ -266,6 +266,8 @@ pub use nom::IResult;
 #[doc(hidden)]
 pub use rusticata_macros::custom_check;
 
+pub(crate) use asn1_rs::der_constraint_fail_if;
+
 pub use asn1_rs::Oid;
 
 /// Procedural macro to get encoded oids, see the [oid module](oid/index.html).

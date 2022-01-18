@@ -523,7 +523,9 @@ where
         let (i, data) = match hdr.length() {
             Length::Definite(len) => take(len)(i)?,
             Length::Indefinite => {
-                return Err(Err::Error(BerError::DerConstraintFailed.into()));
+                return Err(Err::Error(
+                    BerError::DerConstraintFailed(DerConstraint::IndefiniteLength).into(),
+                ));
             }
         };
         let (_rest, v) = f(data, hdr)?;
