@@ -3,8 +3,7 @@ use crate::ber::*;
 use crate::error::*;
 use asn1_rs::{FromBer, Tag};
 use nom::bytes::streaming::take;
-use nom::{Err, Needed, Offset};
-use rusticata_macros::custom_check;
+use nom::{Err, Offset};
 
 /// Default maximum recursion limit
 pub const MAX_RECURSION: usize = 50;
@@ -69,20 +68,6 @@ pub(crate) fn ber_get_object_content<'a>(
     }
 }
 
-/// Try to parse input bytes as u64
-#[inline]
-pub(crate) fn bytes_to_u64(s: &[u8]) -> Result<u64, BerError> {
-    let mut u: u64 = 0;
-    for &c in s {
-        if u & 0xff00_0000_0000_0000 != 0 {
-            return Err(BerError::IntegerTooLarge);
-        }
-        u <<= 8;
-        u |= u64::from(c);
-    }
-    Ok(u)
-}
-
 /// Try to parse an input bit string as u64.
 ///
 /// Note: this is for the primitive BER/DER encoding only, the
@@ -114,52 +99,6 @@ pub(crate) fn bitstring_to_u64(
     Ok(resulting_integer >> padding_bits)
 }
 
-pub(crate) fn parse_identifier(i: &[u8]) -> BerResult<(u8, u8, u32, &[u8])> {
-    if i.is_empty() {
-        Err(Err::Incomplete(Needed::new(1)))
-    } else {
-        let a = i[0] >> 6;
-        let b = if i[0] & 0b0010_0000 != 0 { 1 } else { 0 };
-        let mut c = u32::from(i[0] & 0b0001_1111);
-
-        let mut tag_byte_count = 1;
-
-        if c == 0x1f {
-            c = 0;
-            loop {
-                // Make sure we don't read past the end of our data.
-                custom_check!(i, tag_byte_count >= i.len(), BerError::InvalidTag)?;
-
-                // With tag defined as u32 the most we can fit in is four tag bytes.
-                // (X.690 doesn't actually specify maximum tag width.)
-                custom_check!(i, tag_byte_count > 5, BerError::InvalidTag)?;
-
-                c = (c << 7) | (u32::from(i[tag_byte_count]) & 0x7f);
-                let done = i[tag_byte_count] & 0x80 == 0;
-                tag_byte_count += 1;
-                if done {
-                    break;
-                }
-            }
-        }
-
-        let (raw_tag, rem) = i.split_at(tag_byte_count);
-
-        Ok((rem, (a, b, c, raw_tag)))
-    }
-}
-
-/// Return the MSB and the rest of the first byte, or an error
-pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
-    if i.is_empty() {
-        Err(Err::Incomplete(Needed::new(1)))
-    } else {
-        let a = i[0] >> 7;
-        let b = i[0] & 0b0111_1111;
-        Ok((&i[1..], (a, b)))
-    }
-}
-
 /// Read an object header
 ///
 /// ### Example
@@ -174,48 +113,9 @@ pub(crate) fn parse_ber_length_byte(i: &[u8]) -> BerResult<(u8, u8)> {
 /// assert_eq!(hdr.tag(), Tag::Integer);
 /// assert_eq!(hdr.length(), Length::Definite(3));
 /// ```
+#[inline]
 pub fn ber_read_element_header(i: &[u8]) -> BerResult<Header> {
-    let (i1, el) = parse_identifier(i)?;
-    let class = match Class::try_from(el.0) {
-        Ok(c) => c,
-        Err(_) => unreachable!(), // Cannot fail, we have read exactly 2 bits
-    };
-    let (i2, len) = parse_ber_length_byte(i1)?;
-    let (i3, len) = match (len.0, len.1) {
-        (0, l1) => {
-            // Short form: MSB is 0, the rest encodes the length (which can be 0) (8.1.3.4)
-            (i2, Length::Definite(usize::from(l1)))
-        }
-        (_, 0) => {
-            // Indefinite form: MSB is 1, the rest is 0 (8.1.3.6)
-            // If encoding is primitive, definite form shall be used (8.1.3.2)
-            if el.1 == 0 {
-                return Err(Err::Error(BerError::ConstructExpected));
-            }
-            (i2, Length::Indefinite)
-        }
-        (_, l1) => {
-            // if len is 0xff -> error (8.1.3.5)
-            if l1 == 0b0111_1111 {
-                return Err(::nom::Err::Error(BerError::InvalidTag));
-            }
-            let (i3, llen) = take(l1)(i2)?;
-            match bytes_to_u64(llen) {
-                Ok(l) => {
-                    let l =
-                        usize::try_from(l).or(Err(::nom::Err::Error(BerError::InvalidLength)))?;
-                    (i3, Length::Definite(l))
-                }
-                Err(_) => {
-                    return Err(::nom::Err::Error(BerError::InvalidTag));
-                }
-            }
-        }
-    };
-    let constructed = el.1 != 0;
-    let hdr =
-        Header::new(class, constructed, Tag(el.2), len).with_raw_tag(Some(Cow::Borrowed(el.3)));
-    Ok((i3, hdr))
+    Header::from_ber(i)
 }
 
 /// Parse the next bytes as the *content* of a BER object.

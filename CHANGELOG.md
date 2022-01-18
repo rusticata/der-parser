@@ -37,9 +37,10 @@ MSRV: The minimum supported rust version is now *1.53*.
 `BerError`:
 
 - Add error types `UnexpectedClass` and `UnexpectedTag`
-- Store expected and found item in error to help debugginh
+- Store expected and found item in error to help debugging
 - Keep `InvalidTag` for tags with invalid form (length/encoding/etc.)
 - Use `displaydoc` for `BerError`
+- Parsing an indefinite length in DER now raises `IndefiniteLengthUnexpected`
 
 `DER`:
 - `DerClass` and `DerTag` have been deprecated. Use `Class` and `Tag` instead.

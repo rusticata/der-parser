@@ -1,7 +1,6 @@
 use crate::ber::*;
 use crate::der::*;
 use crate::error::*;
-use alloc::borrow::Cow;
 use asn1_rs::{Any, FromDer, Tag};
 use nom::bytes::streaming::take;
 use nom::number::streaming::be_u8;
@@ -616,46 +615,7 @@ fn der_read_content_bitstring(i: &[u8], len: usize) -> BerResult<DerObjectConten
 }
 
 /// Read an object header (DER)
+#[inline]
 pub fn der_read_element_header(i: &[u8]) -> BerResult<Header> {
-    let (i1, el) = parse_identifier(i)?;
-    let class = match Class::try_from(el.0) {
-        Ok(c) => c,
-        Err(_) => unreachable!(), // Cannot fail, we have read exactly 2 bits
-    };
-    let (i2, len) = parse_ber_length_byte(i1)?;
-    let (i3, len) = match (len.0, len.1) {
-        (0, l1) => {
-            // Short form: MSB is 0, the rest encodes the length (which can be 0) (8.1.3.4)
-            (i2, Length::Definite(usize::from(l1)))
-        }
-        (_, 0) => {
-            // Indefinite form is not allowed in DER (10.1)
-            return Err(::nom::Err::Error(BerError::DerConstraintFailed));
-        }
-        (_, l1) => {
-            // if len is 0xff -> error (8.1.3.5)
-            if l1 == 0b0111_1111 {
-                return Err(::nom::Err::Error(BerError::InvalidTag));
-            }
-            // DER(9.1) if len is 0 (indefinite form), obj must be constructed
-            der_constraint_fail_if!(&i[1..], len.1 == 0 && el.1 != 1);
-            let (i3, llen) = take(l1)(i2)?;
-            match bytes_to_u64(llen) {
-                Ok(l) => {
-                    // DER: should have been encoded in short form (< 127)
-                    der_constraint_fail_if!(i, l < 127);
-                    let l =
-                        usize::try_from(l).or(Err(::nom::Err::Error(BerError::InvalidLength)))?;
-                    (i3, Length::Definite(l))
-                }
-                Err(_) => {
-                    return Err(::nom::Err::Error(BerError::InvalidTag));
-                }
-            }
-        }
-    };
-    let constructed = el.1 != 0;
-    let hdr =
-        Header::new(class, constructed, Tag(el.2), len).with_raw_tag(Some(Cow::Borrowed(el.3)));
-    Ok((i3, hdr))
+    Header::from_der(i)
 }

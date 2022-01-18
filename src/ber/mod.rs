@@ -69,7 +69,6 @@ pub mod compat;
 
 pub use asn1_rs::{Class, Header, Length, Tag};
 
-use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use core::convert::{Into, TryFrom};
+use core::convert::Into;
