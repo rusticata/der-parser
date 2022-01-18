@@ -2,8 +2,7 @@ use crate::ber::*;
 use crate::der::*;
 use crate::error::*;
 use alloc::borrow::Cow;
-use asn1_rs::Any;
-use asn1_rs::Tag;
+use asn1_rs::{Any, FromDer, Tag};
 use nom::bytes::streaming::take;
 use nom::number::streaming::be_u8;
 use nom::{Err, Needed};
@@ -376,9 +375,7 @@ where
 /// integer type.
 #[inline]
 pub fn parse_der_i32(i: &[u8]) -> BerResult<i32> {
-    let (rem, der) = parse_der_integer(i)?;
-    let int = der.as_i32().map_err(nom::Err::Error)?;
-    Ok((rem, int))
+    <i32>::from_der(i)
 }
 
 /// Parse DER object and try to decode it as a 64-bits signed integer
@@ -387,9 +384,7 @@ pub fn parse_der_i32(i: &[u8]) -> BerResult<i32> {
 /// integer type.
 #[inline]
 pub fn parse_der_i64(i: &[u8]) -> BerResult<i64> {
-    let (rem, der) = parse_der_integer(i)?;
-    let int = der.as_i64().map_err(nom::Err::Error)?;
-    Ok((rem, int))
+    <i64>::from_der(i)
 }
 
 /// Parse DER object and try to decode it as a 32-bits unsigned integer
@@ -397,9 +392,7 @@ pub fn parse_der_i64(i: &[u8]) -> BerResult<i64> {
 /// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
 /// integer type.
 pub fn parse_der_u32(i: &[u8]) -> BerResult<u32> {
-    let (rem, der) = parse_der_integer(i)?;
-    let int = der.as_u32().map_err(nom::Err::Error)?;
-    Ok((rem, int))
+    <u32>::from_der(i)
 }
 
 /// Parse DER object and try to decode it as a 64-bits unsigned integer
@@ -407,9 +400,7 @@ pub fn parse_der_u32(i: &[u8]) -> BerResult<u32> {
 /// Return `IntegerTooLarge` if object is an integer, but can not be represented in the target
 /// integer type.
 pub fn parse_der_u64(i: &[u8]) -> BerResult<u64> {
-    let (rem, der) = parse_der_integer(i)?;
-    let int = der.as_u64().map_err(nom::Err::Error)?;
-    Ok((rem, int))
+    <u64>::from_der(i)
 }
 
 /// Parse DER object and get content as slice

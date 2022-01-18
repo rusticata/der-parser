@@ -63,13 +63,13 @@ pub enum BerObjectContent<'a> {
     IA5String(&'a str),
     /// UTF8String: decoded string
     UTF8String(&'a str),
-    /// T61String: raw object bytes
-    T61String(&'a [u8]),
-    /// VideotexString: raw object bytes
-    VideotexString(&'a [u8]),
+    /// T61String: decoded string
+    T61String(&'a str),
+    /// VideotexString: decoded string
+    VideotexString(&'a str),
 
-    /// BmpString: raw object bytes
-    BmpString(&'a [u8]),
+    /// BmpString: decoded string
+    BmpString(&'a str),
     /// UniversalString: raw object bytes
     UniversalString(&'a [u8]),
 
@@ -83,12 +83,12 @@ pub enum BerObjectContent<'a> {
     /// GeneralizedTime: decoded string
     GeneralizedTime(&'a str),
 
-    /// Object descriptor: raw object bytes
-    ObjectDescriptor(&'a [u8]),
-    /// GraphicString: raw object bytes
-    GraphicString(&'a [u8]),
-    /// GeneralString: raw object bytes
-    GeneralString(&'a [u8]),
+    /// Object descriptor: decoded string
+    ObjectDescriptor(&'a str),
+    /// GraphicString: decoded string
+    GraphicString(&'a str),
+    /// GeneralString: decoded string
+    GeneralString(&'a str),
 
     /// Optional object
     Optional(Option<Box<BerObject<'a>>>),
@@ -294,8 +294,7 @@ impl<'a> BerObject<'a> {
     /// Attempt to get the content from a DER object, as a str.
     /// This can fail if the object does not contain a string type.
     ///
-    /// Only NumericString, VisibleString, UTCTime, GeneralizedTime,
-    /// PrintableString, UTF8String and IA5String are considered here. Other
+    /// Only some string types are considered here. Other
     /// string types can be read using `as_slice`.
     pub fn as_str(&self) -> Result<&'a str, BerError> {
         self.content.as_str()
@@ -589,20 +588,20 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::NumericString(s) |
             BerObjectContent::GeneralizedTime(s) |
             BerObjectContent::UTCTime(s) |
+            BerObjectContent::BmpString(s) |
             BerObjectContent::VisibleString(s) |
             BerObjectContent::PrintableString(s) |
+            BerObjectContent::GeneralString(s) |
+            BerObjectContent::ObjectDescriptor(s) |
+            BerObjectContent::GraphicString(s) |
+            BerObjectContent::T61String(s) |
+            BerObjectContent::VideotexString(s) |
             BerObjectContent::UTF8String(s) |
             BerObjectContent::IA5String(s) => Ok(s.as_ref()),
             BerObjectContent::Integer(s) |
             BerObjectContent::BitString(_,BitStringObject{data:s}) |
             BerObjectContent::OctetString(s) |
-            BerObjectContent::T61String(s) |
-            BerObjectContent::VideotexString(s) |
-            BerObjectContent::BmpString(s) |
-            BerObjectContent::UniversalString(s) |
-            BerObjectContent::ObjectDescriptor(s) |
-            BerObjectContent::GraphicString(s) |
-            BerObjectContent::GeneralString(s) => Ok(s),
+            BerObjectContent::UniversalString(s) => Ok(s),
             BerObjectContent::Unknown(ref any) => Ok(any.data),
             _ => Err(BerError::BerTypeError),
         }
@@ -614,8 +613,14 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::NumericString(s) |
             BerObjectContent::GeneralizedTime(s) |
             BerObjectContent::UTCTime(s) |
+            BerObjectContent::BmpString(s) |
             BerObjectContent::VisibleString(s) |
             BerObjectContent::PrintableString(s) |
+            BerObjectContent::GeneralString(s) |
+            BerObjectContent::ObjectDescriptor(s) |
+            BerObjectContent::GraphicString(s) |
+            BerObjectContent::T61String(s) |
+            BerObjectContent::VideotexString(s) |
             BerObjectContent::UTF8String(s) |
             BerObjectContent::IA5String(s) => Ok(s),
             _ => Err(BerError::BerTypeError),

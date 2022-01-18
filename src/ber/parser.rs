@@ -1,8 +1,11 @@
+use crate::ber::wrap_any::parse_ber_any_r;
 use crate::ber::*;
 use crate::error::*;
 use crate::oid::*;
-use asn1_rs::Any;
-use asn1_rs::Tag;
+use asn1_rs::BmpString;
+use asn1_rs::TeletexString;
+use asn1_rs::VideotexString;
+use asn1_rs::{FromBer, GeneralString, GraphicString, ObjectDescriptor, Tag, TestValidCharset};
 use nom::bytes::streaming::take;
 use nom::combinator::{complete, map, verify};
 use nom::multi::{many0, many_till};
@@ -405,12 +408,22 @@ fn ber_read_content_printablestring<'a>(
 
 #[inline]
 fn ber_read_content_t61string(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::T61String)(i)
+    let (rem, bytes) = take(len)(i)?;
+    <TeletexString>::test_valid_charset(bytes)?;
+    let s = core::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(BerObjectContent::T61String)?;
+    Ok((rem, s))
 }
 
 #[inline]
 fn ber_read_content_videotexstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::VideotexString)(i)
+    let (rem, bytes) = take(len)(i)?;
+    <VideotexString>::test_valid_charset(bytes)?;
+    let s = core::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(BerObjectContent::VideotexString)?;
+    Ok((rem, s))
 }
 
 fn ber_read_content_ia5string<'a>(i: &'a [u8], len: usize) -> BerResult<BerObjectContent<'a>> {
@@ -461,22 +474,42 @@ fn ber_read_content_generalizedtime<'a>(
 
 #[inline]
 fn ber_read_content_objectdescriptor(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::ObjectDescriptor)(i)
+    let (rem, bytes) = take(len)(i)?;
+    <ObjectDescriptor>::test_valid_charset(bytes)?;
+    let s = core::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(BerObjectContent::ObjectDescriptor)?;
+    Ok((rem, s))
 }
 
 #[inline]
 fn ber_read_content_graphicstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::GraphicString)(i)
+    let (rem, bytes) = take(len)(i)?;
+    <GraphicString>::test_valid_charset(bytes)?;
+    let s = core::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(BerObjectContent::GraphicString)?;
+    Ok((rem, s))
 }
 
 #[inline]
 fn ber_read_content_generalstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::GeneralString)(i)
+    let (rem, bytes) = take(len)(i)?;
+    <GeneralString>::test_valid_charset(bytes)?;
+    let s = core::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(BerObjectContent::GeneralString)?;
+    Ok((rem, s))
 }
 
 #[inline]
 fn ber_read_content_bmpstring(i: &[u8], len: usize) -> BerResult<BerObjectContent> {
-    map(take(len), BerObjectContent::BmpString)(i)
+    let (rem, bytes) = take(len)(i)?;
+    <BmpString>::test_valid_charset(bytes)?;
+    let s = core::str::from_utf8(bytes)
+        .map_err(|_| Err::Error(BerError::StringInvalidCharset))
+        .map(BerObjectContent::BmpString)?;
+    Ok((rem, s))
 }
 
 #[inline]
@@ -514,177 +547,178 @@ pub fn ber_read_element_content_as(
     constructed: bool,
     max_depth: usize,
 ) -> BerResult<BerObjectContent> {
-    if let Length::Definite(l) = length {
-        custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
-        if i.len() < l {
-            return Err(Err::Incomplete(Needed::new(l)));
-        }
-    }
-    match tag {
-        // 0x00 end-of-content
-        Tag::EndOfContent => {
-            custom_check!(i, length != Length::Definite(0), BerError::InvalidLength)?;
-            ber_read_content_eoc(i)
-        }
-        // 0x01 bool
-        Tag::Boolean => {
-            let len = length.definite().map_err(BerError::from)?;
-            custom_check!(i, len != 1, BerError::InvalidLength)?;
-            ber_read_content_bool(i)
-        }
-        // 0x02
-        Tag::Integer => {
-            custom_check!(i, constructed, BerError::ConstructUnexpected)?;
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_integer(i, len)
-        }
-        // 0x03: bitstring
-        Tag::BitString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.6.3)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_bitstring(i, len)
-        }
-        // 0x04: octetstring
-        Tag::OctetString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.7.1)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_octetstring(i, len)
-        }
-        // 0x05: null
-        Tag::Null => {
-            custom_check!(i, constructed, BerError::ConstructUnexpected)?;
-            let len = length.definite().map_err(BerError::from)?;
-            custom_check!(i, len != 0, BerError::InvalidLength)?;
-            ber_read_content_null(i)
-        }
-        // 0x06: object identifier
-        Tag::Oid => {
-            custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.19.1
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_oid(i, len)
-        }
-        // 0x07: object descriptor - Alias for GraphicString with a different
-        // implicit tag, see below
-        Tag::ObjectDescriptor => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_objectdescriptor(i, len)
-        }
-        // 0x0a: enumerated
-        Tag::Enumerated => {
-            custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.4
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_enum(i, len)
-        }
-        // 0x0c: UTF8String - Unicode encoded with the UTF-8 charset (ISO/IEC
-        // 10646-1, Annex D)
-        Tag::Utf8String => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_utf8string(i, len)
-        }
-        // 0x0d: relative object identified
-        Tag::RelativeOid => {
-            custom_check!(i, constructed, BerError::ConstructUnexpected)?;
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_relativeoid(i, len)
-        }
-        // 0x10: sequence
-        Tag::Sequence => {
-            custom_check!(i, !constructed, BerError::ConstructExpected)?;
-            ber_read_content_sequence(i, length, max_depth)
-        }
-        // 0x11: set
-        Tag::Set => {
-            custom_check!(i, !constructed, BerError::ConstructExpected)?;
-            ber_read_content_set(i, length, max_depth)
-        }
-        // 0x12: numericstring - ASCII string with digits an spaces only
-        Tag::NumericString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_numericstring(i, len)
-        }
-        // 0x13: printablestring - ASCII string with certain printable
-        // characters only (specified in Table 10 of X.680)
-        Tag::PrintableString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_printablestring(i, len)
-        }
-        // 0x14: t61string - ISO 2022 string with a Teletex (T.61) charset,
-        // ASCII is possible but only when explicit escaped, as by default
-        // the G0 character range (0x20-0x7f) will match the graphic character
-        // set. https://en.wikipedia.org/wiki/ITU_T.61
-        Tag::T61String => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_t61string(i, len)
-        }
-        // 0x15: videotexstring - ISO 2022 string with a Videotex (T.100/T.101)
-        // charset, excluding ASCII. https://en.wikipedia.org/wiki/Videotex_character_set
-        Tag::VideotexString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_videotexstring(i, len)
-        }
-        // 0x16: ia5string - ASCII string
-        Tag::Ia5String => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_ia5string(i, len)
-        }
-        // 0x17: utctime - Alias for a VisibleString with a different implicit
-        // tag, see below
-        Tag::UtcTime => {
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_utctime(i, len)
-        }
-        // 0x18: generalizedtime - Alias for a VisibleString with a different
-        // implicit tag, see below
-        Tag::GeneralizedTime => {
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_generalizedtime(i, len)
-        }
-        // 0x19: graphicstring - Generic ISO 2022 container with explicit
-        // escape sequences, without control characters
-        Tag::GraphicString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_graphicstring(i, len)
-        }
-        // 0x1a: visiblestring - ASCII string with no control characters except
-        // SPACE
-        Tag::VisibleString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_visiblestring(i, len)
-        }
-        // 0x1b: generalstring - Generic ISO 2022 container with explicit
-        // escape sequences
-        Tag::GeneralString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_generalstring(i, len)
-        }
-        // 0x1e: bmpstring - Unicode encoded with the UCS-2 big-endian charset
-        // (ISO/IEC 10646-1, section 13.1), restricted to the BMP (Basic
-        // Multilingual Plane) except certain control cahracters
-        Tag::BmpString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_bmpstring(i, len)
-        }
-        // 0x1c: universalstring - Unicode encoded with the UCS-4 big-endian
-        // charset (ISO/IEC 10646-1, section 13.2)
-        Tag::UniversalString => {
-            custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
-            let len = length.definite().map_err(BerError::from)?;
-            ber_read_content_universalstring(i, len)
-        }
-        // all unknown values
-        _ => Err(Err::Error(BerError::UnknownTag(tag.0))),
-    }
+    try_read_berobjectcontent_as(i, tag, length, constructed, max_depth)
+    // if let Length::Definite(l) = length {
+    //     custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
+    //     if i.len() < l {
+    //         return Err(Err::Incomplete(Needed::new(l)));
+    //     }
+    // }
+    // match tag {
+    //     // 0x00 end-of-content
+    //     Tag::EndOfContent => {
+    //         custom_check!(i, length != Length::Definite(0), BerError::InvalidLength)?;
+    //         ber_read_content_eoc(i)
+    //     }
+    //     // 0x01 bool
+    //     Tag::Boolean => {
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         custom_check!(i, len != 1, BerError::InvalidLength)?;
+    //         ber_read_content_bool(i)
+    //     }
+    //     // 0x02
+    //     Tag::Integer => {
+    //         custom_check!(i, constructed, BerError::ConstructUnexpected)?;
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_integer(i, len)
+    //     }
+    //     // 0x03: bitstring
+    //     Tag::BitString => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.6.3)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_bitstring(i, len)
+    //     }
+    //     // 0x04: octetstring
+    //     Tag::OctetString => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.7.1)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_octetstring(i, len)
+    //     }
+    //     // 0x05: null
+    //     Tag::Null => {
+    //         custom_check!(i, constructed, BerError::ConstructUnexpected)?;
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         custom_check!(i, len != 0, BerError::InvalidLength)?;
+    //         ber_read_content_null(i)
+    //     }
+    //     // 0x06: object identifier
+    //     Tag::Oid => {
+    //         custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.19.1
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_oid(i, len)
+    //     }
+    //     // 0x07: object descriptor - Alias for GraphicString with a different
+    //     // implicit tag, see below
+    //     Tag::ObjectDescriptor => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_objectdescriptor(i, len)
+    //     }
+    //     // 0x0a: enumerated
+    //     Tag::Enumerated => {
+    //         custom_check!(i, constructed, BerError::ConstructUnexpected)?; // forbidden in 8.4
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_enum(i, len)
+    //     }
+    //     // 0x0c: UTF8String - Unicode encoded with the UTF-8 charset (ISO/IEC
+    //     // 10646-1, Annex D)
+    //     Tag::Utf8String => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_utf8string(i, len)
+    //     }
+    //     // 0x0d: relative object identified
+    //     Tag::RelativeOid => {
+    //         custom_check!(i, constructed, BerError::ConstructUnexpected)?;
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_relativeoid(i, len)
+    //     }
+    //     // 0x10: sequence
+    //     Tag::Sequence => {
+    //         custom_check!(i, !constructed, BerError::ConstructExpected)?;
+    //         ber_read_content_sequence(i, length, max_depth)
+    //     }
+    //     // 0x11: set
+    //     Tag::Set => {
+    //         custom_check!(i, !constructed, BerError::ConstructExpected)?;
+    //         ber_read_content_set(i, length, max_depth)
+    //     }
+    //     // 0x12: numericstring - ASCII string with digits an spaces only
+    //     Tag::NumericString => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_numericstring(i, len)
+    //     }
+    //     // 0x13: printablestring - ASCII string with certain printable
+    //     // characters only (specified in Table 10 of X.680)
+    //     Tag::PrintableString => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_printablestring(i, len)
+    //     }
+    //     // 0x14: t61string - ISO 2022 string with a Teletex (T.61) charset,
+    //     // ASCII is possible but only when explicit escaped, as by default
+    //     // the G0 character range (0x20-0x7f) will match the graphic character
+    //     // set. https://en.wikipedia.org/wiki/ITU_T.61
+    //     Tag::T61String => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_t61string(i, len)
+    //     }
+    //     // 0x15: videotexstring - ISO 2022 string with a Videotex (T.100/T.101)
+    //     // charset, excluding ASCII. https://en.wikipedia.org/wiki/Videotex_character_set
+    //     Tag::VideotexString => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_videotexstring(i, len)
+    //     }
+    //     // 0x16: ia5string - ASCII string
+    //     Tag::Ia5String => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_ia5string(i, len)
+    //     }
+    //     // 0x17: utctime - Alias for a VisibleString with a different implicit
+    //     // tag, see below
+    //     Tag::UtcTime => {
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_utctime(i, len)
+    //     }
+    //     // 0x18: generalizedtime - Alias for a VisibleString with a different
+    //     // implicit tag, see below
+    //     Tag::GeneralizedTime => {
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_generalizedtime(i, len)
+    //     }
+    //     // 0x19: graphicstring - Generic ISO 2022 container with explicit
+    //     // escape sequences, without control characters
+    //     Tag::GraphicString => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_graphicstring(i, len)
+    //     }
+    //     // 0x1a: visiblestring - ASCII string with no control characters except
+    //     // SPACE
+    //     Tag::VisibleString => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_visiblestring(i, len)
+    //     }
+    //     // 0x1b: generalstring - Generic ISO 2022 container with explicit
+    //     // escape sequences
+    //     Tag::GeneralString => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_generalstring(i, len)
+    //     }
+    //     // 0x1e: bmpstring - Unicode encoded with the UCS-2 big-endian charset
+    //     // (ISO/IEC 10646-1, section 13.1), restricted to the BMP (Basic
+    //     // Multilingual Plane) except certain control cahracters
+    //     Tag::BmpString => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_bmpstring(i, len)
+    //     }
+    //     // 0x1c: universalstring - Unicode encoded with the UCS-4 big-endian
+    //     // charset (ISO/IEC 10646-1, section 13.2)
+    //     Tag::UniversalString => {
+    //         custom_check!(i, constructed, BerError::Unsupported)?; // XXX valid in BER (8.21)
+    //         let len = length.definite().map_err(BerError::from)?;
+    //         ber_read_content_universalstring(i, len)
+    //     }
+    //     // all unknown values
+    //     _ => Err(Err::Error(BerError::UnknownTag(tag.0))),
+    // }
 }
 
 /// Parse the next bytes as the content of a BER object (combinator, header reference)
@@ -1096,9 +1130,7 @@ where
 /// integer type.
 #[inline]
 pub fn parse_ber_i32(i: &[u8]) -> BerResult<i32> {
-    let (rem, ber) = parse_ber_integer(i)?;
-    let int = ber.as_i32().map_err(nom::Err::Error)?;
-    Ok((rem, int))
+    <i32>::from_ber(i)
 }
 
 /// Parse BER object and try to decode it as a 64-bits signed integer
@@ -1107,9 +1139,7 @@ pub fn parse_ber_i32(i: &[u8]) -> BerResult<i32> {
 /// integer type.
 #[inline]
 pub fn parse_ber_i64(i: &[u8]) -> BerResult<i64> {
-    let (rem, ber) = parse_ber_integer(i)?;
-    let int = ber.as_i64().map_err(nom::Err::Error)?;
-    Ok((rem, int))
+    <i64>::from_ber(i)
 }
 
 /// Parse BER object and try to decode it as a 32-bits unsigned integer
@@ -1118,9 +1148,7 @@ pub fn parse_ber_i64(i: &[u8]) -> BerResult<i64> {
 /// integer type.
 #[inline]
 pub fn parse_ber_u32(i: &[u8]) -> BerResult<u32> {
-    let (rem, ber) = parse_ber_integer(i)?;
-    let int = ber.as_u32().map_err(nom::Err::Error)?;
-    Ok((rem, int))
+    <u32>::from_ber(i)
 }
 
 /// Parse BER object and try to decode it as a 64-bits unsigned integer
@@ -1129,9 +1157,7 @@ pub fn parse_ber_u32(i: &[u8]) -> BerResult<u32> {
 /// integer type.
 #[inline]
 pub fn parse_ber_u64(i: &[u8]) -> BerResult<u64> {
-    let (rem, ber) = parse_ber_integer(i)?;
-    let int = ber.as_u64().map_err(nom::Err::Error)?;
-    Ok((rem, int))
+    <u64>::from_ber(i)
 }
 
 /// Parse BER object and get content as slice
@@ -1164,39 +1190,9 @@ pub(crate) fn r_parse_ber(max_depth: usize) -> impl Fn(&[u8]) -> BerResult {
 ///
 /// assert_eq!(obj.header.tag(), Tag::Integer);
 /// ```
+#[inline]
 pub fn parse_ber_recursive(i: &[u8], max_depth: usize) -> BerResult {
-    custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
-    let (rem, hdr) = ber_read_element_header(i)?;
-    if let Length::Definite(l) = hdr.length() {
-        custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
-    }
-    match hdr.class() {
-        Class::Universal => (),
-        _ => {
-            let (rem, data) = ber_get_object_content(rem, &hdr, max_depth)?;
-            let any = Any::new(hdr.clone(), data);
-            let content = BerObjectContent::Unknown(any);
-            let obj = BerObject::from_header_and_content(hdr, content);
-            return Ok((rem, obj));
-        }
-    }
-    match ber_read_element_content_as(
-        rem,
-        hdr.tag(),
-        hdr.length(),
-        hdr.is_constructed(),
-        max_depth,
-    ) {
-        Ok((rem, content)) => Ok((rem, BerObject::from_header_and_content(hdr, content))),
-        Err(Err::Error(BerError::UnknownTag(_))) => {
-            let (rem, data) = ber_get_object_content(rem, &hdr, max_depth)?;
-            let any = Any::new(hdr.clone(), data);
-            let content = BerObjectContent::Unknown(any);
-            let obj = BerObject::from_header_and_content(hdr, content);
-            Ok((rem, obj))
-        }
-        Err(e) => Err(e),
-    }
+    parse_ber_any_r(i, max_depth)
 }
 
 /// Parse BER object recursively

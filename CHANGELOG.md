@@ -31,6 +31,7 @@ MSRV: The minimum supported rust version is now *1.53*.
 `BerObjectContent`:
 - `Unknown` variant now contains an `Any` object, with both the header and object content
 - `Private` variant has been merged into `Unknown`
+- `BmpString`, `GeneralString`, `GraphicString`, `T61String`, `VideotexString` and `ObjectDescriptor` are now decoded
 
 `BerError`:
 
