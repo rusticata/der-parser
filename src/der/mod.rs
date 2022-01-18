@@ -66,7 +66,7 @@ pub use crate::der::tagged::*;
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use core::convert::{Into, TryFrom};
+use core::convert::Into;
 
 /// DER Object class of tag (same as `BerClass`)
 #[deprecated(since = "7.0.0", note = "Use `Class` instead")]

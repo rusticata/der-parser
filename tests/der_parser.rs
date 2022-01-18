@@ -73,14 +73,15 @@ fn test_der_bitstring_primitive() {
         parse_der_bitstring(bytes),
         Err(Err::Error(BerError::DerConstraintFailed))
     );
-    //
-    // long form of length (invalid, < 127)
-    //
-    let bytes = &[0x03, 0x81, 0x04, 0x06, 0x6e, 0x5d, 0xc0];
-    assert_eq!(
-        parse_der_bitstring(bytes),
-        Err(Err::Error(BerError::DerConstraintFailed))
-    );
+    // // XXX test disabled: the parser is laxist here, since *many* implementations do
+    // // XXX not respect this constraint!
+    // // long form of length (invalid, < 127)
+    // //
+    // let bytes = &[0x03, 0x81, 0x04, 0x06, 0x6e, 0x5d, 0xc0];
+    // assert_eq!(
+    //     parse_der_bitstring(bytes),
+    //     Err(Err::Error(BerError::DerConstraintFailed))
+    // );
 }
 
 #[test]
@@ -97,7 +98,7 @@ fn test_der_indefinite_length() {
     let bytes = &hex!("23 80 03 03 00 0a 3b 03 05 04 5f 29 1c d0 00 00");
     assert_eq!(
         parse_der_bitstring(bytes),
-        Err(Err::Error(BerError::DerConstraintFailed))
+        Err(Err::Error(BerError::IndefiniteLengthUnexpected))
     );
 }
 
@@ -610,7 +611,7 @@ fn tc_der_u64(i: &[u8], out: Result<u64, BerError>) {
 #[test_case(&hex!("02 01 01"), Ok(&[1]) ; "slice 1")]
 #[test_case(&hex!("02 01 ff"), Ok(&[255]) ; "slice 2")]
 #[test_case(&hex!("02 09 01 23 45 67 01 23 45 67 ab"), Ok(&hex!("01 23 45 67 01 23 45 67 ab")) ; "slice 3")]
-#[test_case(&hex!("22 80 02 01 01 00 00"), Err(BerError::DerConstraintFailed) ; "constructed slice")]
+#[test_case(&hex!("22 80 02 01 01 00 00"), Err(BerError::IndefiniteLengthUnexpected) ; "constructed slice")]
 #[test_case(&hex!("03 03 01 00 01"), Err(BerError::unexpected_tag(Some(Tag(2)), Tag(3))) ; "invalid tag")]
 fn tc_der_slice(i: &[u8], out: Result<&[u8], BerError>) {
     let res = parse_der_slice(i, 2);
