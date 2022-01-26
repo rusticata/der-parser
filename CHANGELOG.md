@@ -8,6 +8,12 @@
 
 ### Thanks
 
+## 6.0.1
+
+### Changed/Fixed
+
+- Report number of missing bytes when having a complete header and incomplete data
+
 ## 6.0.0
 
 This release has several major changes:

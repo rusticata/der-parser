@@ -1,6 +1,6 @@
 use crate::ber::*;
 use crate::error::*;
-use nom::bytes::complete::take;
+use nom::bytes::streaming::take;
 use nom::combinator::{all_consuming, complete, cut, map};
 use nom::error::ParseError;
 use nom::multi::many0;
