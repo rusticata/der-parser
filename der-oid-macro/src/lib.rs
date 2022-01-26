@@ -1,3 +1,4 @@
+extern crate proc_macro;
 use proc_macro::TokenStream;
 
 fn encode_components(components: &[num_bigint::BigUint], relative: bool) -> Vec<u8> {
