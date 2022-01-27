@@ -1,4 +1,5 @@
-#![allow(deprecated)]
+// test_case seem to generate this warning - ignore it
+#![allow(clippy::unused_unit)]
 
 use asn1_rs::ASN1DateTime;
 use asn1_rs::ASN1TimeZone;
@@ -395,13 +396,7 @@ fn test_der_implicit() {
         hdr: &Header,
         depth: usize,
     ) -> BerResult<'a, BerObjectContent<'a>> {
-        ber_read_element_content_as(
-            i,
-            DerTag::Ia5String,
-            hdr.length(),
-            hdr.is_constructed(),
-            depth,
-        )
+        ber_read_element_content_as(i, Tag::Ia5String, hdr.length(), hdr.is_constructed(), depth)
     }
     assert_eq!(
         parse_der_implicit(&bytes, Tag(1), der_read_ia5string_content),
@@ -427,13 +422,7 @@ fn test_der_implicit_long_tag() {
         hdr: &Header,
         depth: usize,
     ) -> BerResult<'a, BerObjectContent<'a>> {
-        ber_read_element_content_as(
-            i,
-            DerTag::Ia5String,
-            hdr.length(),
-            hdr.is_constructed(),
-            depth,
-        )
+        ber_read_element_content_as(i, Tag::Ia5String, hdr.length(), hdr.is_constructed(), depth)
     }
     assert_eq!(
         parse_der_implicit(&bytes, Tag(0x52), der_read_ia5string_content),

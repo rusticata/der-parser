@@ -1,3 +1,6 @@
+// test_case seem to generate this warning - ignore it
+#![allow(clippy::unused_unit)]
+
 use der_parser::ber::*;
 use der_parser::der::*;
 use der_parser::error::*;
