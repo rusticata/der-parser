@@ -1,19 +1,25 @@
 use crate::ber::BitStringObject;
 use crate::ber::{BerObject, BerObjectContent};
-use alloc::string::String;
+use alloc::string::{String, ToString};
+use alloc::vec;
 use alloc::vec::Vec;
-use asn1_rs::Tag;
+use asn1_rs::{Class, Header, Length, Tag};
 use core::fmt;
 use core::iter::FromIterator;
 use core::str;
+use debug::HexSlice;
 
 use rusticata_macros::debug;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PrettyPrinterFlag {
+    Recursive,
     ShowHeader,
 }
 
+/// Pretty-print BER object
+///
+/// This method is recursive by default. To prevent that, unset the `Recursive` flag.
 pub struct PrettyBer<'a> {
     obj: &'a BerObject<'a>,
     indent: usize,
@@ -24,21 +30,37 @@ pub struct PrettyBer<'a> {
 
 impl<'a> BerObject<'a> {
     pub fn as_pretty(&'a self, indent: usize, increment: usize) -> PrettyBer<'a> {
-        PrettyBer {
-            obj: self,
-            indent,
-            inc: increment,
-
-            flags: Vec::new(),
-        }
+        PrettyBer::new(self, vec![PrettyPrinterFlag::Recursive], indent, increment)
     }
 }
 
 impl<'a> PrettyBer<'a> {
+    pub const fn new(
+        obj: &'a BerObject<'a>,
+        flags: Vec<PrettyPrinterFlag>,
+        indent: usize,
+        increment: usize,
+    ) -> Self {
+        Self {
+            obj,
+            indent,
+            inc: increment,
+            flags,
+        }
+    }
+
     pub fn set_flag(&mut self, flag: PrettyPrinterFlag) {
         if !self.flags.contains(&flag) {
             self.flags.push(flag);
         }
+    }
+
+    pub fn unset_flag(&mut self, flag: PrettyPrinterFlag) {
+        self.flags.retain(|&f| f != flag);
+    }
+
+    pub fn is_flag_set(&self, flag: PrettyPrinterFlag) -> bool {
+        self.flags.contains(&flag)
     }
 
     pub fn next_indent<'b>(&self, obj: &'b BerObject) -> PrettyBer<'b> {
@@ -49,6 +71,32 @@ impl<'a> PrettyBer<'a> {
             flags: self.flags.to_vec(),
         }
     }
+
+    #[inline]
+    fn is_recursive(&self) -> bool {
+        self.is_flag_set(PrettyPrinterFlag::Recursive)
+    }
+}
+
+fn dbg_header(header: &Header, f: &mut fmt::Formatter) -> fmt::Result {
+    let s_constructed = if header.is_constructed() { "+" } else { "" };
+    let l = match header.length() {
+        Length::Definite(sz) => sz.to_string(),
+        Length::Indefinite => "Indefinite".to_string(),
+    };
+    match header.class() {
+        Class::Universal => {
+            write!(f, "[{}]{} {}", header.tag(), s_constructed, l)?;
+        }
+        Class::ContextSpecific => {
+            write!(f, "[{}]{} {}", header.tag().0, s_constructed, l)?;
+        }
+
+        class => {
+            write!(f, "[{} {}]{} {}", class, header.tag().0, s_constructed, l)?;
+        }
+    }
+    Ok(())
 }
 
 impl<'a> fmt::Debug for PrettyBer<'a> {
@@ -58,7 +106,8 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
             write!(f, "{:1$}", " ", self.indent)?;
         };
         if self.flags.contains(&PrettyPrinterFlag::ShowHeader) {
-            write!(f, "[c:{:?}, s:{}, t:{}] ", self.obj.header.class(), self.obj.header.constructed(), self.obj.header.tag())?;
+            dbg_header(&self.obj.header, f)?;
+            write!(f, " ")?;
         };
         fn print_utf32_string_with_type(f: &mut fmt::Formatter, s: &[u8], ty: &str) -> fmt::Result {
             let chars: Option<Vec<char>> = s
@@ -72,34 +121,34 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
             }
         }
         match self.obj.content {
-            BerObjectContent::EndOfContent           => writeln!(f, "EndOfContent"),
-            BerObjectContent::Boolean(b)             => writeln!(f, "Boolean({:?})", b),
-            BerObjectContent::Integer(i)             => writeln!(f, "Integer({:?})", debug::HexSlice(i)),
-            BerObjectContent::Enum(i)                => writeln!(f, "Enum({})", i),
-            BerObjectContent::OID(ref v)             => writeln!(f, "OID({:?})", v),
-            BerObjectContent::RelativeOID(ref v)     => writeln!(f, "RelativeOID({:?})", v),
-            BerObjectContent::Null                   => writeln!(f, "Null"),
-            BerObjectContent::OctetString(v)         => writeln!(f, "OctetString({:?})", debug::HexSlice(v)),
+            BerObjectContent::EndOfContent           => write!(f, "EndOfContent"),
+            BerObjectContent::Boolean(b)             => write!(f, "Boolean({:?})", b),
+            BerObjectContent::Integer(i)             => write!(f, "Integer({:?})", HexSlice(i)),
+            BerObjectContent::Enum(i)                => write!(f, "Enum({})", i),
+            BerObjectContent::OID(ref v)             => write!(f, "OID({:?})", v),
+            BerObjectContent::RelativeOID(ref v)     => write!(f, "RelativeOID({:?})", v),
+            BerObjectContent::Null                   => write!(f, "Null"),
+            BerObjectContent::OctetString(v)         => write!(f, "OctetString({:?})", HexSlice(v)),
             BerObjectContent::BitString(u,BitStringObject{data:v})
-                                                     => writeln!(f, "BitString({},{:?})", u, debug::HexSlice(v)),
-            BerObjectContent::GeneralizedTime(ref time)     => writeln!(f, "GeneralizedTime(\"{}\")", time),
-            BerObjectContent::UTCTime(ref time)             => writeln!(f, "UTCTime(\"{}\")", time),
-            BerObjectContent::VisibleString(s)       => writeln!(f, "VisibleString(\"{}\")", s),
-            BerObjectContent::GeneralString(s)       => writeln!(f, "GeneralString(\"{}\")", s),
-            BerObjectContent::GraphicString(s)       => writeln!(f, "GraphicString(\"{}\")", s),
-            BerObjectContent::PrintableString(s)     => writeln!(f, "PrintableString(\"{}\")", s),
-            BerObjectContent::NumericString(s)       => writeln!(f, "NumericString(\"{}\")", s),
-            BerObjectContent::UTF8String(s)          => writeln!(f, "UTF8String(\"{}\")", s),
-            BerObjectContent::IA5String(s)           => writeln!(f, "IA5String(\"{}\")", s),
-            BerObjectContent::T61String(s)           => writeln!(f, "T61String({})", s),
-            BerObjectContent::VideotexString(s)      => writeln!(f, "VideotexString({})", s),
-            BerObjectContent::ObjectDescriptor(s)    => writeln!(f, "ObjectDescriptor(\"{}\")", s),
-            BerObjectContent::BmpString(s)           => writeln!(f, "BmpString(\"{}\")", s),
+                                                     => write!(f, "BitString({},{:?})", u, HexSlice(v)),
+            BerObjectContent::GeneralizedTime(ref time)     => write!(f, "GeneralizedTime(\"{}\")", time),
+            BerObjectContent::UTCTime(ref time)             => write!(f, "UTCTime(\"{}\")", time),
+            BerObjectContent::VisibleString(s)       => write!(f, "VisibleString(\"{}\")", s),
+            BerObjectContent::GeneralString(s)       => write!(f, "GeneralString(\"{}\")", s),
+            BerObjectContent::GraphicString(s)       => write!(f, "GraphicString(\"{}\")", s),
+            BerObjectContent::PrintableString(s)     => write!(f, "PrintableString(\"{}\")", s),
+            BerObjectContent::NumericString(s)       => write!(f, "NumericString(\"{}\")", s),
+            BerObjectContent::UTF8String(s)          => write!(f, "UTF8String(\"{}\")", s),
+            BerObjectContent::IA5String(s)           => write!(f, "IA5String(\"{}\")", s),
+            BerObjectContent::T61String(s)           => write!(f, "T61String({})", s),
+            BerObjectContent::VideotexString(s)      => write!(f, "VideotexString({})", s),
+            BerObjectContent::ObjectDescriptor(s)    => write!(f, "ObjectDescriptor(\"{}\")", s),
+            BerObjectContent::BmpString(s)           => write!(f, "BmpString(\"{}\")", s),
             BerObjectContent::UniversalString(s)     => print_utf32_string_with_type(f, s, "UniversalString"),
             BerObjectContent::Optional(ref o) => {
                 match o {
-                    Some(obj) => writeln!(f, "OPTION {:?}", obj),
-                    None => writeln!(f, "NONE"),
+                    Some(obj) => write!(f, "OPTION {:?}", obj),
+                    None => write!(f, "NONE"),
                 }
             }
             BerObjectContent::Tagged(class, tag, ref obj) => {
@@ -108,23 +157,29 @@ impl<'a> fmt::Debug for PrettyBer<'a> {
                 if self.indent > 0 {
                     write!(f, "{:1$}", " ", self.indent)?;
                 };
-                writeln!(f, "}}")?;
+                write!(f, "}}")?;
                 Ok(())
             },
             BerObjectContent::Set(ref v) |
             BerObjectContent::Sequence(ref v)        => {
                 let ty = if self.obj.header.tag() == Tag::Sequence { "Sequence" } else { "Set" };
-                writeln!(f, "{}[", ty)?;
-                for o in v {
-                    write!(f, "{:?}", self.next_indent(o))?;
-                };
-                if self.indent > 0 {
-                    write!(f, "{:1$}", " ", self.indent)?;
-                };
-                writeln!(f, "]")?;
+                if self.is_recursive() {
+                    writeln!(f, "{}[", ty)?;
+                    for o in v {
+                        write!(f, "{:?}", self.next_indent(o))?;
+                    };
+                    if self.indent > 0 {
+                        write!(f, "{:1$}", " ", self.indent)?;
+                    };
+                    write!(f, "]")?;
+                } else {
+                    write!(f, "{}", ty)?;
+                }
                 Ok(())
             },
-            BerObjectContent::Unknown(ref any) => writeln!(f, "Unknown([{} {}] {:x?})", any.class(), any.tag().0, debug::HexSlice(any.data)),
+            BerObjectContent::Unknown(ref any) => {
+                write!(f, "Unknown {:x?}", HexSlice(any.data))
+            },
         }
     }
 }
