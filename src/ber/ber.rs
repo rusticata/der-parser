@@ -241,13 +241,13 @@ impl<'a> BerObject<'a> {
 
     /// Attempt to get a reference on the content from an optional object.
     /// This can fail if the object is not optional.
-    pub fn as_optional(&'a self) -> Result<Option<&'_ BerObject<'a>>, BerError> {
+    pub fn as_optional(&self) -> Result<Option<&BerObject<'a>>, BerError> {
         self.content.as_optional()
     }
 
     /// Attempt to get a reference on the content from a tagged object.
     /// This can fail if the object is not tagged.
-    pub fn as_tagged(&'a self) -> Result<(Class, Tag, &'_ BerObject<'a>), BerError> {
+    pub fn as_tagged(&self) -> Result<(Class, Tag, &BerObject<'a>), BerError> {
         self.content.as_tagged()
     }
 
@@ -262,7 +262,7 @@ impl<'a> BerObject<'a> {
 
     /// Attempt to read a BitString value from DER object.
     /// This can fail if the object is not an BitString.
-    pub fn as_bitstring(&'a self) -> Result<BitStringObject<'a>, BerError> {
+    pub fn as_bitstring(&self) -> Result<BitStringObject<'a>, BerError> {
         self.content.as_bitstring()
     }
 
@@ -533,7 +533,7 @@ impl<'a> BerObjectContent<'a> {
         self.as_oid().map(|o| o.clone())
     }
 
-    pub fn as_optional(&'a self) -> Result<Option<&'_ BerObject<'a>>, BerError> {
+    pub fn as_optional(&self) -> Result<Option<&BerObject<'a>>, BerError> {
         match *self {
             BerObjectContent::Optional(Some(ref o)) => Ok(Some(o)),
             BerObjectContent::Optional(None) => Ok(None),
@@ -541,7 +541,7 @@ impl<'a> BerObjectContent<'a> {
         }
     }
 
-    pub fn as_tagged(&'a self) -> Result<(Class, Tag, &'_ BerObject<'a>), BerError> {
+    pub fn as_tagged(&self) -> Result<(Class, Tag, &BerObject<'a>), BerError> {
         match *self {
             BerObjectContent::Tagged(class, tag, ref o) => Ok((class, tag, o.as_ref())),
             _ => Err(BerError::BerTypeError),
@@ -555,7 +555,7 @@ impl<'a> BerObjectContent<'a> {
         }
     }
 
-    pub fn as_bitstring(&'a self) -> Result<BitStringObject<'a>, BerError> {
+    pub fn as_bitstring(&self) -> Result<BitStringObject<'a>, BerError> {
         match *self {
             BerObjectContent::BitString(_, ref b) => Ok(b.to_owned()),
             _ => Err(BerError::BerTypeError),
