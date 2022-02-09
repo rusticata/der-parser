@@ -51,6 +51,10 @@ MSRV: The minimum supported rust version is now *1.53*.
 - The `Oid` object is now the same as `asn1_rs::Oid` (simply reexported)
 - Remove dependency on crate `der-oid-macro`
 
+Misc:
+- `ber_read_element_content_as` now requires a non-zero `depth`, or it
+  will raise a `BerMaxDepth` error (previously, 0 allowed one level of parsing)
+
 ### Added
 
 ### Thanks
