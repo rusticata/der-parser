@@ -8,7 +8,7 @@
 
 ### Thanks
 
-## [Unreleased][unreleased]
+## 7.0.0
 
 This release marks the beginning of the merge with the `asn1-rs` crate. **This will break things.**
 
@@ -54,11 +54,12 @@ MSRV: The minimum supported rust version is now *1.53*.
 Misc:
 - `ber_read_element_content_as` now requires a non-zero `depth`, or it
   will raise a `BerMaxDepth` error (previously, 0 allowed one level of parsing)
-
-### Added
+- crate `rusticata-macros` is now re-exported (#55)
 
 ### Thanks
 
+- @lilyball
+- @erikmarkmartin
 
 ## 6.0.0
 
