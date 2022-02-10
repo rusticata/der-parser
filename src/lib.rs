@@ -260,11 +260,10 @@ pub use nom;
 #[cfg(feature = "bigint")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]
 pub use num_bigint;
+pub use rusticata_macros;
 
 // re-exports nom macros, so this crate's macros can be used without importing nom
 pub use nom::IResult;
-#[doc(hidden)]
-pub use rusticata_macros::custom_check;
 
 pub(crate) use asn1_rs::der_constraint_fail_if;
 
