@@ -8,6 +8,13 @@
 
 ### Thanks
 
+## 8.0.0
+
+### Changed/Fixed
+
+- Upgrade `asn1-rs` to 0.4.0
+  This causes an increment of the major number, because `asn1-rs` is re-exported
+
 ## 7.0.0
 
 This release marks the beginning of the merge with the `asn1-rs` crate. **This will break things.**
