@@ -178,7 +178,7 @@ pub fn ber_read_element_content_as(
 /// ```
 pub fn parse_ber_content<'a>(
     tag: Tag,
-) -> impl Fn(&'a [u8], &'_ Header, usize) -> BerResult<'a, BerObjectContent<'a>> {
+) -> impl Fn(&'a [u8], &Header<'a>, usize) -> BerResult<'a, BerObjectContent<'a>> {
     move |i: &[u8], hdr: &Header, max_recursion: usize| {
         ber_read_element_content_as(i, tag, hdr.length(), hdr.is_constructed(), max_recursion)
     }

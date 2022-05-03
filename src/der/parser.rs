@@ -429,7 +429,7 @@ pub fn parse_der_slice<T: Into<Tag>>(i: &[u8], tag: T) -> BerResult<&[u8]> {
 /// ```
 pub fn parse_der_content<'a>(
     tag: Tag,
-) -> impl Fn(&'a [u8], &'_ Header, usize) -> BerResult<'a, DerObjectContent<'a>> {
+) -> impl Fn(&'a [u8], &Header<'a>, usize) -> BerResult<'a, DerObjectContent<'a>> {
     move |i: &[u8], hdr: &Header, max_recursion: usize| {
         der_read_element_content_as(i, tag, hdr.length(), hdr.is_constructed(), max_recursion)
     }

@@ -170,7 +170,7 @@ where
 /// ```
 pub fn parse_ber_tagged_implicit<'a, T, F>(tag: T, f: F) -> impl FnMut(&'a [u8]) -> BerResult
 where
-    F: Fn(&'a [u8], &'_ Header, usize) -> BerResult<'a, BerObjectContent<'a>>,
+    F: Fn(&'a [u8], &Header<'a>, usize) -> BerResult<'a, BerObjectContent<'a>>,
     T: Into<Tag>,
 {
     let tag = tag.into();
