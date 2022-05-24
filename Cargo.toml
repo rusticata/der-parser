@@ -32,7 +32,7 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-asn1-rs = "0.4"
+asn1-rs = "0.5"
 cookie-factory = { version="0.3.0", optional=true }
 displaydoc = { version="0.2", default-features=false }
 nom = "7.0"
