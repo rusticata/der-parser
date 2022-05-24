@@ -8,6 +8,12 @@
 
 ### Thanks
 
+## 8.1.0
+
+### Changed/Fixed
+
+- Upgrade `asn1-rs` to 0.5.0 (new features only: only increment minor number)
+
 ## 8.0.0
 
 ### Changed/Fixed
