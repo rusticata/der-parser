@@ -221,8 +221,14 @@ pub fn parse_der_numericstring(i: &[u8]) -> DerResult {
 /// Read a printable string value. The content is verified to
 /// contain only the allowed characters.
 #[inline]
-pub fn visiblestring(i: &[u8]) -> DerResult {
+pub fn parse_der_visiblestring(i: &[u8]) -> DerResult {
     parse_der_with_tag(i, Tag::VisibleString)
+}
+
+#[deprecated(since = "8.2.0", note = "Use `parse_der_visiblestring` instead")]
+#[inline]
+pub fn visiblestring(i: &[u8]) -> DerResult {
+    parse_der_visiblestring(i)
 }
 
 /// Read a printable string value. The content is verified to
