@@ -8,6 +8,15 @@
 
 ### Thanks
 
+## 8.2.0
+
+### Changed/Fixed
+
+- Fix parser name to `parse_der_visiblestring` for `VisibleString` (Closes #64).
+  Keep previous function for compatibility (mark it as deprecated).
+- Fix clippy warnings (rustc 1.67.1)
+- Update test-case from 2.0 to 3.0
+
 ## 8.1.0
 
 ### Changed/Fixed
