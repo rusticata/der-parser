@@ -27,7 +27,7 @@ fn encode_length<'a, W: Write + 'a, Len: Into<Length>>(len: Len) -> impl Seriali
                         .skip_while(|&b| b == 0)
                         .collect();
                     let b0 = 0b1000_0000 | (v.len() as u8);
-                    tuple((be_u8(b0 as u8), slice(v)))(out)
+                    tuple((be_u8(b0), slice(v)))(out)
                 }
             }
             Length::Indefinite => be_u8(0b1000_0000)(out),

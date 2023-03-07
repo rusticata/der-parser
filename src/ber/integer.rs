@@ -124,7 +124,7 @@ pub(crate) fn decode_array_int4(input: &[u8]) -> Result<[u8; 4], BerError> {
 #[inline]
 pub(crate) fn is_highest_bit_set(bytes: &[u8]) -> bool {
     bytes
-        .get(0)
+        .first()
         .map(|byte| byte & 0b10000000 != 0)
         .unwrap_or(false)
 }

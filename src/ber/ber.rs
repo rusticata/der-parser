@@ -468,7 +468,7 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::BitString(ignored_bits, data) => {
                 bitstring_to_u64(*ignored_bits as usize, data)
             }
-            BerObjectContent::Enum(i) => Ok(*i as u64),
+            BerObjectContent::Enum(i) => Ok(*i),
             _ => Err(BerError::BerTypeError),
         }
     }
@@ -778,7 +778,7 @@ pub struct BerObjectRefIterator<'a> {
 impl<'a> Iterator for BerObjectRefIterator<'a> {
     type Item = &'a BerObject<'a>;
     fn next(&mut self) -> Option<&'a BerObject<'a>> {
-        let res = match (*self.obj).content {
+        let res = match (self.obj).content {
             BerObjectContent::Sequence(ref v) if self.idx < v.len() => Some(&v[self.idx]),
             BerObjectContent::Set(ref v) if self.idx < v.len() => Some(&v[self.idx]),
             _ => None,
@@ -798,7 +798,7 @@ impl<'a> Index<usize> for BerObject<'a> {
     type Output = BerObject<'a>;
 
     fn index(&self, idx: usize) -> &BerObject<'a> {
-        match (*self).content {
+        match (self).content {
             BerObjectContent::Sequence(ref v) if idx < v.len() => &v[idx],
             BerObjectContent::Set(ref v) if idx < v.len() => &v[idx],
             _ => panic!("Try to index BerObjectContent which is not constructed"),
