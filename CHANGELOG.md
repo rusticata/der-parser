@@ -6,6 +6,16 @@
 
 ### Added
 
+## 4.1.1
+
+### Added/Changed
+
+Add feature oid-macro to allow disabling the reexport of the oid macro
+
+The feature `oid-macro` controls the dependency on the proc-macro crate, and the
+reexport of the `oid!` macro.
+Hopefully this should fix building with very old versions of the compiler (#36).
+
 ## 4.1.0
 
 ### Added/Changed
