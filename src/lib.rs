@@ -164,8 +164,10 @@ pub use nom::{alt, call, complete, do_parse, eof, many0, map, map_res, verify, I
 #[doc(hidden)]
 pub use rusticata_macros::{custom_check, flat_take};
 
+#[cfg(feature="oid-macro")]
 use proc_macro_hack::proc_macro_hack;
 
+#[cfg(feature="oid-macro")]
 #[proc_macro_hack]
 /// Procedural macro to get encoded oids, see the [oid module](oid/index.html).
 pub use der_oid_macro::oid;

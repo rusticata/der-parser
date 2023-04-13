@@ -39,14 +39,15 @@ rusticata-macros = "2.0.2"
 num-traits = "0.2"
 num-bigint = { version = "0.3", optional = true }
 
-proc-macro-hack = "0.5"
-der-oid-macro = { version = "0.2", path = "./der-oid-macro" }
+proc-macro-hack = { version = "0.5", optional = true }
+der-oid-macro = { version = "0.2", path = "./der-oid-macro", optional = true}
 
 [features]
-default = []
+default = ["oid-macro"]
 bigint = ["num-bigint"]
 serialize = ["cookie-factory"]
 unstable = []
+oid-macro = ["proc-macro-hack", "der-oid-macro"]
 
 [dev-dependencies]
 hex-literal = "0.3"

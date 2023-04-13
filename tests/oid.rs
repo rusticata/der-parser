@@ -1,3 +1,4 @@
+#![cfg(feature="oid-macro")]
 //! Test the API provided to compare OIDs
 
 use der_parser::oid;

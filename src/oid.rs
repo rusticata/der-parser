@@ -18,11 +18,14 @@
 //! thing done with oids in your code. The `oid!` macro can be used in expression positions for
 //! this purpose. For example
 //! ```
+//! # #[cfg(feature="oid-macro")]
+//! # {
 //! use der_parser::{oid, oid::Oid};
 //!
 //! # let some_oid: Oid<'static> = oid!(1.2.456);
 //! const SOME_STATIC_OID: Oid<'static> = oid!(1.2.456);
-//! assert_eq!(some_oid, SOME_STATIC_OID)
+//! # assert_eq!(some_oid, SOME_STATIC_OID);
+//! # }
 //! ```
 //! To get a relative Oid use `oid!(rel 1.2)`.
 //!
@@ -31,6 +34,8 @@
 //! the `oid` macro can not directly be used in patterns, also not through constants.
 //! You can do this, though:
 //! ```
+//! # #[cfg(feature="oid-macro")]
+//! # {
 //! # use der_parser::{oid, oid::Oid};
 //! # let some_oid: Oid<'static> = oid!(1.2.456);
 //! const SOME_OID: Oid<'static> = oid!(1.2.456);
@@ -44,6 +49,7 @@
 //!     SOME_OID_RAW => println!("match"),
 //!     _ => panic!("no match"),
 //! }
+//! # }
 //! ```
 //! *Attention*, be aware that the latter version might not handle the case of a relative oid correctly. An
 //! extra check might be necessary.

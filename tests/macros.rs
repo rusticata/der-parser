@@ -95,6 +95,7 @@ fn parse_app_int(i: &[u8]) -> BerResult<(BerObjectHeader, SimpleStruct)> {
     )
 }
 
+#[cfg(feature="oid-macro")]
 #[test]
 fn oid_macro() {
     let abs = oid!(1.2.44.233.0.124_982_9_348248912829838230928);
@@ -114,6 +115,7 @@ fn oid_macro() {
     assert_eq!(format!("{:?}", &rel), "OID(rel. 1.2.44.233)")
 }
 
+#[cfg(feature="oid-macro")]
 #[test]
 fn oid_macro_edge_cases() {
     let undef = oid!(0);
