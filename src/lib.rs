@@ -55,7 +55,7 @@
 //! ];
 //!
 //! let (rem, obj1) = parse_ber_integer(&bytes).expect("parsing failed");
-//! let (rem, obj2) = parse_ber_integer(&bytes).expect("parsing failed");
+//! let (rem, obj2) = parse_ber_integer(&rem).expect("parsing failed");
 //! ```
 //!
 //! Parse a DER sequence of integers:

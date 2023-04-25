@@ -57,7 +57,7 @@ let bytes = [ 0x02, 0x03, 0x01, 0x00, 0x01,
 ];
 
 let (rem, obj1) = parse_ber_integer(&bytes).expect("parsing failed");
-let (rem, obj2) = parse_ber_integer(&bytes).expect("parsing failed");
+let (rem, obj2) = parse_ber_integer(&rem).expect("parsing failed");
 ```
 
 Parse a DER sequence of integers:
