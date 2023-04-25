@@ -176,30 +176,28 @@ fn test_overflow_tag() {
 #[test]
 fn test_incomplete_length() {
     let bytes = hex!("30");
-    let res = parse_ber(&bytes).err().expect("expected error");
+    let res = parse_ber(&bytes).expect_err("expected error");
     assert_eq!(res, Err::Incomplete(Needed::new(1)));
-    let res = parse_der(&bytes).err().expect("expected error");
+    let res = parse_der(&bytes).expect_err("expected error");
     assert_eq!(res, Err::Incomplete(Needed::new(1)));
     let bytes = hex!("02");
-    let res = parse_ber(&bytes).err().expect("expected error");
+    let res = parse_ber(&bytes).expect_err("expected error");
     assert_eq!(res, Err::Incomplete(Needed::new(1)));
     let bytes = hex!("02 05");
-    let _ = parse_ber(&bytes).err().expect("expected error");
+    let _ = parse_ber(&bytes).expect_err("expected error");
     let bytes = hex!("02 85");
-    let res = parse_ber(&bytes).err().expect("expected error");
+    let res = parse_ber(&bytes).expect_err("expected error");
     assert_eq!(res, Err::Incomplete(Needed::new(5)));
     let bytes = hex!("02 85 ff");
-    let res = parse_ber(&bytes).err().expect("expected error");
+    let res = parse_ber(&bytes).expect_err("expected error");
     assert_eq!(res, Err::Incomplete(Needed::new(4)));
 }
 
 #[test]
 fn test_invalid_length() {
     let bytes = hex!("02 ff 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10");
-    let _ = parse_ber(&bytes).err().expect("expected error");
-    let _ = ber_read_element_header(&bytes)
-        .err()
-        .expect("expected error");
+    let _ = parse_ber(&bytes).expect_err("expected error");
+    let _ = ber_read_element_header(&bytes).expect_err("expected error");
     //
     let bytes = hex!("02 8a ff ff ff ff ff ff ff ff ff ff 00");
     let res = parse_ber(&bytes).expect_err("parsing should have returned error");
@@ -210,7 +208,7 @@ fn test_invalid_length() {
     assert_eq!(Err::Error(BerError::InvalidLength), res);
     //
     let bytes = hex!("02 02 00");
-    let res = parse_der(&bytes).err().expect("expected error");
+    let res = parse_der(&bytes).expect_err("expected error");
     assert_eq!(res, Err::Incomplete(Needed::new(2)));
 }
 
