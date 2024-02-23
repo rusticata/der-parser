@@ -8,6 +8,15 @@
 
 ### Thanks
 
+## 9.0.0
+
+### Changed/Fixed
+
+- Upgrade `asn1-rs` to 0.6.0
+- Set MSRV to 1.63.0
+- Update hex-literal to 0.4.0
+- Implement `BerObject::try_from(Any)` (#67)
+
 ## 8.2.0
 
 ### Changed/Fixed
