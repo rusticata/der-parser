@@ -1,6 +1,8 @@
 use super::{Class, Header, Length, Tag};
+use crate::ber::ber_read_element_content_as;
 use crate::ber::bitstring_to_u64;
 use crate::ber::integer::*;
+use crate::ber::MAX_RECURSION;
 use crate::error::BerError;
 use crate::oid::Oid;
 use alloc::borrow::ToOwned;
@@ -12,6 +14,7 @@ use asn1_rs::Any;
 use bitvec::{order::Msb0, slice::BitSlice};
 use core::convert::AsRef;
 use core::convert::From;
+use core::convert::TryFrom;
 use core::ops::Index;
 
 /// Representation of a BER-encoded (X.690) object
@@ -717,6 +720,40 @@ impl<'a> BerObject<'a> {
     }
 }
 
+impl<'a> TryFrom<Any<'a>> for BerObject<'a> {
+    type Error = asn1_rs::Error;
+
+    fn try_from(any: Any<'a>) -> Result<Self, Self::Error> {
+        let (header, data) = (any.header, any.data);
+        let (_, content) = ber_read_element_content_as(
+            data,
+            header.tag(),
+            header.length(),
+            header.constructed(),
+            MAX_RECURSION,
+        )?;
+        let obj = BerObject::from_header_and_content(header, content);
+        Ok(obj)
+    }
+}
+
+impl<'a, 'b> TryFrom<&'b Any<'a>> for BerObject<'a> {
+    type Error = asn1_rs::Error;
+
+    fn try_from(any: &'b Any<'a>) -> Result<Self, Self::Error> {
+        let (header, data) = (any.header.clone(), any.data);
+        let (_, content) = ber_read_element_content_as(
+            data,
+            header.tag(),
+            header.length(),
+            header.constructed(),
+            MAX_RECURSION,
+        )?;
+        let obj = BerObject::from_header_and_content(header, content);
+        Ok(obj)
+    }
+}
+
 // This is a consuming iterator
 impl<'a> IntoIterator for BerObject<'a> {
     type Item = BerObject<'a>;
@@ -843,8 +880,21 @@ impl<'a> AsRef<[u8]> for BitStringObject<'a> {
 
 #[cfg(test)]
 mod tests {
+    use asn1_rs::{Any, FromDer};
+    use core::convert::TryFrom;
+
     use crate::ber::*;
     use crate::oid::*;
+
+    #[test]
+    fn ber_from_any() {
+        let bytes = &[0x02, 0x03, 0x01, 0x00, 0x01];
+
+        let (rem, any) = Any::from_der(bytes).expect("parsing failed");
+        assert!(rem.is_empty());
+        let obj = BerObject::try_from(any).expect("try_from(any) failed");
+        assert_eq!(obj.as_u32(), Ok(0x10001_u32));
+    }
 
     #[test]
     fn test_der_as_u64() {
