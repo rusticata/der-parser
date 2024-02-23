@@ -10,6 +10,7 @@ authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
 categories = ["parser-implementations"]
 readme = "README.md"
 edition = "2018"
+rust-version = "1.63"
 
 include = [
   "LICENSE-*",
