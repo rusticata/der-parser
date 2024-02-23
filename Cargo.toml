@@ -49,6 +49,6 @@ unstable = []
 std = []
 
 [dev-dependencies]
-hex-literal = "0.3"
+hex-literal = "0.4"
 pretty_assertions = "1.0"
 test-case = "3.0"
