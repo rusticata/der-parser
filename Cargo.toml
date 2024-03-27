@@ -1,6 +1,6 @@
 [package]
 description = "Parser/encoder for ASN.1 BER/DER data"
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 keywords = ["BER","DER","ASN1","parser","nom"]
 homepage = "https://github.com/rusticata/der-parser"
 repository = "https://github.com/rusticata/der-parser.git"
