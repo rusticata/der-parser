@@ -3,7 +3,6 @@ use crate::ber::{ber_get_object_content, MAX_OBJECT_SIZE};
 use crate::error::{BerError, BerResult};
 use alloc::vec::Vec;
 use asn1_rs::*;
-use nom::Err;
 use rusticata_macros::custom_check;
 
 /// Parse any BER object recursively, specifying the maximum recursion depth and expected tag

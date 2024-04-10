@@ -12,8 +12,6 @@ use asn1_rs::ASN1DateTime;
 use asn1_rs::Any;
 #[cfg(feature = "bitvec")]
 use bitvec::{order::Msb0, slice::BitSlice};
-use core::convert::AsRef;
-use core::convert::From;
 use core::convert::TryFrom;
 use core::ops::Index;
 
