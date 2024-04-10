@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo check --no-default-features
+      - run: RUSTFLAGS="-D warnings" cargo check --no-default-features
 
   fmt:
     name: Rustfmt
