@@ -497,7 +497,7 @@ impl<'a> BerObjectContent<'a> {
             }
             BerObjectContent::BitString(ignored_bits, data) => {
                 bitstring_to_u64(*ignored_bits as usize, data).and_then(|x| {
-                    if x > u64::from(core::u32::MAX) {
+                    if x > u64::from(u32::MAX) {
                         Err(BerError::IntegerTooLarge)
                     } else {
                         Ok(x as u32)
@@ -505,7 +505,7 @@ impl<'a> BerObjectContent<'a> {
                 })
             }
             BerObjectContent::Enum(i) => {
-                if *i > u64::from(core::u32::MAX) {
+                if *i > u64::from(u32::MAX) {
                     Err(BerError::IntegerTooLarge)
                 } else {
                     Ok(*i as u32)
