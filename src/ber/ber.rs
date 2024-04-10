@@ -531,7 +531,7 @@ impl<'a> BerObjectContent<'a> {
     }
 
     pub fn as_oid_val(&self) -> Result<Oid<'a>, BerError> {
-        self.as_oid().map(|o| o.clone())
+        self.as_oid().cloned()
     }
 
     pub fn as_optional(&self) -> Result<Option<&BerObject<'a>>, BerError> {
