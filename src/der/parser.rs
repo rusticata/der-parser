@@ -3,7 +3,7 @@ use crate::der::*;
 use crate::der_constraint_fail_if;
 use crate::error::*;
 use alloc::borrow::ToOwned;
-use asn1_rs::{Any, FromDer, Tag};
+use asn1_rs::{Any, FromDer};
 use nom::bytes::streaming::take;
 use nom::number::streaming::be_u8;
 use nom::{Err, Needed};

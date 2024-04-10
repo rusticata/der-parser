@@ -1,7 +1,7 @@
 #![cfg(feature = "std")]
 use crate::ber::*;
 use crate::oid::Oid;
-use asn1_rs::{ASN1DateTime, Tag};
+use asn1_rs::ASN1DateTime;
 use cookie_factory::bytes::be_u8;
 use cookie_factory::combinator::slice;
 use cookie_factory::gen_simple;
