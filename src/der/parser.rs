@@ -504,17 +504,17 @@ pub fn der_read_element_content_as(
             // verify leading zeros
             match i[..l] {
                 [] => {
-                    return Err(nom::Err::Error(BerError::DerConstraintFailed(
+                    return Err(Err::Error(BerError::DerConstraintFailed(
                         DerConstraint::IntegerEmpty,
                     )))
                 }
                 [0, 0, ..] => {
-                    return Err(nom::Err::Error(BerError::DerConstraintFailed(
+                    return Err(Err::Error(BerError::DerConstraintFailed(
                         DerConstraint::IntegerLeadingZeroes,
                     )))
                 }
                 [0, byte, ..] if byte < 0x80 => {
-                    return Err(nom::Err::Error(BerError::DerConstraintFailed(
+                    return Err(Err::Error(BerError::DerConstraintFailed(
                         DerConstraint::IntegerLeadingZeroes,
                     )));
                 }
