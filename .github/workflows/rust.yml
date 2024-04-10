@@ -65,8 +65,6 @@ jobs:
   doc:
     name: Build documentation
     runs-on: ubuntu-latest
-    # this can be removed when cargo-doc stops panic'ing in collect_intra_doc_links
-    continue-on-error: true
     env:
       RUSTDOCFLAGS: --cfg docsrs
     steps:
