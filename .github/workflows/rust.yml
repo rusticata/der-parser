@@ -26,13 +26,22 @@ jobs:
         run: cargo update
       - run: cargo check
 
-  test:
-    name: Test Suite
+  test_features:
+    name: Test suite (with features)
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        features:
+          - --features=default
+          - --features=bigint
+          - --features=serialize
+          - --features=unstable
+          - --all-features
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --all-features
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo test ${{ matrix.features }}
 
   no_std:
     name: no-std
