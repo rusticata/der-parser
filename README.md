@@ -198,7 +198,7 @@ Some parsing tools (for ex for tagged objects) are available in different forms:
 
 ## Rust version requirements
 
-The 7.0 series of `der-parser` requires **Rustc version 1.53 or greater**, based on `asn1-rs`
+The 9.0 series of `der-parser` requires **Rustc version 1.63 or greater**, based on `asn1-rs`
 and `nom` 7 dependencies.
 
 # Serialization
