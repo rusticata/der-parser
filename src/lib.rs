@@ -105,8 +105,11 @@
 //!
 //! The second (and preferred) parsing method is to specify the expected objects recursively. The
 //! following functions can be used:
+//!
 //! - [`parse_ber_sequence_defined`](ber/fn.parse_ber_sequence_defined.html) and similar functions
+//!
 //! for sequences and sets variants
+//!
 //! - [`parse_ber_tagged_explicit`](ber/fn.parse_ber_tagged_explicit.html) for tagged explicit
 //! - [`parse_ber_tagged_implicit`](ber/fn.parse_ber_tagged_implicit.html) for tagged implicit
 //! - [`parse_ber_container`](ber/fn.parse_ber_container.html) for generic parsing, etc.
@@ -231,7 +234,7 @@
     missing_debug_implementations,
 )]
 // pragmas for doc
-#![deny(broken_intra_doc_links)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc(test(
     no_crate_inject,
