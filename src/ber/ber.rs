@@ -10,7 +10,7 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 use asn1_rs::ASN1DateTime;
 use asn1_rs::Any;
-#[cfg(feature = "bitvec")]
+#[cfg(feature = "as_bitvec")]
 use bitvec::{order::Msb0, slice::BitSlice};
 use core::convert::TryFrom;
 use core::ops::Index;
@@ -268,8 +268,8 @@ impl<'a> BerObject<'a> {
     }
 
     /// Constructs a shared `&BitSlice` reference over the object data, if available as slice.
-    #[cfg(feature = "bitvec")]
-    pub fn as_bitslice(&self) -> Result<&BitSlice<Msb0, u8>, BerError> {
+    #[cfg(feature = "as_bitvec")]
+    pub fn as_bitslice(&self) -> Result<&BitSlice<u8, Msb0>, BerError> {
         self.content.as_bitslice()
     }
 
@@ -564,10 +564,11 @@ impl<'a> BerObjectContent<'a> {
     }
 
     /// Constructs a shared `&BitSlice` reference over the object data, if available as slice.
-    #[cfg(feature = "bitvec")]
-    pub fn as_bitslice(&self) -> Result<&BitSlice<Msb0, u8>, BerError> {
-        self.as_slice()
-            .and_then(|s| BitSlice::<Msb0, _>::from_slice(s).map_err(|_| BerError::BerValueError))
+    #[cfg(feature = "as_bitvec")]
+    pub fn as_bitslice(&self) -> Result<&BitSlice<u8, Msb0>, BerError> {
+        self.as_slice().and_then(|s| {
+            BitSlice::<_, Msb0>::try_from_slice(s).map_err(|_| BerError::BerValueError)
+        })
     }
 
     pub fn as_sequence(&self) -> Result<&Vec<BerObject<'a>>, BerError> {
@@ -864,9 +865,9 @@ impl<'a> BitStringObject<'a> {
     }
 
     /// Constructs a shared `&BitSlice` reference over the object data.
-    #[cfg(feature = "bitvec")]
-    pub fn as_bitslice(&self) -> Option<&BitSlice<Msb0, u8>> {
-        BitSlice::<Msb0, _>::from_slice(self.data).ok()
+    #[cfg(feature = "as_bitvec")]
+    pub fn as_bitslice(&self) -> Option<&BitSlice<u8, Msb0>> {
+        BitSlice::<_, Msb0>::try_from_slice(self.data).ok()
     }
 }
 
@@ -949,7 +950,7 @@ mod tests {
         assert!(obj.is_set(17));
     }
 
-    #[cfg(feature = "bitvec")]
+    #[cfg(feature = "as_bitvec")]
     #[test]
     fn test_der_bitslice() {
         use std::string::String;
