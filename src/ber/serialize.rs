@@ -207,7 +207,7 @@ pub fn ber_encode_object<'a, 'b: 'a, W: Write + Default + AsRef<[u8]> + 'a>(
     }
 }
 
-impl<'a> BerObject<'a> {
+impl BerObject<'_> {
     /// Attempt to encode object as BER
     ///
     /// Note that the encoding will not check that the values of the `BerObject` fields are correct.
