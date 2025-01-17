@@ -99,7 +99,7 @@ fn dbg_header(header: &Header, f: &mut fmt::Formatter) -> fmt::Result {
     Ok(())
 }
 
-impl<'a> fmt::Debug for PrettyBer<'a> {
+impl fmt::Debug for PrettyBer<'_> {
     #[rustfmt::skip]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.indent > 0 {
