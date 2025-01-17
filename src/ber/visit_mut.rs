@@ -195,6 +195,7 @@ mod tests {
     use super::VisitMut;
     use crate::ber::BerObject;
 
+    #[allow(unused)]
     #[derive(Debug)]
     struct BerObjectVisitor {}
 

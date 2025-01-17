@@ -181,6 +181,7 @@ mod tests {
     use super::Visit;
     use crate::ber::BerObject;
 
+    #[allow(unused)]
     #[derive(Debug)]
     struct BerObjectVisitor {}
 

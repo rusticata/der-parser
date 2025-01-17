@@ -853,7 +853,7 @@ pub struct BitStringObject<'a> {
     pub data: &'a [u8],
 }
 
-impl<'a> BitStringObject<'a> {
+impl BitStringObject<'_> {
     /// Test if bit `bitnum` is set
     pub fn is_set(&self, bitnum: usize) -> bool {
         let byte_pos = bitnum / 8;
@@ -871,7 +871,7 @@ impl<'a> BitStringObject<'a> {
     }
 }
 
-impl<'a> AsRef<[u8]> for BitStringObject<'a> {
+impl AsRef<[u8]> for BitStringObject<'_> {
     fn as_ref(&self) -> &[u8] {
         self.data
     }
