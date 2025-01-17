@@ -15,7 +15,7 @@ fn encode_length<'a, W: Write + 'a, Len: Into<Length>>(len: Len) -> impl Seriali
     move |out| {
         match l {
             Length::Definite(sz) => {
-                if sz <= 128 {
+                if sz <= 0x7f {
                     // definite, short form
                     be_u8(sz as u8)(out)
                 } else {
