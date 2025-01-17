@@ -668,7 +668,7 @@ use num_bigint::{BigInt, BigUint};
 
 #[cfg(feature = "bigint")]
 #[cfg_attr(docsrs, doc(cfg(feature = "bigint")))]
-impl<'a> BerObject<'a> {
+impl BerObject<'_> {
     /// Attempt to read an integer value from this object.
     ///
     /// This can fail if the object is not an integer.

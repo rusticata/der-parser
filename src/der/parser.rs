@@ -486,7 +486,7 @@ pub fn der_read_element_content_as(
     max_depth: usize,
 ) -> BerResult<DerObjectContent> {
     // Indefinite lengths are not allowed in DER (X.690 section 10.1)
-    let l = length.definite().map_err(BerError::from)?;
+    let l = length.definite()?;
     if i.len() < l {
         return Err(Err::Incomplete(Needed::new(l)));
     }
