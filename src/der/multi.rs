@@ -32,9 +32,9 @@ use nom::{Err, IResult};
 /// # assert_eq!(parser(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_der_sequence_of<'a, F>(f: F) -> impl FnMut(&'a [u8]) -> BerResult
+pub fn parse_der_sequence_of<'a, F>(f: F) -> impl FnMut(&'a [u8]) -> BerResult<'a>
 where
-    F: Fn(&'a [u8]) -> BerResult,
+    F: Fn(&'a [u8]) -> BerResult<'a>,
 {
     map(parse_der_sequence_of_v(f), DerObject::from_seq)
 }
@@ -155,9 +155,9 @@ where
 /// # assert_eq!(localparse_seq(&bytes), Ok((empty, expected)));
 /// let (rem, v) = localparse_seq(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_der_sequence_defined<'a, F>(mut f: F) -> impl FnMut(&'a [u8]) -> BerResult
+pub fn parse_der_sequence_defined<'a, F>(mut f: F) -> impl FnMut(&'a [u8]) -> BerResult<'a>
 where
-    F: FnMut(&'a [u8]) -> BerResult<Vec<DerObject>>,
+    F: FnMut(&'a [u8]) -> BerResult<'a, Vec<DerObject<'a>>>,
 {
     map(
         parse_der_sequence_defined_g(move |data, _| f(data)),
@@ -257,9 +257,9 @@ where
 /// # assert_eq!(parser(&bytes), Ok((empty, expected)));
 /// let (rem, v) = parser(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_der_set_of<'a, F>(f: F) -> impl FnMut(&'a [u8]) -> BerResult
+pub fn parse_der_set_of<'a, F>(f: F) -> impl FnMut(&'a [u8]) -> BerResult<'a>
 where
-    F: Fn(&'a [u8]) -> BerResult,
+    F: Fn(&'a [u8]) -> BerResult<'a>,
 {
     map(parse_der_set_of_v(f), DerObject::from_set)
 }
@@ -378,9 +378,9 @@ where
 /// # assert_eq!(localparse_set(&bytes), Ok((empty, expected)));
 /// let (rem, v) = localparse_set(&bytes).expect("parsing failed");
 /// ```
-pub fn parse_der_set_defined<'a, F>(mut f: F) -> impl FnMut(&'a [u8]) -> BerResult
+pub fn parse_der_set_defined<'a, F>(mut f: F) -> impl FnMut(&'a [u8]) -> BerResult<'a>
 where
-    F: FnMut(&'a [u8]) -> BerResult<Vec<DerObject>>,
+    F: FnMut(&'a [u8]) -> BerResult<'a, Vec<DerObject<'a>>>,
 {
     map(
         parse_der_set_defined_g(move |data, _| f(data)),

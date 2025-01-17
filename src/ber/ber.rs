@@ -134,7 +134,7 @@ impl<'a> BerObject<'a> {
     }
 
     /// Set a tag for the BER object
-    pub fn set_raw_tag(self, raw_tag: Option<&'a [u8]>) -> BerObject {
+    pub fn set_raw_tag(self, raw_tag: Option<&'a [u8]>) -> BerObject<'a> {
         let header = self.header.with_raw_tag(raw_tag.map(|x| x.into()));
         BerObject { header, ..self }
     }
