@@ -107,7 +107,7 @@ fn try_berobject_from_any(any: Any, max_depth: usize) -> Result<BerObject> {
                 .map(|a| u16::from_be_bytes([a[0], a[1]]))
                 .collect();
             let _s = String::from_utf16(&v)?;
-            Ok(obj_from(header, BerObjectContent::BmpString(&any.data)))
+            Ok(obj_from(header, BerObjectContent::BmpString(any.data)))
         }
         Tag::Boolean => {
             let b = any.bool()?;
