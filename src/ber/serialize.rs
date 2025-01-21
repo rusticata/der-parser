@@ -142,7 +142,6 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
             ber_encode_datetime(time)(out)
         }
         BerObjectContent::NumericString(s)
-        | BerObjectContent::BmpString(s)
         | BerObjectContent::GeneralString(s)
         | BerObjectContent::ObjectDescriptor(s)
         | BerObjectContent::GraphicString(s)
@@ -152,6 +151,7 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         | BerObjectContent::T61String(s)
         | BerObjectContent::VideotexString(s)
         | BerObjectContent::UTF8String(s) => slice(s)(out),
+        BerObjectContent::BmpString(s) => slice(s)(out),
         BerObjectContent::UniversalString(s) => slice(s)(out),
         BerObjectContent::Sequence(v) | BerObjectContent::Set(v) => ber_encode_sequence(v)(out),
         // best we can do is tagged-explicit, but we don't know
