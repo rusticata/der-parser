@@ -19,7 +19,7 @@ include = [
   "UPGRADING.md",
   ".gitignore",
   "Cargo.toml",
-  "bench/*.rs",
+  "examples/*.rs",
   "src/*.rs",
   "src/ber/*.rs",
   "src/der/*.rs",
