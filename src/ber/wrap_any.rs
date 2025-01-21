@@ -1,4 +1,4 @@
-use std::string::String;
+use alloc::string::String;
 
 use super::{BerObject, BerObjectContent, BitStringObject};
 use crate::ber::{ber_get_object_content, MAX_OBJECT_SIZE};
