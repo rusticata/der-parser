@@ -24,7 +24,7 @@ pub trait Visit<'a> {
     fn visit_ber_bitstring(&mut self, ignored: u8, data: &'a BitStringObject, depth: usize) {}
 
     /// Called for BER bmpstring objects
-    fn visit_ber_bmpstring(&mut self, s: &'a str, depth: usize) {}
+    fn visit_ber_bmpstring(&mut self, s: &'a [u8], depth: usize) {}
 
     /// Called for BER boolean objects
     fn visit_ber_boolean(&mut self, b: bool, depth: usize) {}

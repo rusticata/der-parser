@@ -70,8 +70,11 @@ pub enum BerObjectContent<'a> {
     /// VideotexString: decoded string
     VideotexString(&'a str),
 
-    /// BmpString: decoded string
-    BmpString(&'a str),
+    /// BmpString: raw object bytes
+    ///
+    /// Note: the string is stored as raw bytes because not all UTF-16 sequences can be stored as
+    /// `&str`. To access content, use `String::from_utf16` or `String::from_utf16_lossy`.
+    BmpString(&'a [u8]),
     /// UniversalString: raw object bytes
     UniversalString(&'a [u8]),
 
@@ -589,7 +592,6 @@ impl<'a> BerObjectContent<'a> {
     pub fn as_slice(&self) -> Result<&'a [u8],BerError> {
         match *self {
             BerObjectContent::NumericString(s) |
-            BerObjectContent::BmpString(s) |
             BerObjectContent::VisibleString(s) |
             BerObjectContent::PrintableString(s) |
             BerObjectContent::GeneralString(s) |
@@ -602,6 +604,7 @@ impl<'a> BerObjectContent<'a> {
             BerObjectContent::Integer(s) |
             BerObjectContent::BitString(_,BitStringObject{data:s}) |
             BerObjectContent::OctetString(s) |
+            BerObjectContent::BmpString(s) |
             BerObjectContent::UniversalString(s) => Ok(s),
             BerObjectContent::Unknown(ref any) => Ok(any.data),
             _ => Err(BerError::BerTypeError),
@@ -612,7 +615,6 @@ impl<'a> BerObjectContent<'a> {
     pub fn as_str(&self) -> Result<&'a str,BerError> {
         match *self {
             BerObjectContent::NumericString(s) |
-            BerObjectContent::BmpString(s) |
             BerObjectContent::VisibleString(s) |
             BerObjectContent::PrintableString(s) |
             BerObjectContent::GeneralString(s) |
