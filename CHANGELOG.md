@@ -261,7 +261,7 @@ By alphabetic order of handle:
 
 ### Added
 
-- Add functions `parse_ber_recursive` and `parse_der_recursive`, allowing to specify maximum 
+- Add functions `parse_ber_recursive` and `parse_der_recursive`, allowing to specify maximum
   recursion depth when parsing
 - The string types `IA5String`, `NumericString`, `PrintableString` and `UTF8String`
   do now only parse if the characters are valid.
