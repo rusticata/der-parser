@@ -71,6 +71,14 @@ jobs:
           components: clippy
       - run: cargo clippy --all-features -- -D warnings
 
+  readme:
+    name: Check if README is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - id: cargo-rdme
+        uses: rusticata/ci-action-rdme@v1
+
   doc:
     name: Build documentation
     runs-on: ubuntu-latest
