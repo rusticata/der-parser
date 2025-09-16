@@ -32,7 +32,7 @@ impl From<BerError> for MyError<'_> {
 
 #[test]
 fn parse_sequence_of_v_custom_errors() {
-    fn parse_element(i: &[u8]) -> IResult<&[u8], u32, MyError> {
+    fn parse_element(i: &[u8]) -> IResult<&[u8], u32, MyError<'_>> {
         // incomplete must *NOT* be mapped, or parse_ber_sequence_of_v cannot detect end of
         // sequence
         match parse_ber_u32(i) {

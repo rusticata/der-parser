@@ -337,7 +337,7 @@ where
 /// # use der_parser::der::*;
 /// # use der_parser::error::DerResult;
 /// #
-/// fn parse_int_implicit(i:&[u8]) -> DerResult {
+/// fn parse_int_implicit(i:&[u8]) -> DerResult<'_> {
 ///     parse_der_implicit(
 ///         i,
 ///         3,

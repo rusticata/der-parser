@@ -79,7 +79,7 @@ fn test_ber_set_of() {
         BerObject::from_int_slice(b"\x01\x00\x01"),
         BerObject::from_int_slice(b"\x01\x00\x00"),
     ]);
-    fn parser(i: &[u8]) -> BerResult {
+    fn parser(i: &[u8]) -> BerResult<'_> {
         parse_ber_set_of(parse_ber_integer)(i)
     }
     assert_eq!(parser(&bytes), Ok((empty, expected)));
@@ -99,7 +99,7 @@ fn test_ber_set_of_v() {
         BerObject::from_int_slice(b"\x01\x00\x01"),
         BerObject::from_int_slice(b"\x01\x00\x00"),
     ];
-    fn parser(i: &[u8]) -> BerResult<Vec<BerObject>> {
+    fn parser(i: &[u8]) -> BerResult<'_, Vec<BerObject<'_>>> {
         parse_ber_set_of_v(parse_ber_integer)(i)
     }
     assert_eq!(parser(&bytes), Ok((empty, expected)));

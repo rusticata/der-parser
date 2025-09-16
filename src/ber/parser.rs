@@ -485,7 +485,7 @@ where
 /// # use der_parser::ber::*;
 /// # use der_parser::error::BerResult;
 /// #
-/// fn parse_int_implicit(i:&[u8]) -> BerResult<BerObject> {
+/// fn parse_int_implicit(i:&[u8]) -> BerResult<'_, BerObject<'_>> {
 ///     parse_ber_implicit(
 ///         i,
 ///         3,
