@@ -1,5 +1,4 @@
-<!-- cargo-sync-readme start -->
-
+![Maintenance](https://img.shields.io/badge/maintenance-activly--developed-brightgreen.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE-MIT)
 [![Apache License 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE-APACHE)
 [![docs.rs](https://docs.rs/der-parser/badge.svg)](https://docs.rs/der-parser)
@@ -8,6 +7,8 @@
 [![dependency status](https://deps.rs/crate/der-parser/9.0.0/status.svg)](https://deps.rs/crate/der-parser/9.0.0)
 [![Github CI](https://github.com/rusticata/der-parser/actions/workflows/rust.yml/badge.svg)](https://github.com/rusticata/der-parser/actions/workflows/rust.yml)
 [![Minimum rustc version](https://img.shields.io/badge/rustc-1.63.0+-lightgray.svg)](#rust-version-requirements)
+
+<!-- cargo-rdme start -->
 
 # BER/DER Parser
 
@@ -80,16 +81,16 @@ error.
 # DER parser design
 
 Parsing functions are inspired from `nom`, and follow the same interface. The most common
-return type is [`BerResult`](https://docs.rs/der-parser/latest/der_parser/error/type.BerResult.html), that stores the remaining bytes and
-parsed [`BerObject`](https://docs.rs/der-parser/latest/der_parser/ber/struct.BerObject.html), or an error. Reading the nom documentation may
+return type is [`BerResult`](error/type.BerResult.html), that stores the remaining bytes and
+parsed [`BerObject`](ber/struct.BerObject.html), or an error. Reading the nom documentation may
 help understanding how to write parsers and use the output.
 
 There are two different approaches for parsing DER objects: reading the objects recursively as
 long as the tags are known, or specifying a description of the expected objects (generally from
 the [ASN.1][X.680] description).
 
-The first parsing method can be done using the [`parse_ber`](https://docs.rs/der-parser/latest/der_parser/ber/fn.parse_ber.html) and
-[`parse_der`](https://docs.rs/der-parser/latest/der_parser/der/fn.parse_der.html) methods.
+The first parsing method can be done using the [`parse_ber`](ber/fn.parse_ber.html) and
+[`parse_der`](der/fn.parse_der.html) methods.
 It is useful when decoding an arbitrary DER object.
 However, it cannot fully parse all objects, especially those containing IMPLICIT, OPTIONAL, or
 DEFINED BY items.
@@ -108,13 +109,13 @@ let parsed = parse_der(&bytes);
 The second (and preferred) parsing method is to specify the expected objects recursively. The
 following functions can be used:
 
-- [`parse_ber_sequence_defined`](https://docs.rs/der-parser/latest/der_parser/ber/fn.parse_ber_sequence_defined.html) and similar functions
+- [`parse_ber_sequence_defined`](ber/fn.parse_ber_sequence_defined.html) and similar functions
 
 for sequences and sets variants
 
-- [`parse_ber_tagged_explicit`](https://docs.rs/der-parser/latest/der_parser/ber/fn.parse_ber_tagged_explicit.html) for tagged explicit
-- [`parse_ber_tagged_implicit`](https://docs.rs/der-parser/latest/der_parser/ber/fn.parse_ber_tagged_implicit.html) for tagged implicit
-- [`parse_ber_container`](https://docs.rs/der-parser/latest/der_parser/ber/fn.parse_ber_container.html) for generic parsing, etc.
+- [`parse_ber_tagged_explicit`](ber/fn.parse_ber_tagged_explicit.html) for tagged explicit
+- [`parse_ber_tagged_implicit`](ber/fn.parse_ber_tagged_implicit.html) for tagged implicit
+- [`parse_ber_container`](ber/fn.parse_ber_container.html) for generic parsing, etc.
 - DER objects use the `_der_` variants
 
 For example, to read a BER sequence containing two integers:
@@ -142,8 +143,8 @@ assert_eq!(parsed[0].as_u64(), Ok(65537));
 assert_eq!(parsed[1].as_u64(), Ok(65536));
 ```
 
-All functions return a [`BerResult`](https://docs.rs/der-parser/latest/der_parser/error/type.BerResult.html) object: the parsed
-[`BerObject`](https://docs.rs/der-parser/latest/der_parser/ber/struct.BerObject.html), an `Incomplete` value, or an error.
+All functions return a [`BerResult`](error/type.BerResult.html) object: the parsed
+[`BerObject`](ber/struct.BerObject.html), an `Incomplete` value, or an error.
 
 Note that this type is also a `Result`, so usual functions (`map`, `unwrap` etc.) are available.
 
@@ -158,7 +159,7 @@ Note that, by default, BER/DER integers are signed. Functions are provided to re
 unsigned values, but they will fail if the integer value is negative.
 
 To get the integer value for all possible integer sign and size, use
-[`BerObject::as_bigint`](https://docs.rs/der-parser/latest/der_parser/ber/struct.BerObject.html#method.as_bigint)) (requires the `bigint` feature).
+[`BerObject::as_bigint`](ber/struct.BerObject.html#method.as_bigint)) (requires the `bigint` feature).
 
 To get a simple value expected to be in a known range, use methods like
 [`BerObject::as_i32`](ber/struct.BerObject.html#method.as_i32)) and
@@ -209,8 +210,8 @@ and `nom` 7 dependencies.
 Support for encoding BER/DER objects is currently being tested and can be used by activating the `serialize` feature.
 Note that current status is **experimental**.
 
-See the `ber_encode_*` functions in the [`ber`](https://docs.rs/der-parser/latest/der_parser/ber/index.html) module, and
-[`BerObject::to_vec`](https://docs.rs/der-parser/latest/der_parser/ber/struct.BerObject.html#method.to_vec)
+See the `ber_encode_*` functions in the [`ber`](ber/index.html) module, and
+[`BerObject::to_vec`](ber/struct.BerObject.html#method.to_vec)
 
 # References
 
@@ -223,7 +224,8 @@ See the `ber_encode_*` functions in the [`ber`](https://docs.rs/der-parser/lates
 [X.690]: https://www.itu.int/rec/T-REC-X.690/en "ASN.1 encoding rules: Specification of
   Basic Encoding Rules (BER), Canonical Encoding Rules (CER) and Distinguished Encoding Rules
   (DER)."
-<!-- cargo-sync-readme end -->
+
+<!-- cargo-rdme end -->
 
 ## Changes
 
