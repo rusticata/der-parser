@@ -15,7 +15,7 @@ use nom::{Err, IResult};
 /// # use der_parser::error::BerResult;
 /// #
 /// /// Read a SEQUENCE OF INTEGER
-/// fn parser(i:&[u8]) -> BerResult<BerObject> {
+/// fn parser(i:&[u8]) -> BerResult<'_, BerObject<'_>> {
 ///     parse_ber_sequence_of(parse_ber_integer)(i)
 /// }
 ///
@@ -49,7 +49,7 @@ where
 /// # use der_parser::error::BerResult;
 /// #
 /// /// Read a SEQUENCE OF INTEGER
-/// fn parser(i:&[u8]) -> BerResult<Vec<BerObject>> {
+/// fn parser(i:&[u8]) -> BerResult<'_, Vec<BerObject<'_>>> {
 ///     parse_ber_sequence_of_v(parse_ber_integer)(i)
 /// }
 ///
@@ -99,7 +99,7 @@ where
 /// use nom::combinator::complete;
 /// use nom::multi::many1;
 ///
-/// fn localparse_seq(i:&[u8]) -> BerResult {
+/// fn localparse_seq(i:&[u8]) -> BerResult<'_> {
 ///     parse_ber_sequence_defined(
 ///         many1(complete(parse_ber_integer))
 ///     )(i)
@@ -131,7 +131,7 @@ where
 /// ///     a INTEGER,
 /// ///     b OCTETSTRING
 /// /// }
-/// fn localparse_seq(i:&[u8]) -> BerResult {
+/// fn localparse_seq(i:&[u8]) -> BerResult<'_> {
 ///     parse_ber_sequence_defined(
 ///         // the nom `tuple` combinator returns a tuple, so we have to map it
 ///         // to a list
@@ -194,7 +194,7 @@ where
 /// ///     a INTEGER (0..4294967295),
 /// ///     b OCTETSTRING
 /// /// }
-/// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
+/// fn parse_myobject(i: &[u8]) -> BerResult<'_, MyObject<'_>> {
 ///     parse_ber_sequence_defined_g(
 ///         |i:&[u8], _| {
 ///             let (i, a) = parse_ber_u32(i)?;
@@ -240,7 +240,7 @@ where
 /// # use der_parser::error::BerResult;
 /// #
 /// /// Read a SET OF INTEGER
-/// fn parser(i:&[u8]) -> BerResult<BerObject> {
+/// fn parser(i:&[u8]) -> BerResult<'_, BerObject<'_>> {
 ///     parse_ber_set_of(parse_ber_integer)(i)
 /// }
 ///
@@ -274,7 +274,7 @@ where
 /// # use der_parser::error::BerResult;
 /// #
 /// /// Read a SET OF INTEGER
-/// fn parser(i:&[u8]) -> BerResult<Vec<BerObject>> {
+/// fn parser(i:&[u8]) -> BerResult<'_, Vec<BerObject<'_>>> {
 ///     parse_ber_set_of_v(parse_ber_integer)(i)
 /// }
 ///
@@ -322,7 +322,7 @@ where
 /// use nom::combinator::complete;
 /// use nom::multi::many1;
 ///
-/// fn localparse_seq(i:&[u8]) -> BerResult {
+/// fn localparse_seq(i:&[u8]) -> BerResult<'_> {
 ///     parse_ber_set_defined(
 ///         many1(complete(parse_ber_integer))
 ///     )(i)
@@ -354,7 +354,7 @@ where
 /// ///     a INTEGER,
 /// ///     b OCTETSTRING
 /// /// }
-/// fn localparse_set(i:&[u8]) -> BerResult {
+/// fn localparse_set(i:&[u8]) -> BerResult<'_> {
 ///     parse_ber_set_defined(
 ///         // the nom `tuple` combinator returns a tuple, so we have to map it
 ///         // to a list
@@ -418,7 +418,7 @@ where
 /// ///     a INTEGER (0..4294967295),
 /// ///     b OCTETSTRING
 /// /// }
-/// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
+/// fn parse_myobject(i: &[u8]) -> BerResult<'_, MyObject<'_>> {
 ///     parse_ber_set_defined_g(
 ///         |i:&[u8], _| {
 ///             let (i, a) = parse_ber_u32(i)?;
@@ -485,7 +485,7 @@ where
 /// ///     a INTEGER (0..4294967295),
 /// ///     b OCTETSTRING
 /// /// }
-/// fn parse_myobject(i: &[u8]) -> BerResult<MyObject> {
+/// fn parse_myobject(i: &[u8]) -> BerResult<'_, MyObject<'_>> {
 ///     parse_ber_container(
 ///         |i: &[u8], hdr: Header| {
 ///             if hdr.tag() != Tag::Sequence {

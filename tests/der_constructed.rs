@@ -17,7 +17,7 @@ use test_case::test_case;
 #[test_case(&hex!("22 05 02 03 01 00 01"), Err(BerError::unexpected_class(None, Class::Universal)) ; "invalid class")]
 #[test_case(&hex!("82 05 02 03 01 00 01"), Err(BerError::ConstructExpected) ; "construct expected")]
 fn tc_der_tagged_explicit_g(i: &[u8], out: Result<u32, BerError>) {
-    fn parse_int_explicit(i: &[u8]) -> BerResult<u32> {
+    fn parse_int_explicit(i: &[u8]) -> BerResult<'_, u32> {
         parse_der_tagged_explicit_g(2, move |content, _hdr| {
             let (rem, obj) = parse_der_integer(content)?;
             let value = obj.as_u32()?;
@@ -38,7 +38,7 @@ fn tc_der_tagged_explicit_g(i: &[u8], out: Result<u32, BerError>) {
 #[test_case(&hex!("82 03 01 00 01"), Ok(0x10001) ; "tag ok")]
 #[test_case(&hex!("83 03 01 00 01"), Err(BerError::unexpected_tag(Some(Tag(2)), Tag(3))) ; "invalid tag")]
 fn tc_der_tagged_implicit_g(i: &[u8], out: Result<u32, BerError>) {
-    fn parse_int_implicit(i: &[u8]) -> BerResult<u32> {
+    fn parse_int_implicit(i: &[u8]) -> BerResult<'_, u32> {
         parse_der_tagged_implicit_g(2, |content, hdr, depth| {
             let (rem, obj) = parse_der_content(Tag::Integer)(content, &hdr, depth)?;
             let value = obj.as_u32()?;
@@ -62,7 +62,7 @@ fn tc_der_tagged_implicit_g(i: &[u8], out: Result<u32, BerError>) {
 #[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Err(BerError::unexpected_tag(Some(Tag::Sequence), Tag::Set)) ; "invalid tag")]
 #[test_case(&hex!("30 80 02 03 01 00 01 00 00"), Err(BerError::DerConstraintFailed(DerConstraint::IndefiniteLength)) ; "indefinite seq ok")]
 fn tc_der_seq_of(i: &[u8], out: Result<&[u32], BerError>) {
-    fn parser(i: &[u8]) -> BerResult {
+    fn parser(i: &[u8]) -> BerResult<'_> {
         parse_der_sequence_of(parse_der_integer)(i)
     }
     let res = parser(i);
@@ -90,7 +90,7 @@ fn tc_der_seq_of(i: &[u8], out: Result<&[u32], BerError>) {
 #[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Some(Tag::Sequence), Tag::Set))) ; "invalid tag")]
 #[test_case(&hex!("30 80 02 03 01 00 01 00 00"), Err(Err::Error(BerError::DerConstraintFailed(DerConstraint::IndefiniteLength))) ; "indefinite seq ok")]
 fn tc_der_seq_defined(i: &[u8], out: Result<&[u32], Err<BerError>>) {
-    fn parser(i: &[u8]) -> BerResult<DerObject> {
+    fn parser(i: &[u8]) -> BerResult<'_, DerObject<'_>> {
         parse_der_sequence_defined(map(
             tuple((parse_der_integer, parse_der_integer)),
             |(a, b)| vec![a, b],
@@ -122,7 +122,7 @@ fn tc_der_seq_defined(i: &[u8], out: Result<&[u32], Err<BerError>>) {
 #[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Err(BerError::unexpected_tag(Some(Tag::Set), Tag::Sequence)) ; "invalid tag")]
 #[test_case(&hex!("31 80 02 03 01 00 01 00 00"), Err(BerError::DerConstraintFailed(DerConstraint::IndefiniteLength)) ; "indefinite set ok")]
 fn tc_der_set_of(i: &[u8], out: Result<&[u32], BerError>) {
-    fn parser(i: &[u8]) -> BerResult {
+    fn parser(i: &[u8]) -> BerResult<'_> {
         parse_der_set_of(parse_der_integer)(i)
     }
     let res = parser(i);
@@ -150,7 +150,7 @@ fn tc_der_set_of(i: &[u8], out: Result<&[u32], BerError>) {
 #[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Some(Tag::Set), Tag::Sequence))) ; "invalid tag")]
 #[test_case(&hex!("31 80 02 03 01 00 01 00 00"), Err(Err::Error(BerError::DerConstraintFailed(DerConstraint::IndefiniteLength))) ; "indefinite set ok")]
 fn tc_der_set_defined(i: &[u8], out: Result<&[u32], Err<BerError>>) {
-    fn parser(i: &[u8]) -> BerResult<DerObject> {
+    fn parser(i: &[u8]) -> BerResult<'_, DerObject<'_>> {
         parse_der_set_defined(map(
             tuple((parse_der_integer, parse_der_integer)),
             |(a, b)| vec![a, b],

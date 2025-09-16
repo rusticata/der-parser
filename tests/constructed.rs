@@ -22,7 +22,7 @@ struct MyStruct<'a> {
     b: BerObject<'a>,
 }
 
-fn parse_struct01(i: &[u8]) -> BerResult<MyStruct> {
+fn parse_struct01(i: &[u8]) -> BerResult<'_, MyStruct<'_>> {
     parse_der_sequence_defined_g(|i: &[u8], _| {
         let (i, a) = parse_ber_integer(i)?;
         let (i, b) = parse_ber_integer(i)?;
@@ -30,7 +30,7 @@ fn parse_struct01(i: &[u8]) -> BerResult<MyStruct> {
     })(i)
 }
 
-fn parse_struct01_complete(i: &[u8]) -> BerResult<MyStruct> {
+fn parse_struct01_complete(i: &[u8]) -> BerResult<'_, MyStruct<'_>> {
     parse_der_sequence_defined_g(|i: &[u8], _| {
         let (i, a) = parse_ber_integer(i)?;
         let (i, b) = parse_ber_integer(i)?;
@@ -40,7 +40,7 @@ fn parse_struct01_complete(i: &[u8]) -> BerResult<MyStruct> {
 }
 
 // verifying tag
-fn parse_struct04(i: &[u8], tag: Tag) -> BerResult<MyStruct> {
+fn parse_struct04(i: &[u8], tag: Tag) -> BerResult<'_, MyStruct<'_>> {
     parse_der_container(|i: &[u8], hdr| {
         if hdr.tag() != tag {
             return Err(Err::Error(BerError::InvalidTag));
@@ -59,7 +59,7 @@ fn parse_struct04(i: &[u8], tag: Tag) -> BerResult<MyStruct> {
 #[test_case(&hex!("30 80 02 03 01 00 01 00 00"), Ok(&[0x10001]) ; "indefinite seq ok")]
 #[test_case(&hex!("30 80"), Err(Err::Incomplete(Needed::new(1))) ; "indefinite incomplete")]
 fn tc_ber_seq_of(i: &[u8], out: Result<&[u32], Err<BerError>>) {
-    fn parser(i: &[u8]) -> BerResult {
+    fn parser(i: &[u8]) -> BerResult<'_> {
         parse_ber_sequence_of(parse_ber_integer)(i)
     }
     let res = parser(i);
@@ -87,7 +87,7 @@ fn tc_ber_seq_of(i: &[u8], out: Result<&[u32], Err<BerError>>) {
 #[test_case(&hex!("31 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Some(Tag::Sequence), Tag::Set))) ; "invalid tag")]
 #[test_case(&hex!("30 80 02 03 01 00 01 02 03 01 00 00 00 00"), Ok(&[0x10001, 0x10000]) ; "indefinite seq")]
 fn tc_ber_seq_defined(i: &[u8], out: Result<&[u32], Err<BerError>>) {
-    fn parser(i: &[u8]) -> BerResult<BerObject> {
+    fn parser(i: &[u8]) -> BerResult<'_, BerObject<'_>> {
         parse_ber_sequence_defined(map(
             tuple((parse_ber_integer, parse_ber_integer)),
             |(a, b)| vec![a, b],
@@ -120,7 +120,7 @@ fn tc_ber_seq_defined(i: &[u8], out: Result<&[u32], Err<BerError>>) {
 #[test_case(&hex!("31 80 02 03 01 00 01 00 00"), Ok(&[0x10001]) ; "indefinite set ok")]
 #[test_case(&hex!("31 80"), Err(Err::Incomplete(Needed::new(1))) ; "indefinite incomplete")]
 fn tc_ber_set_of(i: &[u8], out: Result<&[u32], Err<BerError>>) {
-    fn parser(i: &[u8]) -> BerResult {
+    fn parser(i: &[u8]) -> BerResult<'_> {
         parse_ber_set_of(parse_ber_integer)(i)
     }
     let res = parser(i);
@@ -148,7 +148,7 @@ fn tc_ber_set_of(i: &[u8], out: Result<&[u32], Err<BerError>>) {
 #[test_case(&hex!("30 0a 02 03 01 00 01 02 03 01 00 00"), Err(Err::Error(BerError::unexpected_tag(Some(Tag::Set), Tag::Sequence))) ; "invalid tag")]
 #[test_case(&hex!("31 80 02 03 01 00 01 02 03 01 00 00 00 00"), Ok(&[0x10001, 0x10000]) ; "indefinite set")]
 fn tc_ber_set_defined(i: &[u8], out: Result<&[u32], Err<BerError>>) {
-    fn parser(i: &[u8]) -> BerResult<BerObject> {
+    fn parser(i: &[u8]) -> BerResult<'_, BerObject<'_>> {
         parse_ber_set_defined(map(
             tuple((parse_ber_integer, parse_ber_integer)),
             |(a, b)| vec![a, b],
@@ -241,14 +241,14 @@ fn struct02() {
             },
         ],
     };
-    fn parse_directory_string(i: &[u8]) -> BerResult {
+    fn parse_directory_string(i: &[u8]) -> BerResult<'_> {
         alt((
             parse_ber_utf8string,
             parse_ber_printablestring,
             parse_ber_ia5string,
         ))(i)
     }
-    fn parse_attr_type_and_value(i: &[u8]) -> BerResult<Attr> {
+    fn parse_attr_type_and_value(i: &[u8]) -> BerResult<'_, Attr<'_>> {
         fn clone_oid(x: BerObject) -> Result<Oid, BerError> {
             x.as_oid().cloned()
         }
@@ -258,13 +258,13 @@ fn struct02() {
             Ok((i, Attr { oid: o, val: s }))
         })(i)
     }
-    fn parse_rdn(i: &[u8]) -> BerResult<Rdn> {
+    fn parse_rdn(i: &[u8]) -> BerResult<'_, Rdn<'_>> {
         parse_der_set_defined_g(|i: &[u8], _| {
             let (i, a) = parse_attr_type_and_value(i)?;
             Ok((i, Rdn { a }))
         })(i)
     }
-    fn parse_name(i: &[u8]) -> BerResult<Name> {
+    fn parse_name(i: &[u8]) -> BerResult<'_, Name<'_>> {
         parse_der_sequence_defined_g(|i: &[u8], _| {
             let (i, l) = many0(complete(parse_rdn))(i)?;
             Ok((i, Name { l }))
@@ -317,7 +317,7 @@ fn struct_verify_tag() {
 #[test_case(&hex!("22 05 02 03 01 00 01"), Err(BerError::unexpected_class(None, Class::Universal)) ; "invalid class")]
 #[test_case(&hex!("82 05 02 03 01 00 01"), Err(BerError::ConstructExpected) ; "construct expected")]
 fn tc_ber_tagged_explicit_g(i: &[u8], out: Result<u32, BerError>) {
-    fn parse_int_explicit(i: &[u8]) -> BerResult<u32> {
+    fn parse_int_explicit(i: &[u8]) -> BerResult<'_, u32> {
         parse_ber_tagged_explicit_g(2, move |content, _hdr| {
             let (rem, obj) = parse_ber_integer(content)?;
             let value = obj.as_u32()?;
@@ -337,7 +337,7 @@ fn tc_ber_tagged_explicit_g(i: &[u8], out: Result<u32, BerError>) {
 
 #[test]
 fn tagged_explicit() {
-    fn parse_int_explicit(i: &[u8]) -> BerResult<u32> {
+    fn parse_int_explicit(i: &[u8]) -> BerResult<'_, u32> {
         map_res(
             parse_der_tagged_explicit(2, parse_der_integer),
             |x: BerObject| x.as_tagged()?.2.as_u32(),
@@ -363,7 +363,7 @@ fn tagged_explicit() {
 #[test_case(&hex!("82 03 01 00 01"), Ok(0x10001) ; "tag ok")]
 #[test_case(&hex!("83 03 01 00 01"), Err(BerError::unexpected_tag(Some(Tag(2)), Tag(3))) ; "invalid tag")]
 fn tc_ber_tagged_implicit_g(i: &[u8], out: Result<u32, BerError>) {
-    fn parse_int_implicit(i: &[u8]) -> BerResult<u32> {
+    fn parse_int_implicit(i: &[u8]) -> BerResult<'_, u32> {
         parse_ber_tagged_implicit_g(2, |content, hdr, depth| {
             let (rem, obj) = parse_ber_content(Tag::Integer)(content, &hdr, depth)?;
             let value = obj.as_u32()?;
@@ -383,7 +383,7 @@ fn tc_ber_tagged_implicit_g(i: &[u8], out: Result<u32, BerError>) {
 
 #[test]
 fn tagged_implicit() {
-    fn parse_int_implicit(i: &[u8]) -> BerResult<u32> {
+    fn parse_int_implicit(i: &[u8]) -> BerResult<'_, u32> {
         map_res(
             parse_der_tagged_implicit(2, parse_der_content(Tag::Integer)),
             |x: BerObject| x.as_u32(),
@@ -407,7 +407,7 @@ fn application() {
     struct SimpleStruct {
         a: u32,
     }
-    fn parse_app01(i: &[u8]) -> BerResult<SimpleStruct> {
+    fn parse_app01(i: &[u8]) -> BerResult<'_, SimpleStruct> {
         parse_der_container(|i, hdr| {
             if hdr.class() != Class::Application {
                 return Err(Err::Error(BerError::unexpected_class(None, hdr.class())));

@@ -121,7 +121,7 @@
 //! use der_parser::ber::*;
 //! use der_parser::error::BerResult;
 //!
-//! fn localparse_seq(i:&[u8]) -> BerResult {
+//! fn localparse_seq(i:&[u8]) -> BerResult<'_> {
 //!     parse_ber_sequence_defined(|data| {
 //!         let (rem, a) = parse_ber_integer(data)?;
 //!         let (rem, b) = parse_ber_integer(rem)?;

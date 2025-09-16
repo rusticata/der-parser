@@ -18,7 +18,7 @@ use nom::{Err, IResult};
 /// # use der_parser::error::BerResult;
 /// use nom::combinator::map_res;
 /// #
-/// fn parse_int_explicit(i:&[u8]) -> BerResult<u32> {
+/// fn parse_int_explicit(i:&[u8]) -> BerResult<'_, u32> {
 ///    map_res(
 ///        parse_ber_tagged_explicit(2, parse_ber_integer),
 ///        |x: BerObject| x.as_tagged()?.2.as_u32()
@@ -60,7 +60,7 @@ where
 /// # use der_parser::ber::*;
 /// # use der_parser::error::BerResult;
 /// #
-/// fn parse_int_explicit(i:&[u8]) -> BerResult<u32> {
+/// fn parse_int_explicit(i:&[u8]) -> BerResult<'_, u32> {
 ///     parse_ber_tagged_explicit_g(2, move |content, hdr| {
 ///         let (rem, obj) = parse_ber_integer(content)?;
 ///         let value = obj.as_u32()?;
@@ -121,7 +121,7 @@ where
 /// # use der_parser::ber::*;
 /// # use der_parser::error::BerResult;
 /// #
-/// fn parse_int_implicit(i:&[u8]) -> BerResult<BerObject> {
+/// fn parse_int_implicit(i:&[u8]) -> BerResult<'_, BerObject<'_>> {
 ///     parse_ber_tagged_implicit(
 ///         2,
 ///         parse_ber_content(Tag::Integer),
@@ -147,7 +147,7 @@ where
 /// # use der_parser::error::BerResult;
 /// use nom::combinator::map_res;
 /// #
-/// fn parse_int_implicit(i:&[u8]) -> BerResult<u32> {
+/// fn parse_int_implicit(i:&[u8]) -> BerResult<'_, u32> {
 ///     map_res(
 ///         parse_ber_tagged_implicit(
 ///             2,
@@ -193,7 +193,7 @@ where
 /// # use der_parser::ber::*;
 /// # use der_parser::error::BerResult;
 /// #
-/// fn parse_implicit_0_octetstring(i:&[u8]) -> BerResult<BerObjectContent> {
+/// fn parse_implicit_0_octetstring(i:&[u8]) -> BerResult<'_, BerObjectContent<'_>> {
 ///     parse_ber_tagged_implicit_g(
 ///         2,
 ///         parse_ber_content2(Tag::OctetString)
@@ -219,7 +219,7 @@ where
 /// # use der_parser::ber::*;
 /// # use der_parser::error::BerResult;
 /// #
-/// fn parse_int_implicit(i:&[u8]) -> BerResult<u32> {
+/// fn parse_int_implicit(i:&[u8]) -> BerResult<'_, u32> {
 ///     parse_ber_tagged_implicit_g(
 ///         2,
 ///         |content, hdr, depth| {
