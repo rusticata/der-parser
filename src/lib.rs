@@ -1,12 +1,3 @@
-//! [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE-MIT)
-//! [![Apache License 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE-APACHE)
-//! [![docs.rs](https://docs.rs/der-parser/badge.svg)](https://docs.rs/der-parser)
-//! [![crates.io](https://img.shields.io/crates/v/der-parser.svg)](https://crates.io/crates/der-parser)
-//! [![Download numbers](https://img.shields.io/crates/d/der-parser.svg)](https://crates.io/crates/der-parser)
-//! [![dependency status](https://deps.rs/crate/der-parser/9.0.0/status.svg)](https://deps.rs/crate/der-parser/9.0.0)
-//! [![Github CI](https://github.com/rusticata/der-parser/actions/workflows/rust.yml/badge.svg)](https://github.com/rusticata/der-parser/actions/workflows/rust.yml)
-//! [![Minimum rustc version](https://img.shields.io/badge/rustc-1.63.0+-lightgray.svg)](#rust-version-requirements)
-//!
 //! # BER/DER Parser
 //!
 //! A parser for Basic Encoding Rules (BER [[X.690]]) and Distinguished Encoding Rules(DER

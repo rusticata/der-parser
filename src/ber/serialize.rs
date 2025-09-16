@@ -349,7 +349,7 @@ mod test {
 
     #[test]
     fn test_encode_tagged_explicit() {
-        fn local_parse(i: &[u8]) -> BerResult {
+        fn local_parse(i: &[u8]) -> BerResult<'_> {
             parse_ber_explicit_optional(i, Tag(0), parse_ber_integer)
         }
         let bytes = hex!("a0 03 02 01 02");
@@ -379,7 +379,7 @@ mod test {
         ) -> BerResult<'a, BerObjectContent<'a>> {
             ber_read_element_content_as(i, Tag::Integer, hdr.length(), false, depth)
         }
-        fn local_parse(i: &[u8]) -> BerResult<BerObject> {
+        fn local_parse(i: &[u8]) -> BerResult<'_, BerObject<'_>> {
             parse_ber_implicit(i, Tag(3), der_read_integer_content)
         }
         let obj = BerObject::from_int_slice(b"\x02");
@@ -396,7 +396,7 @@ mod test {
     }
     #[test]
     fn test_encode_tagged_application() {
-        fn local_parse(i: &[u8]) -> BerResult {
+        fn local_parse(i: &[u8]) -> BerResult<'_> {
             parse_ber_explicit_optional(i, Tag(2), parse_ber_integer)
         }
         let obj = BerObject::from_int_slice(b"\x02");
