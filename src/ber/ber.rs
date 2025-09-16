@@ -260,7 +260,7 @@ impl<'a> BerObject<'a> {
     ///
     /// Note that this function returns a reference to the BitString. To get an owned value,
     /// use [`as_bitstring`](struct.BerObject.html#method.as_bitstring)
-    pub fn as_bitstring_ref(&self) -> Result<&BitStringObject, BerError> {
+    pub fn as_bitstring_ref(&self) -> Result<&BitStringObject<'_>, BerError> {
         self.content.as_bitstring_ref()
     }
 
@@ -552,7 +552,7 @@ impl<'a> BerObjectContent<'a> {
         }
     }
 
-    pub fn as_bitstring_ref(&self) -> Result<&BitStringObject, BerError> {
+    pub fn as_bitstring_ref(&self) -> Result<&BitStringObject<'_>, BerError> {
         match *self {
             BerObjectContent::BitString(_, ref b) => Ok(b),
             _ => Err(BerError::BerTypeError),
