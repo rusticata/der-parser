@@ -10,7 +10,7 @@ use rusticata_macros::custom_check;
 /// Parse any BER object recursively, specifying the maximum recursion depth and expected tag
 ///
 /// Raise an error if the maximum recursion depth was reached.
-pub fn parse_ber_any_with_tag_r(i: &[u8], tag: Tag, max_depth: usize) -> BerResult {
+pub fn parse_ber_any_with_tag_r(i: &[u8], tag: Tag, max_depth: usize) -> BerResult<'_> {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     let (rem, any) = Any::from_ber(i)?;
     any.header.assert_tag(tag)?;
@@ -21,7 +21,7 @@ pub fn parse_ber_any_with_tag_r(i: &[u8], tag: Tag, max_depth: usize) -> BerResu
 /// Parse any BER object recursively, specifying the maximum recursion depth
 ///
 /// Raise an error if the maximum recursion depth was reached.
-pub fn parse_ber_any_r(i: &[u8], max_depth: usize) -> BerResult {
+pub fn parse_ber_any_r(i: &[u8], max_depth: usize) -> BerResult<'_> {
     custom_check!(i, max_depth == 0, BerError::BerMaxDepth)?;
     let (rem, any) = Any::from_ber(i)?;
     let obj = try_berobject_from_any(any, max_depth)?;
@@ -29,7 +29,7 @@ pub fn parse_ber_any_r(i: &[u8], max_depth: usize) -> BerResult {
 }
 
 /// Parse any BER object (not recursive)
-pub fn parse_ber_any(i: &[u8]) -> BerResult<Any> {
+pub fn parse_ber_any(i: &[u8]) -> BerResult<'_, Any<'_>> {
     Any::from_ber(i)
 }
 
@@ -61,7 +61,7 @@ pub(crate) fn try_read_berobjectcontent_as(
     length: Length,
     constructed: bool,
     max_depth: usize,
-) -> BerResult<BerObjectContent> {
+) -> BerResult<'_, BerObjectContent<'_>> {
     if let Length::Definite(l) = length {
         custom_check!(i, l > MAX_OBJECT_SIZE, BerError::InvalidLength)?;
         if i.len() < l {
@@ -217,7 +217,7 @@ mod tests {
     #[test_case(&hex!("1e 08 00 55 00 73 00 65 00 72") => matches Ok(BerObject{header:_, content:BerObjectContent::BmpString(b"\x00U\x00s\x00e\x00r")}) ; "bmp")]
     #[test_case(&hex!("30 80 04 03 56 78 90 00 00") => matches Ok(BerObject{header:_, content:BerObjectContent::Sequence(_)}) ; "indefinite length")]
     #[test_case(&hex!("c0 03 01 00 01") => matches Ok(BerObject{header:_, content:BerObjectContent::Unknown(_)}) ; "private")]
-    fn ber_from_any(i: &[u8]) -> Result<BerObject, BerError> {
+    fn ber_from_any(i: &[u8]) -> Result<BerObject<'_>, BerError> {
         let (rem, res) = parse_ber_any_r(i, MAX_RECURSION)?;
         assert!(rem.is_empty());
         // dbg!(&res);
