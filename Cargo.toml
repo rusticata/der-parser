@@ -17,7 +17,6 @@ include = [
   "CHANGELOG.md",
   "README.md",
   "UPGRADING.md",
-  ".gitignore",
   "Cargo.toml",
   "examples/*.rs",
   "src/*.rs",
