@@ -10,7 +10,7 @@ Header names have changed:
 
 Changing the names should be enough for upgrades.
 
-To eventually ease upgrades, a new module (`der_parser::ber::compat`) has been added, to provide aliases for these types. It must be imported explicitely.
+To eventually ease upgrades, a new module (`der_parser::ber::compat`) has been added, to provide aliases for these types. It must be imported explicitly.
 
 Header fields are now private. Getters/setters have been added, and must be used to access/modify fields. Replace:
 - `hdr.len` by `hdr.length()`

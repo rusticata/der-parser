@@ -235,7 +235,7 @@ fn struct02() {
                 a: Attr {
                     oid: Oid::from(&[2, 5, 4, 10]).unwrap(), // organizationName
                     val: BerObject::from_obj(BerObjectContent::IA5String(
-                        "Internet Widgits Pty Ltd",
+                        "Internet Widgets Pty Ltd",
                     )),
                 },
             },
@@ -275,7 +275,7 @@ fn struct02() {
     //
     assert_eq!(parsed.1.l[0].a.val.as_str(), Ok("FR"));
     assert_eq!(parsed.1.l[1].a.val.as_str(), Ok("Some-State"));
-    assert_eq!(parsed.1.l[2].a.val.as_str(), Ok("Internet Widgits Pty Ltd"));
+    assert_eq!(parsed.1.l[2].a.val.as_str(), Ok("Internet Widgets Pty Ltd"));
 }
 
 #[test]

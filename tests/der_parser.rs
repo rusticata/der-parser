@@ -491,7 +491,7 @@ fn test_der_seq_dn() {
         ])]),
         DerObject::from_set(vec![DerObject::from_seq(vec![
             DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 10]).unwrap())), // organizationName
-            DerObject::from_obj(BerObjectContent::UTF8String("Internet Widgits Pty Ltd")),
+            DerObject::from_obj(BerObjectContent::UTF8String("Internet Widgets Pty Ltd")),
         ])]),
     ]);
     assert_eq!(parse_der(&bytes), Ok((empty, expected)));
@@ -518,7 +518,7 @@ fn test_der_seq_dn_defined() {
         ])]),
         DerObject::from_set(vec![DerObject::from_seq(vec![
             DerObject::from_obj(BerObjectContent::OID(Oid::from(&[2, 5, 4, 10]).unwrap())), // organizationName
-            DerObject::from_obj(BerObjectContent::UTF8String("Internet Widgits Pty Ltd")),
+            DerObject::from_obj(BerObjectContent::UTF8String("Internet Widgets Pty Ltd")),
         ])]),
     ]);
     #[inline]
