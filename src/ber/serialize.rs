@@ -44,7 +44,7 @@ pub fn ber_encode_header<'a, 'b: 'a, W: Write + 'a>(hdr: &'b Header) -> impl Ser
         // identifier octets (X.690 8.1.2)
         let class_u8 = (hdr.class() as u8) << 6;
         let pc_u8 = (if hdr.constructed() { 1 } else { 0 }) << 5;
-        if hdr.tag().0 >= 30 {
+        if hdr.tag().0 > 30 {
             unimplemented!();
         }
         let byte_0 = class_u8 | pc_u8 | (hdr.tag().0 as u8);
@@ -394,6 +394,32 @@ mod test {
         let bytes = hex!("83 01 02");
         assert_eq!(&v[..], bytes);
     }
+
+    #[test]
+    fn test_encode_single_byte_tag_limit() {
+        fn der_read_integer_content<'a>(
+            i: &'a [u8],
+            hdr: &Header,
+            depth: usize,
+        ) -> BerResult<'a, BerObjectContent<'a>> {
+            ber_read_element_content_as(i, Tag::Integer, hdr.length(), false, depth)
+        }
+        fn local_parse(i: &[u8]) -> BerResult<'_, BerObject<'_>> {
+            parse_ber_implicit(i, Tag(30), der_read_integer_content)
+        }
+        let obj = BerObject::from_int_slice(b"\x02");
+        let v = gen_simple(
+            ber_encode_tagged_implicit(Tag(30), Class::ContextSpecific, &obj),
+            Vec::new(),
+        )
+        .expect("could not encode");
+        let (_, obj2) = local_parse(&v).expect("could not re-parse");
+        assert_eq!(obj2.header.tag(), Tag(30));
+        assert_eq!(&obj.content, &obj2.content);
+        let bytes = hex!("9e 01 02");
+        assert_eq!(&v[..], bytes);
+    }
+
     #[test]
     fn test_encode_tagged_application() {
         fn local_parse(i: &[u8]) -> BerResult<'_> {
