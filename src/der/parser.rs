@@ -131,7 +131,7 @@ pub fn parse_der_integer(i: &[u8]) -> DerResult<'_> {
 /// Read an bitstring value
 ///
 /// To access the content as plain bytes, you will have to
-/// interprete the resulting tuple which will contain in
+/// interpret the resulting tuple which will contain in
 /// its first item the number of padding bits left at
 /// the end of the bit string, and in its second item
 /// a `BitStringObject` structure which will, in its sole

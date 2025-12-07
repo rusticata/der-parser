@@ -39,7 +39,7 @@ encode and decode ASN.1 objects in binary.
 [X.690] also defines Distinguished Encoding Rules (DER), which is BER with added rules to
 ensure canonical and unequivocal binary representation of objects.
 
-The choice of which one to use is usually guided by the speficication of the data format based
+The choice of which one to use is usually guided by the specification of the data format based
 on BER or DER: for example, X.509 uses DER as encoding representation.
 
 See the related modules for object definitions, functions, and example:
