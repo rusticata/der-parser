@@ -232,3 +232,35 @@ fn test_print_unexpected() {
 
     eprintln!("{}", BerError::BerMaxDepth);
 }
+
+#[cfg(feature = "serialize")]
+#[test]
+fn test_enum_serialization_minimal_encoding() {
+    // Test that ENUMERATED values are always encoded with at least one octet
+    // and use minimal encoding with proper sign handling
+
+    // Enum(0) should encode as [0x0a, 0x01, 0x00]
+    let obj = BerObject::from_obj(BerObjectContent::Enum(0));
+    let serialized = obj.to_vec().expect("serialization failed");
+    assert_eq!(serialized, vec![0x0a, 0x01, 0x00], "Enum(0) must have one content octet");
+
+    // Enum(127) should encode as [0x0a, 0x01, 0x7f] (positive, no leading zero needed)
+    let obj = BerObject::from_obj(BerObjectContent::Enum(127));
+    let serialized = obj.to_vec().expect("serialization failed");
+    assert_eq!(serialized, vec![0x0a, 0x01, 0x7f], "Enum(127) encodes as single byte");
+
+    // Enum(128) should encode as [0x0a, 0x02, 0x00, 0x80] (needs leading zero to indicate positive)
+    let obj = BerObject::from_obj(BerObjectContent::Enum(128));
+    let serialized = obj.to_vec().expect("serialization failed");
+    assert_eq!(serialized, vec![0x0a, 0x02, 0x00, 0x80], "Enum(128) needs leading zero for positive indication");
+
+    // Enum(255) should encode as [0x0a, 0x02, 0x00, 0xff]
+    let obj = BerObject::from_obj(BerObjectContent::Enum(255));
+    let serialized = obj.to_vec().expect("serialization failed");
+    assert_eq!(serialized, vec![0x0a, 0x02, 0x00, 0xff], "Enum(255) needs leading zero");
+
+    // Enum(256) should encode as [0x0a, 0x02, 0x01, 0x00]
+    let obj = BerObject::from_obj(BerObjectContent::Enum(256));
+    let serialized = obj.to_vec().expect("serialization failed");
+    assert_eq!(serialized, vec![0x0a, 0x02, 0x01, 0x00], "Enum(256) minimal encoding");
+}
