@@ -57,6 +57,41 @@ fn test_der_int() {
 }
 
 #[test]
+fn test_der_integer_canonicality() {
+    use der_parser::der::parse_der_integer;
+    use der_parser::error::DerConstraint;
+
+    // Canonical positive integers should pass
+    assert!(parse_der_integer(&hex!("02 01 7f")).is_ok());  // 127
+    assert!(parse_der_integer(&hex!("02 02 00 80")).is_ok());  // 128 (needs leading 0)
+
+    // Canonical negative integers should pass
+    assert!(parse_der_integer(&hex!("02 01 80")).is_ok());  // -128
+    assert!(parse_der_integer(&hex!("02 02 ff 7f")).is_ok());  // -129
+
+    // Non-canonical positive integer: redundant leading zeros
+    let result = parse_der_integer(&hex!("02 02 00 7f"));  // Should be [02 01 7f]
+    assert!(matches!(
+        result,
+        Err(nom::Err::Error(BerError::DerConstraintFailed(DerConstraint::IntegerLeadingZeroes)))
+    ));
+
+    // Non-canonical negative integer: redundant leading 0xFF bytes
+    let result = parse_der_integer(&hex!("02 02 ff 80"));  // Should be [02 01 80]
+    assert!(matches!(
+        result,
+        Err(nom::Err::Error(BerError::DerConstraintFailed(DerConstraint::IntegerLeadingZeroes)))
+    ));
+
+    // Another non-canonical negative: value -1 with redundant 0xFF
+    let result = parse_der_integer(&hex!("02 02 ff ff"));  // Should be [02 01 ff]
+    assert!(matches!(
+        result,
+        Err(nom::Err::Error(BerError::DerConstraintFailed(DerConstraint::IntegerLeadingZeroes)))
+    ));
+}
+
+#[test]
 fn test_der_bitstring_primitive() {
     let empty = &b""[..];
     //
