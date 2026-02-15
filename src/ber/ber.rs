@@ -414,7 +414,11 @@ impl<'a> BerObjectContent<'a> {
             let result = if is_highest_bit_set(bytes) {
                 <i64>::from_be_bytes(decode_array_int8(bytes)?)
             } else {
-                <u64>::from_be_bytes(decode_array_uint8(bytes)?) as i64
+                let unsigned_val = <u64>::from_be_bytes(decode_array_uint8(bytes)?);
+                if unsigned_val > i64::MAX as u64 {
+                    return Err(BerError::IntegerTooLarge);
+                }
+                unsigned_val as i64
             };
             Ok(result)
         } else {
@@ -441,7 +445,11 @@ impl<'a> BerObjectContent<'a> {
             let result = if is_highest_bit_set(bytes) {
                 <i32>::from_be_bytes(decode_array_int4(bytes)?)
             } else {
-                <u32>::from_be_bytes(decode_array_uint4(bytes)?) as i32
+                let unsigned_val = <u32>::from_be_bytes(decode_array_uint4(bytes)?);
+                if unsigned_val > i32::MAX as u32 {
+                    return Err(BerError::IntegerTooLarge);
+                }
+                unsigned_val as i32
             };
             Ok(result)
         } else {

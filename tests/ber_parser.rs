@@ -202,6 +202,40 @@ fn tc_ber_i64(i: &[u8], out: Result<i64, BerError>) {
     }
 }
 
+#[test]
+fn test_as_i64_overflow_detection() {
+    use der_parser::ber::*;
+
+    // Valid positive value within i64::MAX
+    let obj = BerObject::from_int_slice(b"\x7f\xff\xff\xff\xff\xff\xff\xff"); // i64::MAX
+    assert_eq!(obj.as_i64(), Ok(i64::MAX));
+
+    // Positive value exceeding i64::MAX should return error
+    let obj = BerObject::from_int_slice(b"\x00\x80\x00\x00\x00\x00\x00\x00\x00"); // i64::MAX + 1
+    assert_eq!(obj.as_i64(), Err(BerError::IntegerTooLarge));
+
+    // Negative values should still work
+    let obj = BerObject::from_int_slice(b"\x80\x00\x00\x00\x00\x00\x00\x00"); // i64::MIN
+    assert_eq!(obj.as_i64(), Ok(i64::MIN));
+}
+
+#[test]
+fn test_as_i32_overflow_detection() {
+    use der_parser::ber::*;
+
+    // Valid positive value within i32::MAX
+    let obj = BerObject::from_int_slice(b"\x7f\xff\xff\xff"); // i32::MAX
+    assert_eq!(obj.as_i32(), Ok(i32::MAX));
+
+    // Positive value exceeding i32::MAX should return error
+    let obj = BerObject::from_int_slice(b"\x00\x80\x00\x00\x00"); // i32::MAX + 1
+    assert_eq!(obj.as_i32(), Err(BerError::IntegerTooLarge));
+
+    // Negative values should still work
+    let obj = BerObject::from_int_slice(b"\x80\x00\x00\x00"); // i32::MIN
+    assert_eq!(obj.as_i32(), Ok(i32::MIN));
+}
+
 #[cfg(feature = "bigint")]
 #[test_case(&hex!("02 01 01"), Ok(BigInt::from(1)) ; "bigint-1")]
 #[test_case(&hex!("02 02 00 ff"), Ok(BigInt::from(255)) ; "bigint-255")]
