@@ -518,6 +518,11 @@ pub fn der_read_element_content_as(
                         DerConstraint::IntegerLeadingZeroes,
                     )));
                 }
+                [0xff, byte, ..] if byte >= 0x80 => {
+                    return Err(Err::Error(BerError::DerConstraintFailed(
+                        DerConstraint::IntegerLeadingZeroes,
+                    )));
+                }
                 _ => (),
             }
         }
