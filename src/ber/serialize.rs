@@ -129,12 +129,15 @@ fn ber_encode_object_content<'a, W: Write + Default + AsRef<[u8]> + 'a>(
         BerObjectContent::OctetString(s) => slice(s)(out),
         BerObjectContent::Null => Ok(out),
         BerObjectContent::Enum(i) => {
-            let v: Vec<u8> = i
-                .to_be_bytes()
-                .iter()
-                .cloned()
-                .skip_while(|&b| b == 0)
-                .collect();
+            let bytes = i.to_be_bytes();
+            // Find first non-zero byte, but always keep at least one byte (for value 0)
+            let start = bytes.iter().position(|&b| b != 0).unwrap_or(7);
+            // Add leading 0x00 if MSB is set (to indicate positive value in two's complement)
+            let v = if bytes[start] >= 0x80 {
+                [&[0x00], &bytes[start..]].concat()
+            } else {
+                bytes[start..].to_vec()
+            };
             slice(v)(out)
         }
         BerObjectContent::OID(oid) | BerObjectContent::RelativeOID(oid) => ber_encode_oid(oid)(out),
